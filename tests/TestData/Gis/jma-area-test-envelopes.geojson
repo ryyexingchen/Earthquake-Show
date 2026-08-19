@@ -1,0 +1,272 @@
+{
+  "type": "FeatureCollection",
+  "name": "jma-area-test-envelopes",
+  "metadata": {
+    "coordinateSystem": "EPSG:4326",
+    "source": "Derived from JMA VXSE53 area membership and official intensity station coordinates",
+    "sourceUrl": "https://www.data.jma.go.jp/eqev/data/intens-st/stations.json",
+    "retrievedDate": "2026-08-19",
+    "disclaimer": "Test-only station envelopes; not official JMA administrative or forecast-area boundaries."
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "areaCode": "741",
+        "name": "熊本県熊本",
+        "maxIntensity": "3",
+        "geometryKind": "station-envelope",
+        "officialBoundary": false
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              130.45000000000002,
+              32.4
+            ],
+            [
+              131.03,
+              32.4
+            ],
+            [
+              131.03,
+              33.04
+            ],
+            [
+              130.45000000000002,
+              33.04
+            ],
+            [
+              130.45000000000002,
+              32.4
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "areaCode": "743",
+        "name": "熊本県天草・芦北",
+        "maxIntensity": "2",
+        "geometryKind": "station-envelope",
+        "officialBoundary": false
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              130.15,
+              32.17
+            ],
+            [
+              130.54999999999998,
+              32.17
+            ],
+            [
+              130.54999999999998,
+              32.63
+            ],
+            [
+              130.15,
+              32.63
+            ],
+            [
+              130.15,
+              32.17
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "areaCode": "742",
+        "name": "熊本県球磨",
+        "maxIntensity": "1",
+        "geometryKind": "station-envelope",
+        "officialBoundary": false
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              130.61,
+              32.160000000000004
+            ],
+            [
+              131.04999999999998,
+              32.160000000000004
+            ],
+            [
+              131.04999999999998,
+              32.44
+            ],
+            [
+              130.61,
+              32.44
+            ],
+            [
+              130.61,
+              32.160000000000004
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "areaCode": "732",
+        "name": "長崎県島原半島",
+        "maxIntensity": "2",
+        "geometryKind": "station-envelope",
+        "officialBoundary": false
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              130.11,
+              32.57
+            ],
+            [
+              130.4,
+              32.57
+            ],
+            [
+              130.4,
+              32.9
+            ],
+            [
+              130.11,
+              32.9
+            ],
+            [
+              130.11,
+              32.57
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "areaCode": "760",
+        "name": "宮崎県北部平野部",
+        "maxIntensity": "1",
+        "geometryKind": "station-envelope",
+        "officialBoundary": false
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              131.35,
+              32.07
+            ],
+            [
+              131.72,
+              32.07
+            ],
+            [
+              131.72,
+              32.74
+            ],
+            [
+              131.35,
+              32.74
+            ],
+            [
+              131.35,
+              32.07
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "areaCode": "761",
+        "name": "宮崎県北部山沿い",
+        "maxIntensity": "1",
+        "geometryKind": "station-envelope",
+        "officialBoundary": false
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              131.11,
+              32.4
+            ],
+            [
+              131.45999999999998,
+              32.4
+            ],
+            [
+              131.45999999999998,
+              32.75
+            ],
+            [
+              131.11,
+              32.75
+            ],
+            [
+              131.11,
+              32.4
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "areaCode": "770",
+        "name": "鹿児島県薩摩",
+        "maxIntensity": "1",
+        "geometryKind": "station-envelope",
+        "officialBoundary": false
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              130.14000000000001,
+              31.77
+            ],
+            [
+              130.73999999999998,
+              31.77
+            ],
+            [
+              130.73999999999998,
+              32.32
+            ],
+            [
+              130.14000000000001,
+              32.32
+            ],
+            [
+              130.14000000000001,
+              31.77
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

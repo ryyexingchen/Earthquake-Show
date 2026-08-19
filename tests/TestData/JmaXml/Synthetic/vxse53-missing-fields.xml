@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://xml.kishou.go.jp/jmaxml1/" xmlns:jmx="http://xml.kishou.go.jp/jmaxml1/">
+  <Control>
+    <Title>震源・震度に関する情報</Title>
+    <DateTime>2098-12-31T15:01:00Z</DateTime>
+    <Status>通常</Status>
+    <EditorialOffice>テスト気象台</EditorialOffice>
+    <PublishingOffice>テスト気象台</PublishingOffice>
+  </Control>
+  <Head xmlns="http://xml.kishou.go.jp/jmaxml1/informationBasis1/">
+    <Title>震源・震度情報</Title>
+    <ReportDateTime>2099-01-01T00:01:00+09:00</ReportDateTime>
+    <TargetDateTime>2099-01-01T00:01:00+09:00</TargetDateTime>
+    <EventID>20990101000000</EventID>
+    <InfoType>発表</InfoType>
+    <Serial>1</Serial>
+    <InfoKind>地震情報</InfoKind>
+    <InfoKindVersion>1.0_1</InfoKindVersion>
+    <Headline>
+      <Text>字段缺失测试专用报文，不是气象厅发布内容。</Text>
+    </Headline>
+  </Head>
+  <Body xmlns="http://xml.kishou.go.jp/jmaxml1/body/seismology1/" xmlns:jmx_eb="http://xml.kishou.go.jp/jmaxml1/elementBasis1/">
+    <Earthquake>
+      <OriginTime>2099-01-01T00:00:00+09:00</OriginTime>
+      <Hypocenter>
+        <Area>
+          <Name>震源不明</Name>
+          <Code type="震央地名">000</Code>
+        </Area>
+      </Hypocenter>
+      <jmx_eb:Magnitude type="Mj" condition="Ｍ不明">NaN</jmx_eb:Magnitude>
+    </Earthquake>
+    <Intensity>
+      <Observation>
+        <CodeDefine>
+          <Type xpath="Pref/Code">地震情報／都道府県等</Type>
+          <Type xpath="Pref/Area/Code">地震情報／細分区域</Type>
+          <Type xpath="Pref/Area/City/Code">気象・地震・火山情報／市町村等</Type>
+          <Type xpath="Pref/Area/City/IntensityStation/Code">震度観測点</Type>
+        </CodeDefine>
+        <MaxInt>4</MaxInt>
+        <Pref>
+          <Name>测试县</Name>
+          <Code>99</Code>
+          <MaxInt>4</MaxInt>
+          <Area>
+            <Name>测试区域</Name>
+            <Code>999</Code>
+            <MaxInt>4</MaxInt>
+            <City>
+              <Name>测试市</Name>
+              <Code>9999900</Code>
+              <MaxInt>4</MaxInt>
+              <IntensityStation>
+                <Name>坐标不明观测点＊</Name>
+                <Code>9999999</Code>
+                <Int>4</Int>
+              </IntensityStation>
+            </City>
+          </Area>
+        </Pref>
+      </Observation>
+    </Intensity>
+  </Body>
+</Report>

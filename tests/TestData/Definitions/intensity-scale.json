@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "note": "Earthquake Show 测试与显示定义；颜色不是 JMA 官方配色，状态必须同时显示文字。",
+  "levels": [
+    { "code": "unknown", "jmaText": "不明", "sortRank": 0, "color": "#767676", "textColor": "#FFFFFF" },
+    { "code": "1", "jmaText": "1", "sortRank": 1, "color": "#F2F2FF", "textColor": "#202124" },
+    { "code": "2", "jmaText": "2", "sortRank": 2, "color": "#A0D2FF", "textColor": "#202124" },
+    { "code": "3", "jmaText": "3", "sortRank": 3, "color": "#4CB4FF", "textColor": "#202124" },
+    { "code": "4", "jmaText": "4", "sortRank": 4, "color": "#FFF000", "textColor": "#202124" },
+    { "code": "5-lower", "jmaText": "5弱", "sortRank": 5, "color": "#FFAA00", "textColor": "#202124" },
+    { "code": "5-upper", "jmaText": "5強", "sortRank": 6, "color": "#FF6400", "textColor": "#202124" },
+    { "code": "6-lower", "jmaText": "6弱", "sortRank": 7, "color": "#FF2800", "textColor": "#FFFFFF" },
+    { "code": "6-upper", "jmaText": "6強", "sortRank": 8, "color": "#A00000", "textColor": "#FFFFFF" },
+    { "code": "7", "jmaText": "7", "sortRank": 9, "color": "#960096", "textColor": "#FFFFFF" }
+  ]
+}

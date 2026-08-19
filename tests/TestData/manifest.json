@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "datasetVersion": "0.3.0",
+  "retrievedDate": "2026-08-19",
+  "feedUrl": "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml",
+  "fixtures": [
+    {
+      "id": "official-vxse51",
+      "reportCode": "VXSE51",
+      "path": "JmaXml/Official/20260818221220_0_VXSE51_010000.xml",
+      "origin": {
+        "kind": "official",
+        "url": "https://www.data.jma.go.jp/developer/xml/data/20260818221220_0_VXSE51_010000.xml",
+        "retrievedDate": "2026-08-19"
+      },
+      "sha256": "00e0618106ce8c6a8ecb30de9c23bf541c2a45d442054e8398eee19faffbd620",
+      "expected": {
+        "eventId": "20260819071048",
+        "infoType": "発表",
+        "serial": null,
+        "maxIntensity": "3",
+        "magnitude": null,
+        "hasHypocenterCoordinate": false,
+        "prefectureCount": 1,
+        "areaCount": 1,
+        "cityCount": 0,
+        "stationCount": 0
+      }
+    },
+    {
+      "id": "official-vxse52",
+      "reportCode": "VXSE52",
+      "path": "JmaXml/Official/20260818221317_0_VXSE52_270000.xml",
+      "origin": {
+        "kind": "official",
+        "url": "https://www.data.jma.go.jp/developer/xml/data/20260818221317_0_VXSE52_270000.xml",
+        "retrievedDate": "2026-08-19"
+      },
+      "sha256": "c8d78639b931a3c593548d8c71ecc9b81c7022aa796423aa8f06e77957dc3067",
+      "expected": {
+        "eventId": "20260819071048",
+        "infoType": "発表",
+        "serial": null,
+        "maxIntensity": null,
+        "magnitude": 3.8,
+        "hasHypocenterCoordinate": true,
+        "prefectureCount": 0,
+        "areaCount": 0,
+        "cityCount": 0,
+        "stationCount": 0
+      }
+    },
+    {
+      "id": "official-vxse53",
+      "reportCode": "VXSE53",
+      "path": "JmaXml/Official/20260818221432_0_VXSE53_270000.xml",
+      "origin": {
+        "kind": "official",
+        "url": "https://www.data.jma.go.jp/developer/xml/data/20260818221432_0_VXSE53_270000.xml",
+        "retrievedDate": "2026-08-19"
+      },
+      "sha256": "3b53e6054e8c5721ecf21b511bcf80ef7b7911cedb0dbe5db27b59793ad972ae",
+      "expected": {
+        "eventId": "20260819071048",
+        "infoType": "発表",
+        "serial": "1",
+        "maxIntensity": "3",
+        "magnitude": 3.8,
+        "hasHypocenterCoordinate": true,
+        "prefectureCount": 4,
+        "areaCount": 7,
+        "cityCount": 41,
+        "stationCount": 75
+      }
+    },
+    {
+      "id": "synthetic-vxse53-correction",
+      "reportCode": "VXSE53",
+      "path": "JmaXml/Synthetic/vxse53-correction.xml",
+      "origin": {
+        "kind": "synthetic",
+        "basedOn": "JmaXml/Official/20260818221432_0_VXSE53_270000.xml",
+        "changes": ["Control/DateTime", "ReportDateTime", "TargetDateTime", "InfoType", "Serial", "Magnitude"]
+      },
+      "sha256": "83d9605810e202d271baa331e716dcea286150c7b4d9bb93373e9aaa7c106ae9",
+      "expected": {
+        "eventId": "20260819071048",
+        "infoType": "訂正",
+        "serial": "2",
+        "maxIntensity": "3",
+        "magnitude": 3.9,
+        "hasHypocenterCoordinate": true,
+        "prefectureCount": 4,
+        "areaCount": 7,
+        "cityCount": 41,
+        "stationCount": 75
+      }
+    },
+    {
+      "id": "synthetic-vxse53-missing-fields",
+      "reportCode": "VXSE53",
+      "path": "JmaXml/Synthetic/vxse53-missing-fields.xml",
+      "origin": {
+        "kind": "synthetic",
+        "purpose": "验证震级不明、震源无坐标、观测点无法补齐坐标和可选字段缺失"
+      },
+      "sha256": "7e0ffefa1672204560693a206986aec61235ab57a4ea5e2e6596ff5d317dfabf",
+      "expected": {
+        "eventId": "20990101000000",
+        "infoType": "発表",
+        "serial": "1",
+        "maxIntensity": "4",
+        "magnitude": null,
+        "hasHypocenterCoordinate": false,
+        "prefectureCount": 1,
+        "areaCount": 1,
+        "cityCount": 1,
+        "stationCount": 1,
+        "unresolvedStationCodes": ["9999999"]
+      }
+    }
+  ],
+  "assets": [
+    {
+      "id": "jma-stations",
+      "path": "JmaStations.csv",
+      "sha256": "7ab3717f42d403650e94a7bb2c06c79a47de1a7015cbd6365e7e1e80de848d57",
+      "source": "https://www.data.jma.go.jp/eqev/data/intens-st/stations.json",
+      "expectedRecordCount": 75
+    },
+    {
+      "id": "jma-area-test-envelopes",
+      "path": "Gis/jma-area-test-envelopes.geojson",
+      "sha256": "a9b39a2fdbd68253b3e4be2ed51768aa509cf21cad45ad5edd90cdd1c432696d",
+      "source": "由官方 VXSE53 区域归属和官方观测点坐标派生的测试包络，不是官方边界",
+      "expectedRecordCount": 7
+    },
+    {
+      "id": "intensity-scale",
+      "path": "Definitions/intensity-scale.json",
+      "sha256": "1dcd194398bb668b01668c97f7447be38d15354b6ccf799bf9836fb7408d6827",
+      "source": "Earthquake Show 测试与显示定义",
+      "expectedRecordCount": 10
+    }
+  ]
+}
