@@ -108,6 +108,20 @@ public sealed class DomainModelTests
         Assert.Equal(report, earthquakeEvent.Reports[0]);
     }
 
+    [Fact]
+    public void EarthquakeEvent_DefaultTimeline_HasNoDerivedReportOrSummary()
+    {
+        var earthquakeEvent = new EarthquakeEvent
+        {
+            EventId = "20260819071048",
+            Reports = default,
+        };
+
+        Assert.Null(earthquakeEvent.LatestReport);
+        Assert.Null(earthquakeEvent.LatestEffectiveReport);
+        Assert.Null(earthquakeEvent.Summary);
+    }
+
     private static EarthquakeReport CreateReport(
         DateTimeOffset timestamp,
         SourceReference source)

@@ -6,11 +6,12 @@
 
 - 正式技术路线：`C# + .NET 8 + WPF`
 - 产品形态：Windows 原生桌面应用，不使用浏览器、WebView 或本地 Web 服务
-- 当前版本：`0.4.0`
+- 当前版本：`0.5.0`
 - 已实现：原生主窗口外壳、地震事件空状态、地图占位区、四个详情标签、JST 时钟和底部状态栏
 - 固定数据：同一事件的官方 `VXSE51/52/53`、订正与缺字段夹具、75 个观测点坐标、7 个区域测试包络和震度定义
 - 领域模型：地震事件、报文、震源、震度区域/市町村/观测点、来源引用与来源状态
-- 下一步：实现同一事件的报文合并、去重和稳定排序
+- 事件归并：按事件合并报文、按来源消息去重、稳定排序，并生成支持订正和取消状态的事件摘要
+- 下一步：建立页面状态和数据访问边界
 
 `0.1.0` Tauri/Vue 技术原型已停止开发，并于 2026-08-19 按用户要求从工作区删除；历史决策保留在版本记录和工程实现文档中。
 
@@ -22,17 +23,26 @@
 - Microsoft.Data.Sqlite：本地事件和报文缓存。
 - xUnit：领域逻辑和数据适配器测试。
 
-## 开发运行
+## 正式执行入口
 
 ```powershell
-dotnet restore
-dotnet build EarthquakeShow.sln
-dotnet test EarthquakeShow.sln
-dotnet run --project src\EarthquakeShow.App
-python tools\validate_test_data.py
+dotnet run --project src\EarthquakeShow.App --configuration Release
 ```
 
-当前应用界面仍只展示原生桌面外壳，固定数据和领域模型尚未接入 UI；地图、缓存、报文解析和网络数据源仍未实现。
+## 测试入口
+
+```powershell
+dotnet test EarthquakeShow.sln --configuration Release
+```
+
+首次开发或依赖变化后先执行 `dotnet restore`。完整开发校验还包括：
+
+```powershell
+dotnet build EarthquakeShow.sln --configuration Release
+python -X utf8 tools\validate_test_data.py
+```
+
+当前应用界面仍只展示原生桌面外壳，固定数据、领域模型和事件归并服务尚未接入 UI；地图、缓存、报文解析和网络数据源仍未实现。
 
 ## 项目文档
 
