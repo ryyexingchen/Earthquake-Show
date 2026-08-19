@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows.Threading;
+using EarthquakeShow.Core.Services;
 
 namespace EarthquakeShow.App.ViewModels;
 
@@ -12,11 +13,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time");
 
     private readonly DispatcherTimer _clockTimer;
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
     private string _currentTime = string.Empty;
+    private bool _isDisposed;
 
     public MainWindowViewModel()
     {
         AppVersion = GetAppVersion();
+        EarthquakePage = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository());
         UpdateClock();
 
         _clockTimer = new DispatcherTimer(DispatcherPriority.Background)
@@ -50,10 +55,26 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public string AppVersion { get; }
 
+    public EarthquakePageViewModel EarthquakePage { get; }
+
+    public ValueTask InitializeAsync()
+    {
+        return EarthquakePage.LoadAsync(_lifetimeCancellation.Token);
+    }
+
     public void Dispose()
     {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _isDisposed = true;
+        _lifetimeCancellation.Cancel();
         _clockTimer.Stop();
         _clockTimer.Tick -= OnClockTick;
+        EarthquakePage.Dispose();
+        _lifetimeCancellation.Dispose();
     }
 
     private static string GetAppVersion()

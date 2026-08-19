@@ -12,6 +12,8 @@
 - `Definitions/intensity-scale.json`：震度标准化、排序和应用显示颜色定义。
 - `manifest.json`：每份数据的来源、哈希和预期解析结果。
 
+字段、空值、编码和文件结构的长期约定参见[数据契约与格式](../../docs/数据契约与格式.md)。
+
 ## 来源
 
 - JMA 地震火山 Feed：<https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml>

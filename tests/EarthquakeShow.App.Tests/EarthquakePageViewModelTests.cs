@@ -1,0 +1,192 @@
+using System.Collections.Immutable;
+using EarthquakeShow.App.ViewModels;
+using EarthquakeShow.Core.Abstractions;
+using EarthquakeShow.Core.Models;
+using EarthquakeShow.Core.Services;
+using Xunit;
+
+namespace EarthquakeShow.App.Tests;
+
+public sealed class EarthquakePageViewModelTests
+{
+    private static readonly DateTimeOffset BaseTime =
+        new(2026, 8, 19, 7, 10, 0, TimeSpan.FromHours(9));
+
+    [Fact]
+    public async Task Load_SelectsNewestEventAndLatestReport()
+    {
+        EarthquakeReport older = CreateReport("event-old", "old", 1);
+        EarthquakeReport newerFirst = CreateReport("event-new", "new-1", 2);
+        EarthquakeReport newerLatest = CreateReport("event-new", "new-2", 3);
+        using var viewModel = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([older, newerLatest, newerFirst]));
+
+        await viewModel.LoadAsync();
+
+        Assert.Equal(EarthquakePageLoadState.Ready, viewModel.State.LoadState);
+        Assert.Equal("event-new", viewModel.State.SelectedEvent?.EventId);
+        Assert.Equal("new-2", viewModel.State.ViewedReport?.Source.SourceMessageId);
+    }
+
+    [Fact]
+    public async Task RepositoryUpdate_PreservesSelectedEventAndViewedReport()
+    {
+        EarthquakeReport historyFirst = CreateReport("history", "history-1", 1);
+        EarthquakeReport historyLatest = CreateReport("history", "history-2", 2);
+        EarthquakeReport current = CreateReport("current", "current-1", 3);
+        var repository = new InMemoryEarthquakeEventRepository(
+            [historyFirst, historyLatest, current]);
+        using var viewModel = new EarthquakePageViewModel(repository);
+        await viewModel.LoadAsync();
+        Assert.True(viewModel.SelectEvent("history"));
+        Assert.True(viewModel.SelectReport("jma-xml", "history-1"));
+
+        repository.ApplyReports([
+            CreateReport("history", "history-3", 4),
+            CreateReport("new-event", "new-event-1", 5),
+        ]);
+
+        Assert.Equal("history", viewModel.State.SelectedEvent?.EventId);
+        Assert.Equal("history-1", viewModel.State.ViewedReport?.Source.SourceMessageId);
+    }
+
+    [Fact]
+    public async Task SelectEventAndReturnToLatest_UpdateViewedReport()
+    {
+        var repository = new InMemoryEarthquakeEventRepository([
+            CreateReport("event-a", "a-1", 1),
+            CreateReport("event-a", "a-2", 2),
+            CreateReport("event-b", "b-1", 3),
+        ]);
+        using var viewModel = new EarthquakePageViewModel(repository);
+        await viewModel.LoadAsync();
+
+        Assert.True(viewModel.SelectEvent("event-a"));
+        Assert.True(viewModel.SelectReport("jma-xml", "a-1"));
+        Assert.Equal("a-1", viewModel.State.ViewedReport?.Source.SourceMessageId);
+
+        viewModel.ReturnToLatestReport();
+
+        Assert.Equal("a-2", viewModel.State.ViewedReport?.Source.SourceMessageId);
+        Assert.False(viewModel.SelectEvent("missing"));
+    }
+
+    [Fact]
+    public async Task Load_RepositoryFailure_StoresErrorState()
+    {
+        var repository = new TestRepository
+        {
+            ListException = new InvalidOperationException("测试读取失败"),
+        };
+        using var viewModel = new EarthquakePageViewModel(repository);
+
+        await viewModel.LoadAsync();
+
+        Assert.Equal(EarthquakePageLoadState.Error, viewModel.State.LoadState);
+        Assert.Equal("测试读取失败", viewModel.State.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task Refresh_DelegatesToRepositoryAndClearsRefreshingState()
+    {
+        var repository = new TestRepository
+        {
+            Events = EarthquakeEventMerger.Merge([
+                CreateReport("event", "message", 1),
+            ]),
+        };
+        using var viewModel = new EarthquakePageViewModel(repository);
+
+        await viewModel.RefreshAsync();
+
+        Assert.Equal(1, repository.RefreshCount);
+        Assert.False(viewModel.State.IsRefreshing);
+        Assert.Equal(EarthquakePageLoadState.Ready, viewModel.State.LoadState);
+    }
+
+    [Fact]
+    public void PageOptions_AreStoredWithoutApplyingStepSevenFiltering()
+    {
+        using var viewModel = new EarthquakePageViewModel(new TestRepository());
+        var map = new EarthquakeMapViewState
+        {
+            FocusMode = EarthquakeMapFocusMode.SelectedEvent,
+            FollowSelection = false,
+        };
+        var sourceStatus = new SourceStatus(
+            "jma-xml",
+            SourceConnectionState.Disconnected,
+            BaseTime);
+
+        viewModel.SetSearchText("  熊本  ");
+        viewModel.SetSortOrder(EarthquakeEventSortOrder.HighestIntensity);
+        viewModel.SetMapViewState(map);
+        viewModel.SetSourceState([sourceStatus], isOffline: true);
+
+        Assert.Equal("熊本", viewModel.State.SearchText);
+        Assert.Equal(EarthquakeEventSortOrder.HighestIntensity, viewModel.State.SortOrder);
+        Assert.Equal(map, viewModel.State.Map);
+        Assert.Equal(sourceStatus, Assert.Single(viewModel.State.SourceStatuses));
+        Assert.True(viewModel.State.IsOffline);
+    }
+
+    private static EarthquakeReport CreateReport(
+        string eventId,
+        string sourceMessageId,
+        int issuedMinute)
+    {
+        DateTimeOffset issuedAt = BaseTime.AddMinutes(issuedMinute);
+        return new EarthquakeReport
+        {
+            EventId = eventId,
+            ReportCode = "VXSE53",
+            Status = ReportStatus.Issued,
+            Context = ReportContext.Normal,
+            IssuedAt = issuedAt,
+            ReceivedAt = issuedAt.AddSeconds(1),
+            Source = new SourceReference("jma-xml", sourceMessageId),
+        };
+    }
+
+    private sealed class TestRepository : IEarthquakeEventRepository
+    {
+        public event EventHandler<EarthquakeEventsChangedEventArgs>? EventsChanged;
+
+        public ImmutableArray<EarthquakeEvent> Events { get; init; } = [];
+
+        public Exception? ListException { get; init; }
+
+        public int RefreshCount { get; private set; }
+
+        public ValueTask<ImmutableArray<EarthquakeEvent>> ListEventsAsync(
+            CancellationToken cancellationToken = default)
+        {
+            if (ListException is not null)
+            {
+                throw ListException;
+            }
+
+            return ValueTask.FromResult(Events);
+        }
+
+        public ValueTask<EarthquakeEvent?> GetEventAsync(
+            string eventId,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult(
+                Events.FirstOrDefault(earthquakeEvent =>
+                    earthquakeEvent.EventId == eventId));
+        }
+
+        public ValueTask RefreshAsync(CancellationToken cancellationToken = default)
+        {
+            RefreshCount++;
+            return ValueTask.CompletedTask;
+        }
+
+        public void Publish(ImmutableArray<EarthquakeEvent> events)
+        {
+            EventsChanged?.Invoke(this, new EarthquakeEventsChangedEventArgs(events));
+        }
+    }
+}
