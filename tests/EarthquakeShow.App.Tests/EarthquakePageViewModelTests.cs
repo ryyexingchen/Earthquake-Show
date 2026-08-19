@@ -26,6 +26,8 @@ public sealed class EarthquakePageViewModelTests
         Assert.Equal(EarthquakePageLoadState.Ready, viewModel.State.LoadState);
         Assert.Equal("event-new", viewModel.State.SelectedEvent?.EventId);
         Assert.Equal("new-2", viewModel.State.ViewedReport?.Source.SourceMessageId);
+        Assert.Equal("2 条", viewModel.Display.EventCountText);
+        Assert.Equal("来源：jma-xml", viewModel.Display.SourceText);
     }
 
     [Fact]

@@ -22,6 +22,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         AppVersion = GetAppVersion();
         EarthquakePage = new EarthquakePageViewModel(
             new InMemoryEarthquakeEventRepository());
+        Layout = new WindowLayoutViewModel();
         UpdateClock();
 
         _clockTimer = new DispatcherTimer(DispatcherPriority.Background)
@@ -49,13 +50,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public string NetworkStatus => "网络未连接";
+    public string CacheStatus => "缓存：未初始化";
 
-    public string CacheStatus => "缓存未初始化";
+    public string MapDataStatus => "地图：未安装";
 
     public string AppVersion { get; }
 
     public EarthquakePageViewModel EarthquakePage { get; }
+
+    public WindowLayoutViewModel Layout { get; }
 
     public ValueTask InitializeAsync()
     {

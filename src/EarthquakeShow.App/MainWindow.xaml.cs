@@ -14,6 +14,23 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = _viewModel;
+        SizeChanged += OnWindowSizeChanged;
+        UpdateLayout(Width);
+    }
+
+    private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdateLayout(e.NewSize.Width);
+    }
+
+    private void OnOpenDetailsClick(object sender, RoutedEventArgs e)
+    {
+        _viewModel.Layout.OpenDetailsPane();
+    }
+
+    private void OnCloseDetailsClick(object sender, RoutedEventArgs e)
+    {
+        _viewModel.Layout.CloseDetailsPane();
     }
 
     protected override async void OnContentRendered(EventArgs e)
@@ -36,7 +53,16 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        SizeChanged -= OnWindowSizeChanged;
         _viewModel.Dispose();
         base.OnClosed(e);
+    }
+
+    private void UpdateLayout(double width)
+    {
+        _viewModel.Layout.UpdateWidth(width);
+        DetailsColumn.Width = _viewModel.Layout.IsCompactLayout
+            ? new GridLength(0)
+            : new GridLength(380);
     }
 }

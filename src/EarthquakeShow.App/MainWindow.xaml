@@ -10,6 +10,10 @@
         MinWidth="1180"
         MinHeight="720"
         WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </Window.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="52" />
@@ -24,8 +28,13 @@
                 BorderThickness="0,0,0,1">
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="220" />
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="82" />
+                    <ColumnDefinition Width="176" />
+                    <ColumnDefinition Width="38" />
+                    <ColumnDefinition Width="38" />
+                    <ColumnDefinition Width="174" />
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0"
@@ -49,31 +58,90 @@
                                Text="Earthquake Show" />
                 </StackPanel>
 
-                <StackPanel Grid.Column="1"
-                            Orientation="Horizontal"
-                            VerticalAlignment="Center">
-                    <Border Margin="0,0,8,0"
-                            Padding="9,5"
-                            Background="{StaticResource OfflineSoftBrush}"
-                            BorderBrush="#E3B7B2"
-                            BorderThickness="1"
-                            CornerRadius="5">
-                        <TextBlock Foreground="{StaticResource OfflineBrush}"
-                                   FontSize="12"
-                                   FontWeight="SemiBold"
-                                   Text="离线" />
-                    </Border>
-                    <Border Padding="9,5"
-                            Background="{StaticResource SurfaceSubtleBrush}"
-                            BorderBrush="{StaticResource BorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="5">
-                        <TextBlock Foreground="{StaticResource MutedTextBrush}"
-                                   FontFamily="Consolas"
-                                   FontSize="12"
-                                   Text="{Binding CurrentTime}" />
-                    </Border>
-                </StackPanel>
+                <Border Grid.Column="2"
+                        Width="74"
+                        Padding="8,5"
+                        HorizontalAlignment="Center"
+                        BorderThickness="1"
+                        CornerRadius="5">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="{StaticResource SurfaceSubtleBrush}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding EarthquakePage.Display.HasOnlineSource}" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource OnlineSoftBrush}" />
+                                    <Setter Property="BorderBrush" Value="{StaticResource OnlineBorderBrush}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding EarthquakePage.Display.IsOffline}" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource OfflineSoftBrush}" />
+                                    <Setter Property="BorderBrush" Value="#E3B7B2" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding EarthquakePage.Display.HasError}" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource OfflineSoftBrush}" />
+                                    <Setter Property="BorderBrush" Value="#E3B7B2" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock HorizontalAlignment="Center"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               Text="{Binding EarthquakePage.Display.DataStatusText}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding EarthquakePage.Display.HasOnlineSource}" Value="True">
+                                        <Setter Property="Foreground" Value="{StaticResource OnlineBrush}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding EarthquakePage.Display.IsOffline}" Value="True">
+                                        <Setter Property="Foreground" Value="{StaticResource OfflineBrush}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding EarthquakePage.Display.HasError}" Value="True">
+                                        <Setter Property="Foreground" Value="{StaticResource OfflineBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Border>
+
+                <TextBlock Grid.Column="3"
+                           VerticalAlignment="Center"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           FontSize="11"
+                           Text="{Binding EarthquakePage.Display.LastReceivedText}"
+                           TextTrimming="CharacterEllipsis" />
+
+                <Button Grid.Column="4"
+                        AutomationProperties.Name="搜索"
+                        IsEnabled="False"
+                        Style="{StaticResource HeaderIconButtonStyle}"
+                        ToolTip="搜索">
+                    <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xE721;" />
+                </Button>
+
+                <Button Grid.Column="5"
+                        AutomationProperties.Name="设置"
+                        IsEnabled="False"
+                        Style="{StaticResource HeaderIconButtonStyle}"
+                        ToolTip="设置">
+                    <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xE713;" />
+                </Button>
+
+                <Border Grid.Column="6"
+                        Padding="9,5"
+                        Background="{StaticResource SurfaceSubtleBrush}"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="5">
+                    <TextBlock HorizontalAlignment="Center"
+                               Foreground="{StaticResource MutedTextBrush}"
+                               FontFamily="Consolas"
+                               FontSize="12"
+                               Text="{Binding CurrentTime}" />
+                </Border>
             </Grid>
         </Border>
 
@@ -82,7 +150,7 @@
                 <ColumnDefinition Width="68" />
                 <ColumnDefinition Width="280" />
                 <ColumnDefinition Width="*" MinWidth="360" />
-                <ColumnDefinition Width="380" />
+                <ColumnDefinition x:Name="DetailsColumn" Width="380" />
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0"
@@ -137,13 +205,51 @@
                                        VerticalAlignment="Bottom"
                                        Foreground="{StaticResource MutedTextBrush}"
                                        FontSize="12"
-                                       Text="0 条" />
+                                       Text="{Binding EarthquakePage.Display.EventCountText}" />
                         </Grid>
                     </Border>
 
                     <StackPanel Grid.Row="1"
                                 HorizontalAlignment="Center"
-                                VerticalAlignment="Center">
+                                VerticalAlignment="Center"
+                                Visibility="{Binding EarthquakePage.Display.IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock HorizontalAlignment="Center"
+                                   Foreground="{StaticResource AccentBrush}"
+                                   FontFamily="Segoe Fluent Icons"
+                                   FontSize="28"
+                                   Text="&#xE896;" />
+                        <TextBlock Margin="0,10,0,0"
+                                   Style="{StaticResource EmptyTitleTextStyle}"
+                                   Text="{Binding EarthquakePage.Display.EventListTitle}" />
+                        <TextBlock Margin="0,6,0,0"
+                                   Style="{StaticResource EmptyBodyTextStyle}"
+                                   Text="{Binding EarthquakePage.Display.EventListMessage}" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1"
+                                MaxWidth="220"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Visibility="{Binding EarthquakePage.Display.ShowErrorState, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock HorizontalAlignment="Center"
+                                   Foreground="{StaticResource OfflineBrush}"
+                                   FontFamily="Segoe Fluent Icons"
+                                   FontSize="28"
+                                   Text="&#xEA39;" />
+                        <TextBlock Margin="0,10,0,0"
+                                   Style="{StaticResource EmptyTitleTextStyle}"
+                                   Text="{Binding EarthquakePage.Display.EventListTitle}" />
+                        <TextBlock Margin="0,6,0,0"
+                                   Style="{StaticResource EmptyBodyTextStyle}"
+                                   Text="{Binding EarthquakePage.Display.EventListMessage}"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Visibility="{Binding EarthquakePage.Display.ShowEmptyState, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <TextBlock HorizontalAlignment="Center"
                                    Foreground="{StaticResource MutedTextBrush}"
                                    FontFamily="Segoe Fluent Icons"
@@ -151,36 +257,63 @@
                                    Text="&#xE8B7;" />
                         <TextBlock Margin="0,10,0,0"
                                    Style="{StaticResource EmptyTitleTextStyle}"
-                                   Text="暂无地震事件" />
+                                   Text="{Binding EarthquakePage.Display.EventListTitle}" />
                         <TextBlock Margin="0,6,0,0"
                                    Style="{StaticResource EmptyBodyTextStyle}"
-                                   Text="本地缓存尚未建立" />
+                                   Text="{Binding EarthquakePage.Display.EventListMessage}" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Visibility="{Binding EarthquakePage.Display.HasEvents, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock HorizontalAlignment="Center"
+                                   Foreground="{StaticResource AccentBrush}"
+                                   FontFamily="Segoe Fluent Icons"
+                                   FontSize="28"
+                                   Text="&#xE8FD;" />
+                        <TextBlock Margin="0,10,0,0"
+                                   Style="{StaticResource EmptyTitleTextStyle}"
+                                   Text="{Binding EarthquakePage.Display.EventListTitle}" />
+                        <TextBlock Margin="0,6,0,0"
+                                   Style="{StaticResource EmptyBodyTextStyle}"
+                                   Text="{Binding EarthquakePage.Display.EventListMessage}" />
                     </StackPanel>
                 </Grid>
             </Border>
 
             <Grid Grid.Column="2" Background="{StaticResource BackgroundBrush}">
-                <StackPanel Margin="12"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Top"
-                            Orientation="Horizontal">
-                    <Button IsEnabled="False"
-                            Style="{StaticResource MapToolButtonStyle}"
-                            ToolTip="放大"
-                            Content="+" />
-                    <Button IsEnabled="False"
-                            Style="{StaticResource MapToolButtonStyle}"
-                            ToolTip="缩小"
-                            Content="−" />
-                    <Button IsEnabled="False"
-                            Style="{StaticResource MapToolButtonStyle}"
-                            ToolTip="恢复日本全图"
-                            Content="⌖" />
-                    <Button IsEnabled="False"
-                            Style="{StaticResource MapToolButtonStyle}"
-                            ToolTip="地图图层"
-                            Content="层" />
-                </StackPanel>
+                <Grid Margin="12" VerticalAlignment="Top">
+                    <Button Width="34"
+                            Height="34"
+                            HorizontalAlignment="Left"
+                            AutomationProperties.Name="打开事件详情"
+                            Click="OnOpenDetailsClick"
+                            Style="{StaticResource HeaderIconButtonStyle}"
+                            ToolTip="打开事件详情"
+                            Visibility="{Binding Layout.IsCompactLayout, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xE8A0;" />
+                    </Button>
+
+                    <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                        <Button IsEnabled="False"
+                                Style="{StaticResource MapToolButtonStyle}"
+                                ToolTip="放大"
+                                Content="+" />
+                        <Button IsEnabled="False"
+                                Style="{StaticResource MapToolButtonStyle}"
+                                ToolTip="缩小"
+                                Content="−" />
+                        <Button IsEnabled="False"
+                                Style="{StaticResource MapToolButtonStyle}"
+                                ToolTip="恢复日本全图"
+                                Content="⌖" />
+                        <Button IsEnabled="False"
+                                Style="{StaticResource MapToolButtonStyle}"
+                                ToolTip="地图图层"
+                                Content="层" />
+                    </StackPanel>
+                </Grid>
 
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock HorizontalAlignment="Center"
@@ -197,42 +330,69 @@
                 </StackPanel>
             </Grid>
 
-            <Border Grid.Column="3"
+            <Border Grid.Column="2"
+                    Grid.ColumnSpan="2"
+                    Width="380"
+                    HorizontalAlignment="Right"
                     Background="{StaticResource SurfaceBrush}"
                     BorderBrush="{StaticResource BorderStrongBrush}"
-                    BorderThickness="1,0,0,0">
-                <TabControl>
-                    <TabItem Header="摘要">
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock HorizontalAlignment="Center"
-                                       Foreground="{StaticResource MutedTextBrush}"
-                                       FontFamily="Segoe Fluent Icons"
-                                       FontSize="28"
-                                       Text="&#xE9D9;" />
-                            <TextBlock Margin="0,10,0,0"
-                                       Style="{StaticResource EmptyTitleTextStyle}"
-                                       Text="未选择事件" />
-                            <TextBlock Margin="0,6,0,0"
+                    BorderThickness="1,0,0,0"
+                    Panel.ZIndex="4"
+                    Visibility="{Binding Layout.IsDetailsPaneVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid>
+                    <TabControl>
+                        <TabItem Header="摘要">
+                            <StackPanel MaxWidth="300"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <TextBlock HorizontalAlignment="Center"
+                                           Foreground="{StaticResource MutedTextBrush}"
+                                           FontFamily="Segoe Fluent Icons"
+                                           FontSize="28"
+                                           Text="&#xE9D9;" />
+                                <TextBlock Margin="0,10,0,0"
+                                           Style="{StaticResource EmptyTitleTextStyle}"
+                                           Text="{Binding EarthquakePage.Display.DetailsTitle}"
+                                           TextAlignment="Center"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Margin="0,6,0,0"
+                                           Style="{StaticResource EmptyBodyTextStyle}"
+                                           Text="{Binding EarthquakePage.Display.DetailsMessage}"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </TabItem>
+                        <TabItem Header="观测点">
+                            <TextBlock VerticalAlignment="Center"
                                        Style="{StaticResource EmptyBodyTextStyle}"
-                                       Text="从左侧事件列表选择一条地震情报" />
-                        </StackPanel>
-                    </TabItem>
-                    <TabItem Header="观测点">
-                        <TextBlock VerticalAlignment="Center"
-                                   Style="{StaticResource EmptyBodyTextStyle}"
-                                   Text="未选择事件" />
-                    </TabItem>
-                    <TabItem Header="时间线">
-                        <TextBlock VerticalAlignment="Center"
-                                   Style="{StaticResource EmptyBodyTextStyle}"
-                                   Text="未选择事件" />
-                    </TabItem>
-                    <TabItem Header="原始数据">
-                        <TextBlock VerticalAlignment="Center"
-                                   Style="{StaticResource EmptyBodyTextStyle}"
-                                   Text="未选择事件" />
-                    </TabItem>
-                </TabControl>
+                                       Text="{Binding EarthquakePage.Display.DetailsTitle}" />
+                        </TabItem>
+                        <TabItem Header="时间线">
+                            <TextBlock VerticalAlignment="Center"
+                                       Style="{StaticResource EmptyBodyTextStyle}"
+                                       Text="{Binding EarthquakePage.Display.DetailsTitle}" />
+                        </TabItem>
+                        <TabItem Header="原始数据">
+                            <TextBlock VerticalAlignment="Center"
+                                       Style="{StaticResource EmptyBodyTextStyle}"
+                                       Text="{Binding EarthquakePage.Display.DetailsTitle}" />
+                        </TabItem>
+                    </TabControl>
+
+                    <Button Width="30"
+                            Height="30"
+                            Margin="0,8,8,0"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            AutomationProperties.Name="关闭事件详情"
+                            Click="OnCloseDetailsClick"
+                            Panel.ZIndex="5"
+                            Style="{StaticResource HeaderIconButtonStyle}"
+                            ToolTip="关闭事件详情"
+                            Visibility="{Binding Layout.IsCompactLayout, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xE711;" />
+                    </Button>
+                </Grid>
             </Border>
         </Grid>
 
@@ -245,6 +405,8 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
@@ -252,14 +414,28 @@
                            VerticalAlignment="Center"
                            Foreground="{StaticResource MutedTextBrush}"
                            FontSize="11"
-                           Text="{Binding NetworkStatus}" />
+                           Text="{Binding EarthquakePage.Display.NetworkStatusText}" />
                 <TextBlock Grid.Column="1"
                            Margin="20,0,0,0"
                            VerticalAlignment="Center"
                            Foreground="{StaticResource MutedTextBrush}"
                            FontSize="11"
                            Text="{Binding CacheStatus}" />
+                <TextBlock Grid.Column="2"
+                           MaxWidth="220"
+                           Margin="20,0,0,0"
+                           VerticalAlignment="Center"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           FontSize="11"
+                           Text="{Binding EarthquakePage.Display.SourceText}"
+                           TextTrimming="CharacterEllipsis" />
                 <TextBlock Grid.Column="3"
+                           Margin="20,0,0,0"
+                           VerticalAlignment="Center"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           FontSize="11"
+                           Text="{Binding MapDataStatus}" />
+                <TextBlock Grid.Column="5"
                            VerticalAlignment="Center"
                            Foreground="{StaticResource MutedTextBrush}"
                            FontSize="11">

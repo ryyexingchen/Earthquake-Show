@@ -11,6 +11,7 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
     private readonly IEarthquakeEventRepository _repository;
     private readonly SynchronizationContext? _synchronizationContext;
     private EarthquakePageState _state = new();
+    private EarthquakePageDisplayState _display;
     private bool _isDisposed;
 
     public EarthquakePageViewModel(
@@ -19,6 +20,7 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _synchronizationContext = synchronizationContext ?? SynchronizationContext.Current;
+        _display = EarthquakePageDisplayState.Create(_state);
         _repository.EventsChanged += OnRepositoryEventsChanged;
     }
 
@@ -35,9 +37,13 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
             }
 
             _state = value;
+            _display = EarthquakePageDisplayState.Create(value);
             OnPropertyChanged();
+            OnPropertyChanged(nameof(Display));
         }
     }
+
+    public EarthquakePageDisplayState Display => _display;
 
     public async ValueTask LoadAsync(CancellationToken cancellationToken = default)
     {

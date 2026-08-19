@@ -13,6 +13,9 @@
     <Color x:Key="AccentSoftColor">#E8F2F9</Color>
     <Color x:Key="OfflineColor">#B33A32</Color>
     <Color x:Key="OfflineSoftColor">#F9EBE9</Color>
+    <Color x:Key="OnlineColor">#276749</Color>
+    <Color x:Key="OnlineSoftColor">#E8F3ED</Color>
+    <Color x:Key="OnlineBorderColor">#A9CFBA</Color>
 
     <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource BackgroundColor}" />
     <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}" />
@@ -27,6 +30,9 @@
     <SolidColorBrush x:Key="AccentSoftBrush" Color="{StaticResource AccentSoftColor}" />
     <SolidColorBrush x:Key="OfflineBrush" Color="{StaticResource OfflineColor}" />
     <SolidColorBrush x:Key="OfflineSoftBrush" Color="{StaticResource OfflineSoftColor}" />
+    <SolidColorBrush x:Key="OnlineBrush" Color="{StaticResource OnlineColor}" />
+    <SolidColorBrush x:Key="OnlineSoftBrush" Color="{StaticResource OnlineSoftColor}" />
+    <SolidColorBrush x:Key="OnlineBorderBrush" Color="{StaticResource OnlineBorderColor}" />
 
     <Style TargetType="Window">
         <Setter Property="FontFamily" Value="Segoe UI, Microsoft YaHei UI" />
@@ -125,6 +131,42 @@
                 <Setter Property="Opacity" Value="0.5" />
             </Trigger>
         </Style.Triggers>
+    </Style>
+
+    <Style x:Key="HeaderIconButtonStyle" TargetType="Button">
+        <Setter Property="Width" Value="32" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="5">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{StaticResource SurfaceSubtleBrush}" />
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.42" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style TargetType="TabControl">
