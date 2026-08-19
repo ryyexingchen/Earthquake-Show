@@ -1,2 +1,13 @@
 .codegraph/
 web_cache/
+tmp/
+.vs/
+.idea/
+bin/
+obj/
+TestResults/
+artifacts/
+publish/
+*.user
+*.suo
+*.log
