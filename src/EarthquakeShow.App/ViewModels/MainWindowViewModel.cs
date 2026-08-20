@@ -4,7 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows.Threading;
-using EarthquakeShow.Core.Services;
+using EarthquakeShow.App.Services;
 
 namespace EarthquakeShow.App.ViewModels;
 
@@ -22,7 +22,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         AppVersion = GetAppVersion();
         EarthquakePage = new EarthquakePageViewModel(
-            new InMemoryEarthquakeEventRepository());
+            FixedJmaXmlDataLoader.CreateRepository());
         EventList = new EarthquakeEventListViewModel(EarthquakePage);
         Map = new EarthquakeMapViewModel(
             EarthquakePage,
