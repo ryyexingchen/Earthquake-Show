@@ -5,7 +5,24 @@ using EarthquakeShow.Core.Services;
 
 namespace EarthquakeShow.App.ViewModels;
 
-public sealed record EarthquakeDetailField(string Label, string Value);
+public sealed record EarthquakeDetailField(string Label, string Value)
+{
+    public bool IsOverviewField => Label is "最大震度" or "震级" or "震源地" or "深度" or "海啸";
+}
+
+public sealed record EarthquakeSummaryOverviewViewModel(
+    string MaximumIntensityText,
+    bool HasMaximumIntensity,
+    string MagnitudeText,
+    bool HasMagnitude,
+    string HypocenterText,
+    bool HasHypocenter,
+    string DepthText,
+    bool HasDepth,
+    EarthquakeTsunamiStatusViewModel TsunamiStatus)
+{
+    public bool HasSourceDetails => HasMagnitude || HasHypocenter || HasDepth;
+}
 
 public sealed record EarthquakeTsunamiStatusViewModel(string Text, string Kind);
 
@@ -83,6 +100,10 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
 
     public EarthquakeTsunamiStatusViewModel TsunamiStatus { get; private set; } =
         new("津波 调查中", "Investigating");
+
+    public EarthquakeSummaryOverviewViewModel SummaryOverview { get; private set; } =
+        new(string.Empty, false, string.Empty, false, string.Empty, false, string.Empty, false,
+            new EarthquakeTsunamiStatusViewModel("津波 调查中", "Investigating"));
 
     public IReadOnlyList<EarthquakeSourceDifferenceItemViewModel> SourceDifferences { get; private set; } = [];
 
@@ -241,6 +262,16 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             SnapshotText = "请选择一个地震事件";
             SummaryFields = [];
             TsunamiStatus = new EarthquakeTsunamiStatusViewModel("津波 调查中", "Investigating");
+            SummaryOverview = new(
+                string.Empty,
+                false,
+                string.Empty,
+                false,
+                string.Empty,
+                false,
+                string.Empty,
+                false,
+                TsunamiStatus);
             SourceDifferences = [];
             EventAssociations = [];
             _allObservations = [];
@@ -262,6 +293,7 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             $"{GetReportTypeText(report)} · {GetStatusText(report.Status)}";
         SummaryFields = BuildSummaryFields(earthquakeEvent.EventId, report, displaySnapshot);
         TsunamiStatus = BuildTsunamiStatus(displaySnapshot.TsunamiComment);
+        SummaryOverview = BuildSummaryOverview(displaySnapshot);
         SourceDifferences = BuildSourceDifferences(earthquakeEvent, report);
         EventAssociations = BuildEventAssociations(earthquakeEvent);
         _allObservations = BuildObservations(report);
@@ -326,6 +358,8 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             fields.Add(new("震源・规模", "调查中"));
         }
 
+        fields.Add(new("海啸", BuildTsunamiStatus(displaySnapshot.TsunamiComment).Text));
+
         if (displaySnapshot.OriginTime is DateTimeOffset originTime)
         {
             fields.Add(new("发生时间", FormatTime(originTime)));
@@ -337,6 +371,35 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         fields.Add(new("状态", $"{GetStatusText(report.Status)} · {GetContextText(report.Context)}"));
         fields.Add(new("来源", report.Source.SourceId));
         return fields;
+    }
+
+    private static EarthquakeSummaryOverviewViewModel BuildSummaryOverview(
+        ReportDisplaySnapshot snapshot)
+    {
+        EarthquakeTsunamiStatusViewModel tsunamiStatus = BuildTsunamiStatus(snapshot.TsunamiComment);
+        string maximumIntensityText = snapshot.MaxIntensity is JmaIntensity intensity
+            ? GetIntensityText(intensity)
+            : string.Empty;
+        string magnitudeText = snapshot.Magnitude?.Value is double magnitude
+            ? $"M {magnitude:0.0}" +
+                (string.IsNullOrWhiteSpace(snapshot.Magnitude.Type)
+                    ? string.Empty
+                    : $" ({snapshot.Magnitude.Type})")
+            : string.Empty;
+        string hypocenterText = snapshot.Hypocenter?.Name ?? string.Empty;
+        string depthText = snapshot.Hypocenter?.DepthKm is int depth
+            ? $"{depth} km"
+            : string.Empty;
+        return new(
+            maximumIntensityText,
+            maximumIntensityText.Length > 0,
+            magnitudeText,
+            magnitudeText.Length > 0,
+            hypocenterText,
+            hypocenterText.Length > 0,
+            depthText,
+            depthText.Length > 0,
+            tsunamiStatus);
     }
 
     private static ReportDisplaySnapshot BuildDisplaySnapshot(
@@ -650,128 +713,98 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         EarthquakeReport current,
         ReportDisplaySnapshot currentSnapshot)
     {
-        if (previous is null)
-        {
-            return GetInitialSummary(current, currentSnapshot);
-        }
-
-        var changes = new List<string>();
-        if (current.Status != ReportStatus.Unknown)
+        var fields = new List<string>();
+        if (previous?.Status is ReportStatus previousStatus &&
+            current.Status != ReportStatus.Unknown)
         {
             AddKnownChange(
-                changes,
+                fields,
                 "状态",
-                previous.Status is ReportStatus previousStatus
-                    ? GetStatusText(previousStatus)
-                    : null,
+                GetStatusText(previousStatus),
                 GetStatusText(current.Status));
         }
 
-        if (current.MaxIntensity != JmaIntensity.Unknown)
-        {
-            AddKnownChange(
-                changes,
-                "最大震度",
-                previous.MaxIntensity is JmaIntensity intensity
-                    ? GetIntensityText(intensity)
-                    : null,
-                GetIntensityText(current.MaxIntensity));
-        }
+        AddCumulativeField(
+            fields,
+            "最大震度",
+            previous?.MaxIntensity is JmaIntensity previousIntensity
+                ? GetIntensityText(previousIntensity)
+                : null,
+            currentSnapshot.MaxIntensity is JmaIntensity intensity
+                ? GetIntensityText(intensity)
+                : null,
+            current.MaxIntensity != JmaIntensity.Unknown);
 
-        if (current.Magnitude is not null)
-        {
-            AddKnownChange(
-                changes,
-                "震级",
-                previous.Magnitude is null ? null : GetMagnitudeText(previous.Magnitude),
-                GetMagnitudeText(current.Magnitude));
-        }
+        AddCumulativeField(
+            fields,
+            "震级",
+            previous?.Magnitude is Magnitude previousMagnitude
+                ? GetMagnitudeText(previousMagnitude)
+                : null,
+            currentSnapshot.Magnitude is Magnitude magnitude
+                ? GetMagnitudeText(magnitude)
+                : null,
+            current.Magnitude is not null);
 
-        if (!string.IsNullOrWhiteSpace(current.Hypocenter?.Name))
-        {
-            AddKnownChange(
-                changes,
-                "震源地",
-                previous.Hypocenter?.Name,
-                current.Hypocenter.Name);
-        }
+        AddCumulativeField(
+            fields,
+            "震源地",
+            previous?.Hypocenter?.Name,
+            currentSnapshot.Hypocenter?.Name,
+            !string.IsNullOrWhiteSpace(current.Hypocenter?.Name));
 
-        if (current.Hypocenter?.DepthKm is int depth)
-        {
-            AddKnownChange(
-                changes,
-                "深度",
-                previous.Hypocenter?.DepthKm is int previousDepth
-                    ? $"{previousDepth} km"
-                    : null,
-                $"{depth} km");
-        }
+        AddCumulativeField(
+            fields,
+            "深度",
+            previous?.Hypocenter?.DepthKm is int previousDepth
+                ? $"{previousDepth} km"
+                : null,
+            currentSnapshot.Hypocenter?.DepthKm is int depth
+                ? $"{depth} km"
+                : null,
+            current.Hypocenter?.DepthKm is not null);
 
-        if (!string.IsNullOrWhiteSpace(current.TsunamiComment))
-        {
-            AddKnownChange(
-                changes,
-                "海啸",
-                previous.TsunamiComment is null
-                    ? null
-                    : BuildTsunamiStatus(previous.TsunamiComment).Text,
-                BuildTsunamiStatus(current.TsunamiComment).Text);
-        }
+        string? currentTsunami = currentSnapshot.TsunamiComment is string tsunamiComment
+            ? BuildTsunamiStatus(tsunamiComment).Text
+            : null;
+        AddCumulativeField(
+            fields,
+            "海啸",
+            previous?.TsunamiComment is string previousTsunami
+                ? BuildTsunamiStatus(previousTsunami).Text
+                : null,
+            currentTsunami,
+            !string.IsNullOrWhiteSpace(current.TsunamiComment));
 
         if (current.ReportType == EarthquakeReportType.SeismicIntensity &&
-            current.MaxIntensity != JmaIntensity.Unknown &&
-            previous.MaxIntensity is not null)
-        {
-            AddPersistedField(changes, "震级", currentSnapshot.Magnitude);
-            AddPersistedField(changes, "深度", currentSnapshot.Hypocenter?.DepthKm is int currentDepth
-                ? $"{currentDepth} km"
-                : null);
-            AddPersistedField(changes, "震源地", currentSnapshot.Hypocenter?.Name);
-            if (currentSnapshot.TsunamiComment is not null)
-            {
-                AddPersistedField(changes, "海啸", BuildTsunamiStatus(currentSnapshot.TsunamiComment).Text);
-            }
-        }
-
-        return changes.Count == 0 ? "无关键字段变化" : string.Join("；", changes);
-    }
-
-    private static string GetInitialSummary(
-        EarthquakeReport report,
-        ReportDisplaySnapshot snapshot)
-    {
-        var fields = new List<string>();
-        if (snapshot.MaxIntensity is JmaIntensity intensity)
-        {
-            fields.Add($"最大震度：{GetIntensityText(intensity)}");
-        }
-
-        if (report.ReportType == EarthquakeReportType.SeismicIntensity &&
-            snapshot.Hypocenter is null &&
-            snapshot.Magnitude is null)
+            currentSnapshot.Hypocenter is null &&
+            currentSnapshot.Magnitude is null)
         {
             fields.Add("震源・规模：调查中");
         }
-        else
+
+        return fields.Count == 0 ? "无关键字段变化" : string.Join("；", fields);
+    }
+
+    private static void AddCumulativeField(
+        List<string> fields,
+        string label,
+        string? previous,
+        string? current,
+        bool currentProvided)
+    {
+        if (string.IsNullOrWhiteSpace(current))
         {
-            if (snapshot.Magnitude is Magnitude magnitude)
-            {
-                fields.Add($"震级：{GetMagnitudeText(magnitude)}");
-            }
-
-            if (snapshot.Hypocenter?.DepthKm is int depth)
-            {
-                fields.Add($"深度：{depth} km");
-            }
-
-            if (!string.IsNullOrWhiteSpace(snapshot.Hypocenter?.Name))
-            {
-                fields.Add($"震源地：{snapshot.Hypocenter.Name}");
-            }
+            return;
         }
 
-        fields.Add($"海啸：{BuildTsunamiStatus(snapshot.TsunamiComment).Text}");
-        return string.Join("；", fields);
+        if (currentProvided && previous is not null && !string.Equals(previous, current, StringComparison.Ordinal))
+        {
+            fields.Add($"{label} {previous} → {current}");
+            return;
+        }
+
+        fields.Add($"{label}：{current}");
     }
 
     private static void AddKnownChange(
@@ -786,21 +819,6 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         }
 
         changes.Add(previous is null ? $"{label}：{current}" : $"{label} {previous} → {current}");
-    }
-
-    private static void AddPersistedField(
-        List<string> changes,
-        string label,
-        object? value)
-    {
-        if (value is Magnitude magnitude)
-        {
-            AddKnownChange(changes, label, null, GetMagnitudeText(magnitude));
-        }
-        else if (value is string text)
-        {
-            AddKnownChange(changes, label, null, text);
-        }
     }
 
     private static void AddChange(List<string> changes, string label, string previous, string current)
@@ -896,6 +914,7 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(SnapshotText));
         OnPropertyChanged(nameof(SummaryFields));
+        OnPropertyChanged(nameof(SummaryOverview));
         OnPropertyChanged(nameof(TsunamiStatus));
         OnPropertyChanged(nameof(SourceDifferences));
         OnPropertyChanged(nameof(HasSourceDifferences));

@@ -56,11 +56,99 @@
                     </Border>
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                         <StackPanel Margin="16,12,16,8">
+                            <StackPanel Margin="0,0,0,10">
+                                <StackPanel Visibility="{Binding SummaryOverview.HasMaximumIntensity, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="88" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                                                   FontSize="12"
+                                                   Text="最大震度" />
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding SummaryOverview.MaximumIntensityText}" />
+                                    </Grid>
+                                </StackPanel>
+                                <StackPanel Margin="0,8,0,0"
+                                            Orientation="Horizontal"
+                                            Visibility="{Binding SummaryOverview.HasSourceDetails, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <StackPanel Orientation="Horizontal"
+                                                Visibility="{Binding SummaryOverview.HasMagnitude, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock Foreground="{StaticResource MutedTextBrush}" Text="震级" />
+                                        <TextBlock Margin="4,0,0,0" Text="{Binding SummaryOverview.MagnitudeText}" />
+                                    </StackPanel>
+                                    <StackPanel Margin="16,0,0,0"
+                                                Orientation="Horizontal"
+                                                Visibility="{Binding SummaryOverview.HasHypocenter, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock Foreground="{StaticResource MutedTextBrush}" Text="震源地" />
+                                        <TextBlock Margin="4,0,0,0"
+                                                   MaxWidth="130"
+                                                   Text="{Binding SummaryOverview.HypocenterText}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <StackPanel Margin="16,0,0,0"
+                                                Orientation="Horizontal"
+                                                Visibility="{Binding SummaryOverview.HasDepth, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock Foreground="{StaticResource MutedTextBrush}" Text="深度" />
+                                        <TextBlock Margin="4,0,0,0" Text="{Binding SummaryOverview.DepthText}" />
+                                    </StackPanel>
+                                </StackPanel>
+                                <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
+                                    <TextBlock Foreground="{StaticResource MutedTextBrush}" Text="海啸" />
+                                    <Border Margin="12,0,0,0" Padding="4,1">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="{StaticResource SurfaceSubtleBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SummaryOverview.TsunamiStatus.Kind}" Value="MinorChange">
+                                                        <Setter Property="Background" Value="#DCEFF7" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding SummaryOverview.TsunamiStatus.Kind}" Value="Advisory">
+                                                        <Setter Property="Background" Value="#F4E59C" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding SummaryOverview.TsunamiStatus.Kind}" Value="Warning">
+                                                        <Setter Property="Background" Value="#E17467" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding SummaryOverview.TsunamiStatus.Kind}" Value="MajorWarning">
+                                                        <Setter Property="Background" Value="#963F68" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock Text="{Binding SummaryOverview.TsunamiStatus.Text}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+                                                    <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SummaryOverview.TsunamiStatus.Kind}" Value="MajorWarning">
+                                                        <Setter Property="Foreground" Value="White" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding SummaryOverview.TsunamiStatus.Kind}" Value="Warning">
+                                                        <Setter Property="Foreground" Value="White" />
+                                                    </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Border>
+                                </StackPanel>
+                            </StackPanel>
                             <ItemsControl Grid.IsSharedSizeScope="True"
                                           ItemsSource="{Binding SummaryFields}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Grid Margin="0,0,0,10">
+                                            <Grid.Style>
+                                                <Style TargetType="Grid">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsOverviewField}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Grid.Style>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="88" SharedSizeGroup="SummaryLabel" />
                                                 <ColumnDefinition Width="*" />
@@ -76,56 +164,6 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                            <Border Margin="0,0,0,10"
-                                    Padding="10,8"
-                                    BorderBrush="{StaticResource BorderBrush}"
-                                    BorderThickness="1">
-                                <Border.Style>
-                                    <Style TargetType="Border">
-                                        <Setter Property="Background" Value="{StaticResource SurfaceSubtleBrush}" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding TsunamiStatus.Kind}" Value="MinorChange">
-                                                <Setter Property="Background" Value="#DCEFF7" />
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding TsunamiStatus.Kind}" Value="Advisory">
-                                                <Setter Property="Background" Value="#F4E59C" />
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding TsunamiStatus.Kind}" Value="Warning">
-                                                <Setter Property="Background" Value="#E17467" />
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding TsunamiStatus.Kind}" Value="MajorWarning">
-                                                <Setter Property="Background" Value="#963F68" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Border.Style>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock FontWeight="SemiBold" Text="海啸">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding TsunamiStatus.Kind}" Value="MajorWarning">
-                                                        <Setter Property="Foreground" Value="White" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                    <TextBlock Margin="12,0,0,0" Text="{Binding TsunamiStatus.Text}">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding TsunamiStatus.Kind}" Value="MajorWarning">
-                                                        <Setter Property="Foreground" Value="White" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Border>
                             <Border Margin="0,4,0,0"
                                     Padding="10,8"
                                     BorderBrush="{StaticResource BorderBrush}"
