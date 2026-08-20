@@ -162,6 +162,62 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
         State = State with { SortOrder = sortOrder };
     }
 
+    public void SetTimeRange(EarthquakeEventTimeRange timeRange)
+    {
+        ThrowIfDisposed();
+        State = State with { Filters = State.Filters with { TimeRange = timeRange } };
+    }
+
+    public void SetMinimumIntensity(JmaIntensity minimumIntensity)
+    {
+        ThrowIfDisposed();
+        State = State with
+        {
+            Filters = State.Filters with { MinimumIntensity = minimumIntensity },
+        };
+    }
+
+    public void SetMinimumMagnitude(double? minimumMagnitude)
+    {
+        ThrowIfDisposed();
+        if (minimumMagnitude is double value && !double.IsFinite(value))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(minimumMagnitude),
+                minimumMagnitude,
+                "最低震级必须是有限值。");
+        }
+
+        State = State with
+        {
+            Filters = State.Filters with { MinimumMagnitude = minimumMagnitude },
+        };
+    }
+
+    public void SetRegionText(string? regionText)
+    {
+        ThrowIfDisposed();
+        State = State with
+        {
+            Filters = State.Filters with { RegionText = regionText?.Trim() ?? string.Empty },
+        };
+    }
+
+    public void SetSourceId(string? sourceId)
+    {
+        ThrowIfDisposed();
+        State = State with
+        {
+            Filters = State.Filters with { SourceId = sourceId?.Trim() ?? string.Empty },
+        };
+    }
+
+    public void ClearFilters()
+    {
+        ThrowIfDisposed();
+        State = State with { Filters = new EarthquakeEventFilterState() };
+    }
+
     public void SetMapViewState(EarthquakeMapViewState mapViewState)
     {
         ThrowIfDisposed();

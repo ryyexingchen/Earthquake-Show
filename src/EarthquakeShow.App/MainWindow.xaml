@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:EarthquakeShow.App.Views"
         mc:Ignorable="d"
         Title="Earthquake Show"
         Width="1440"
@@ -116,7 +117,7 @@
 
                 <Button Grid.Column="4"
                         AutomationProperties.Name="搜索"
-                        IsEnabled="False"
+                        Click="OnSearchClick"
                         Style="{StaticResource HeaderIconButtonStyle}"
                         ToolTip="搜索">
                     <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xE721;" />
@@ -179,107 +180,9 @@
                     Background="{StaticResource SurfaceBrush}"
                     BorderBrush="{StaticResource BorderStrongBrush}"
                     BorderThickness="0,0,1,0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="72" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0"
-                            Padding="14,12"
-                            BorderBrush="{StaticResource BorderBrush}"
-                            BorderThickness="0,0,0,1">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource EyebrowTextStyle}"
-                                           Text="JMA 地震情报" />
-                                <TextBlock Margin="0,4,0,0"
-                                           Style="{StaticResource PaneTitleTextStyle}"
-                                           Text="事件列表" />
-                            </StackPanel>
-                            <TextBlock Grid.Column="1"
-                                       VerticalAlignment="Bottom"
-                                       Foreground="{StaticResource MutedTextBrush}"
-                                       FontSize="12"
-                                       Text="{Binding EarthquakePage.Display.EventCountText}" />
-                        </Grid>
-                    </Border>
-
-                    <StackPanel Grid.Row="1"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Visibility="{Binding EarthquakePage.Display.IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock HorizontalAlignment="Center"
-                                   Foreground="{StaticResource AccentBrush}"
-                                   FontFamily="Segoe Fluent Icons"
-                                   FontSize="28"
-                                   Text="&#xE896;" />
-                        <TextBlock Margin="0,10,0,0"
-                                   Style="{StaticResource EmptyTitleTextStyle}"
-                                   Text="{Binding EarthquakePage.Display.EventListTitle}" />
-                        <TextBlock Margin="0,6,0,0"
-                                   Style="{StaticResource EmptyBodyTextStyle}"
-                                   Text="{Binding EarthquakePage.Display.EventListMessage}" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Row="1"
-                                MaxWidth="220"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Visibility="{Binding EarthquakePage.Display.ShowErrorState, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock HorizontalAlignment="Center"
-                                   Foreground="{StaticResource OfflineBrush}"
-                                   FontFamily="Segoe Fluent Icons"
-                                   FontSize="28"
-                                   Text="&#xEA39;" />
-                        <TextBlock Margin="0,10,0,0"
-                                   Style="{StaticResource EmptyTitleTextStyle}"
-                                   Text="{Binding EarthquakePage.Display.EventListTitle}" />
-                        <TextBlock Margin="0,6,0,0"
-                                   Style="{StaticResource EmptyBodyTextStyle}"
-                                   Text="{Binding EarthquakePage.Display.EventListMessage}"
-                                   TextAlignment="Center"
-                                   TextWrapping="Wrap" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Row="1"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Visibility="{Binding EarthquakePage.Display.ShowEmptyState, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock HorizontalAlignment="Center"
-                                   Foreground="{StaticResource MutedTextBrush}"
-                                   FontFamily="Segoe Fluent Icons"
-                                   FontSize="28"
-                                   Text="&#xE8B7;" />
-                        <TextBlock Margin="0,10,0,0"
-                                   Style="{StaticResource EmptyTitleTextStyle}"
-                                   Text="{Binding EarthquakePage.Display.EventListTitle}" />
-                        <TextBlock Margin="0,6,0,0"
-                                   Style="{StaticResource EmptyBodyTextStyle}"
-                                   Text="{Binding EarthquakePage.Display.EventListMessage}" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Row="1"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Visibility="{Binding EarthquakePage.Display.HasEvents, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock HorizontalAlignment="Center"
-                                   Foreground="{StaticResource AccentBrush}"
-                                   FontFamily="Segoe Fluent Icons"
-                                   FontSize="28"
-                                   Text="&#xE8FD;" />
-                        <TextBlock Margin="0,10,0,0"
-                                   Style="{StaticResource EmptyTitleTextStyle}"
-                                   Text="{Binding EarthquakePage.Display.EventListTitle}" />
-                        <TextBlock Margin="0,6,0,0"
-                                   Style="{StaticResource EmptyBodyTextStyle}"
-                                   Text="{Binding EarthquakePage.Display.EventListMessage}" />
-                    </StackPanel>
-                </Grid>
+                <views:EarthquakeEventListView x:Name="EventListView"
+                                               DataContext="{Binding EventList}"
+                                               RequestOpenDetails="OnEventListRequestOpenDetails" />
             </Border>
 
             <Grid Grid.Column="2" Background="{StaticResource BackgroundBrush}">
@@ -340,7 +243,7 @@
                     Panel.ZIndex="4"
                     Visibility="{Binding Layout.IsDetailsPaneVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Grid>
-                    <TabControl>
+                    <TabControl x:Name="DetailsTabs">
                         <TabItem Header="摘要">
                             <StackPanel MaxWidth="300"
                                         HorizontalAlignment="Center"

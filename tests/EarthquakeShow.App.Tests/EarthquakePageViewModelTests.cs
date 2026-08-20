@@ -107,7 +107,7 @@ public sealed class EarthquakePageViewModelTests
     }
 
     [Fact]
-    public void PageOptions_AreStoredWithoutApplyingStepSevenFiltering()
+    public void PageOptions_AreStoredAsListAndMapState()
     {
         using var viewModel = new EarthquakePageViewModel(new TestRepository());
         var map = new EarthquakeMapViewState
@@ -122,11 +122,21 @@ public sealed class EarthquakePageViewModelTests
 
         viewModel.SetSearchText("  熊本  ");
         viewModel.SetSortOrder(EarthquakeEventSortOrder.HighestIntensity);
+        viewModel.SetTimeRange(EarthquakeEventTimeRange.Last7Days);
+        viewModel.SetMinimumIntensity(JmaIntensity.Four);
+        viewModel.SetMinimumMagnitude(5.0);
+        viewModel.SetRegionText("  九州  ");
+        viewModel.SetSourceId("  jma-json  ");
         viewModel.SetMapViewState(map);
         viewModel.SetSourceState([sourceStatus], isOffline: true);
 
         Assert.Equal("熊本", viewModel.State.SearchText);
         Assert.Equal(EarthquakeEventSortOrder.HighestIntensity, viewModel.State.SortOrder);
+        Assert.Equal(EarthquakeEventTimeRange.Last7Days, viewModel.State.Filters.TimeRange);
+        Assert.Equal(JmaIntensity.Four, viewModel.State.Filters.MinimumIntensity);
+        Assert.Equal(5.0, viewModel.State.Filters.MinimumMagnitude);
+        Assert.Equal("九州", viewModel.State.Filters.RegionText);
+        Assert.Equal("jma-json", viewModel.State.Filters.SourceId);
         Assert.Equal(map, viewModel.State.Map);
         Assert.Equal(sourceStatus, Assert.Single(viewModel.State.SourceStatuses));
         Assert.True(viewModel.State.IsOffline);

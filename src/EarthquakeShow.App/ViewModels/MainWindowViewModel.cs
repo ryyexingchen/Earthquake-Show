@@ -22,6 +22,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         AppVersion = GetAppVersion();
         EarthquakePage = new EarthquakePageViewModel(
             new InMemoryEarthquakeEventRepository());
+        EventList = new EarthquakeEventListViewModel(EarthquakePage);
         Layout = new WindowLayoutViewModel();
         UpdateClock();
 
@@ -58,6 +59,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public EarthquakePageViewModel EarthquakePage { get; }
 
+    public EarthquakeEventListViewModel EventList { get; }
+
     public WindowLayoutViewModel Layout { get; }
 
     public ValueTask InitializeAsync()
@@ -76,6 +79,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _lifetimeCancellation.Cancel();
         _clockTimer.Stop();
         _clockTimer.Tick -= OnClockTick;
+        EventList.Dispose();
         EarthquakePage.Dispose();
         _lifetimeCancellation.Dispose();
     }

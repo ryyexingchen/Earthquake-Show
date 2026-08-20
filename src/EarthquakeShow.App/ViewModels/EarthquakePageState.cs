@@ -18,6 +18,14 @@ public enum EarthquakeEventSortOrder
     HighestIntensity,
 }
 
+public enum EarthquakeEventTimeRange
+{
+    All,
+    Last24Hours,
+    Last7Days,
+    Last30Days,
+}
+
 public enum EarthquakeMapFocusMode
 {
     JapanOverview,
@@ -32,6 +40,26 @@ public sealed record EarthquakeMapViewState
     public bool FollowSelection { get; init; } = true;
 }
 
+public sealed record EarthquakeEventFilterState
+{
+    public EarthquakeEventTimeRange TimeRange { get; init; }
+
+    public JmaIntensity MinimumIntensity { get; init; } = JmaIntensity.Unknown;
+
+    public double? MinimumMagnitude { get; init; }
+
+    public string RegionText { get; init; } = string.Empty;
+
+    public string SourceId { get; init; } = string.Empty;
+
+    public bool IsActive =>
+        TimeRange != EarthquakeEventTimeRange.All ||
+        MinimumIntensity != JmaIntensity.Unknown ||
+        MinimumMagnitude is not null ||
+        RegionText.Length > 0 ||
+        SourceId.Length > 0;
+}
+
 public sealed record EarthquakePageState
 {
     public ImmutableArray<EarthquakeEvent> Events { get; init; } = [];
@@ -44,6 +72,8 @@ public sealed record EarthquakePageState
 
     public EarthquakeEventSortOrder SortOrder { get; init; } =
         EarthquakeEventSortOrder.LatestIssued;
+
+    public EarthquakeEventFilterState Filters { get; init; } = new();
 
     public EarthquakeMapViewState Map { get; init; } = new();
 
