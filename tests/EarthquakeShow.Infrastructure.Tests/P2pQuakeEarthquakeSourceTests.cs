@@ -101,7 +101,9 @@ public sealed class P2pQuakeEarthquakeSourceTests
         EarthquakeSourceFetchResult result = enumerator.Current;
         EarthquakeReport report = Assert.Single(result.Reports);
         Assert.Equal(SourceConnectionState.Online, result.Status.State);
+        Assert.Equal("p2pquake-ws", result.Status.SourceId);
         Assert.Equal("p2pquake:p2p-message-1", report.EventId);
+        Assert.Equal("p2pquake", report.Source.SourceId);
         Assert.Equal("wss://example.test/v2/ws", report.Source.RawMessageUri?.ToString());
     }
 

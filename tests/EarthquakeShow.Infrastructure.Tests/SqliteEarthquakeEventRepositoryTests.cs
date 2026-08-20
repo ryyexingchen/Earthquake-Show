@@ -174,6 +174,55 @@ public sealed class SqliteEarthquakeEventRepositoryTests
         Assert.Contains("保留已有数据", repository.CacheStatus);
     }
 
+    [Fact]
+    public async Task ApplyStreamingResult_PersistsReportAndPreservesChannelStatus()
+    {
+        using var database = new TemporaryDatabase();
+        EarthquakeReport streamingReport = CreateOnlineReport() with
+        {
+            EventId = "p2pquake:stream-message-1",
+            ReportCode = "P2P-551",
+            Source = new SourceReference(
+                "p2pquake",
+                "stream-message-1",
+                SourcePayload: "{\"id\":\"stream-message-1\"}"),
+        };
+        var httpSource = new StubRealtimeSource(new EarthquakeSourceFetchResult(
+            [],
+            new SourceStatus(
+                "jma-json",
+                SourceConnectionState.Online,
+                DateTimeOffset.UtcNow,
+                Detail: "HTTP 测试源在线")));
+        var repository = new SqliteEarthquakeEventRepository(database.Path, httpSource);
+        await repository.InitializeAsync(LoadReports());
+
+        await repository.ApplyStreamingResultAsync(new EarthquakeSourceFetchResult(
+            [streamingReport],
+            new SourceStatus(
+                "p2pquake-ws",
+                SourceConnectionState.Online,
+                streamingReport.ReceivedAt,
+                streamingReport.ReceivedAt,
+                "WebSocket 测试源在线")));
+        await repository.RefreshAsync();
+
+        Assert.Contains(
+            await repository.ListEventsAsync(),
+            item => item.EventId == streamingReport.EventId);
+        Assert.Equal(
+            SourceConnectionState.Online,
+            Assert.Single(
+                repository.SourceStatuses,
+                status => status.SourceId == "p2pquake-ws").State);
+
+        var reloaded = new SqliteEarthquakeEventRepository(database.Path);
+        await reloaded.InitializeAsync([]);
+        Assert.Contains(
+            await reloaded.ListEventsAsync(),
+            item => item.EventId == streamingReport.EventId);
+    }
+
     private static EarthquakeReport CreateOnlineReport()
     {
         DateTimeOffset issuedAt = new(2026, 8, 20, 10, 1, 0, TimeSpan.FromHours(9));

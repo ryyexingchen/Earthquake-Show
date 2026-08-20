@@ -279,12 +279,18 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
             SynchronizationContext.Current != _synchronizationContext)
         {
             _synchronizationContext.Post(
-                _ => ApplyEvents(eventArgs.Events),
+                _ => ApplyRepositorySnapshot(eventArgs.Events),
                 null);
             return;
         }
 
-        ApplyEvents(eventArgs.Events);
+        ApplyRepositorySnapshot(eventArgs.Events);
+    }
+
+    private void ApplyRepositorySnapshot(ImmutableArray<EarthquakeEvent> events)
+    {
+        ApplyEvents(events);
+        ApplyRepositorySourceState();
     }
 
     private void ApplyEvents(ImmutableArray<EarthquakeEvent> events)

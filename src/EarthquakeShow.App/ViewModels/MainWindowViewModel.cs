@@ -24,8 +24,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly HttpClient? _httpClient;
     private readonly JmaJsonEarthquakeSource? _realtimeSource;
     private readonly IReadOnlyList<IRealtimeEarthquakeSource> _realtimeSources = [];
+    private readonly IStreamingEarthquakeSource? _streamingSource;
     private readonly RefreshBackoffPolicy _refreshBackoffPolicy = new();
     private Task? _refreshLoopTask;
+    private Task? _streamingLoopTask;
     private string _currentTime = string.Empty;
     private string _cacheStatus = "缓存：初始化中";
     private string _autoRefreshStatus = "自动刷新：未启动";
@@ -33,7 +35,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public MainWindowViewModel(
         string? cachePath = null,
-        bool enableNetwork = true)
+        bool enableNetwork = true,
+        IStreamingEarthquakeSource? streamingSource = null)
     {
         AppVersion = GetAppVersion();
         _seedReports = FixedJmaXmlDataLoader.LoadReports();
@@ -43,13 +46,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 Timeout = TimeSpan.FromSeconds(15),
             };
-            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.20.0");
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.21.0");
             _realtimeSource = new JmaJsonEarthquakeSource(_httpClient);
             JmaXmlEarthquakeSource xmlSource = new(
                 _httpClient,
                 FixedJmaXmlDataLoader.LoadStationCoordinates());
             P2pQuakeEarthquakeSource p2pQuakeSource = new(_httpClient);
             _realtimeSources = [_realtimeSource, xmlSource, p2pQuakeSource];
+            _streamingSource = streamingSource ?? new ReconnectingEarthquakeSource(
+                new P2pQuakeWebSocketSource());
+        }
+        else
+        {
+            _streamingSource = streamingSource;
         }
 
         _repository = new SqliteEarthquakeEventRepository(
@@ -152,6 +161,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             await RefreshFromNetworkAsync(token);
             _refreshLoopTask ??= RunRefreshLoopAsync(_lifetimeCancellation.Token);
         }
+
+        if (_streamingSource is not null)
+        {
+            _streamingLoopTask ??= RunStreamingLoopAsync(_lifetimeCancellation.Token);
+        }
     }
 
     public void Dispose()
@@ -208,6 +222,35 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested)
         {
             AutoRefreshStatus = "自动刷新：已停止";
+        }
+    }
+
+    private async Task RunStreamingLoopAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await foreach (EarthquakeSourceFetchResult result in
+                _streamingSource!.StreamAsync(cancellationToken))
+            {
+                await _repository.ApplyStreamingResultAsync(result, cancellationToken);
+                if (!_isDisposed)
+                {
+                    CacheStatus = _repository.CacheStatus;
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            if (!_isDisposed)
+            {
+                CacheStatus = $"缓存：WebSocket 流已停止（{exception.Message}）";
+            }
         }
     }
 

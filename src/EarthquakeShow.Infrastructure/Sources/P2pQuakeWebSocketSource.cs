@@ -11,7 +11,7 @@ namespace EarthquakeShow.Infrastructure.Sources;
 public sealed class P2pQuakeWebSocketSource : IStreamingEarthquakeSource
 {
     public const string DefaultEndpoint = "wss://api.p2pquake.net/v2/ws";
-    private const string SourceName = "p2pquake";
+    private const string SourceName = "p2pquake-ws";
     private readonly Func<IWebSocketConnection> _connectionFactory;
     private readonly Uri _endpoint;
 

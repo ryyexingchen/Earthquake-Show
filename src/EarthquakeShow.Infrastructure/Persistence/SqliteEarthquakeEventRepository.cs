@@ -21,6 +21,7 @@ public sealed class SqliteEarthquakeEventRepository :
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly object _syncRoot = new();
+    private readonly SemaphoreSlim _writeGate = new(1, 1);
     private readonly string _databasePath;
     private readonly ImmutableArray<IRealtimeEarthquakeSource> _realtimeSources;
     private ImmutableArray<EarthquakeReport> _reports = [];
@@ -222,36 +223,61 @@ public sealed class SqliteEarthquakeEventRepository :
             cancellationToken).ConfigureAwait(false);
     }
 
+    public Task ApplyStreamingResultAsync(
+        EarthquakeSourceFetchResult result,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        string cacheStatus = result.Status.State == SourceConnectionState.Online
+            ? $"缓存：{result.Status.SourceId} 已更新 {result.Reports.Length} 条报文"
+            : $"缓存：{result.Status.SourceId} 状态已更新，保留已有数据";
+        return SaveReportsAndStatusAsync(
+            result.Reports,
+            [result.Status],
+            cacheStatus,
+            cancellationToken);
+    }
+
     private async Task SaveReportsAndStatusAsync(
         ImmutableArray<EarthquakeReport> incomingReports,
         ImmutableArray<SourceStatus> sourceStatuses,
         string cacheStatus,
         CancellationToken cancellationToken)
     {
-        string? directory = Path.GetDirectoryName(_databasePath);
-        if (!string.IsNullOrEmpty(directory))
+        await _writeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            Directory.CreateDirectory(directory);
-        }
+            string? directory = Path.GetDirectoryName(_databasePath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
 
-        await using var connection = CreateConnection();
-        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
-        await EnsureSchemaAsync(connection, cancellationToken).ConfigureAwait(false);
-        await SaveReportsToConnectionAsync(connection, incomingReports, cancellationToken)
-            .ConfigureAwait(false);
-        ImmutableArray<EarthquakeReport> allReports =
-            await ReadReportsAsync(connection, cancellationToken).ConfigureAwait(false);
-        ImmutableArray<SourceStatus> existingStatuses =
-            await ReadSourceStatusesAsync(connection, cancellationToken).ConfigureAwait(false);
-        ImmutableArray<SourceStatus> statuses = BuildOfflineStatuses(allReports, existingStatuses);
-        foreach (SourceStatus sourceStatus in sourceStatuses)
+            await using var connection = CreateConnection();
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+            await EnsureSchemaAsync(connection, cancellationToken).ConfigureAwait(false);
+            await SaveReportsToConnectionAsync(connection, incomingReports, cancellationToken)
+                .ConfigureAwait(false);
+            ImmutableArray<EarthquakeReport> allReports =
+                await ReadReportsAsync(connection, cancellationToken).ConfigureAwait(false);
+            ImmutableArray<SourceStatus> existingStatuses =
+                await ReadSourceStatusesAsync(connection, cancellationToken).ConfigureAwait(false);
+            ImmutableArray<SourceStatus> statuses = EnsureSourceStatuses(
+                allReports,
+                existingStatuses);
+            foreach (SourceStatus sourceStatus in sourceStatuses)
+            {
+                statuses = ReplaceSourceStatus(statuses, sourceStatus);
+            }
+
+            await SaveSourceStatusesToConnectionAsync(connection, statuses, cancellationToken)
+                .ConfigureAwait(false);
+            SetSnapshot(allReports, statuses, cacheStatus);
+        }
+        finally
         {
-            statuses = ReplaceSourceStatus(statuses, sourceStatus);
+            _writeGate.Release();
         }
-
-        await SaveSourceStatusesToConnectionAsync(connection, statuses, cancellationToken)
-            .ConfigureAwait(false);
-        SetSnapshot(allReports, statuses, cacheStatus);
     }
 
     private SqliteConnection CreateConnection()
@@ -482,6 +508,43 @@ public sealed class SqliteEarthquakeEventRepository :
         }
 
         return builder.ToImmutable();
+    }
+
+    private static ImmutableArray<SourceStatus> EnsureSourceStatuses(
+        ImmutableArray<EarthquakeReport> reports,
+        ImmutableArray<SourceStatus> existing)
+    {
+        ImmutableArray<SourceStatus> statuses = existing;
+        IEnumerable<string> sourceIds = reports
+            .Select(report => report.Source.SourceId)
+            .Append(DefaultSourceId)
+            .Distinct(StringComparer.Ordinal);
+        foreach (string sourceId in sourceIds)
+        {
+            if (statuses.Any(status =>
+                    string.Equals(status.SourceId, sourceId, StringComparison.Ordinal)))
+            {
+                continue;
+            }
+
+            DateTimeOffset? lastReceived = reports
+                .Where(report => string.Equals(
+                    report.Source.SourceId,
+                    sourceId,
+                    StringComparison.Ordinal))
+                .Select(report => (DateTimeOffset?)report.ReceivedAt)
+                .Max();
+            statuses = ReplaceSourceStatus(
+                statuses,
+                new SourceStatus(
+                    sourceId,
+                    SourceConnectionState.Disabled,
+                    DateTimeOffset.UtcNow,
+                    lastReceived,
+                    "离线缓存，尚未连接实时数据源"));
+        }
+
+        return statuses;
     }
 
     private static ImmutableArray<SourceStatus> ReplaceSourceStatus(
