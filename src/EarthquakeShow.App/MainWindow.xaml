@@ -17,9 +17,9 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="52" />
+            <RowDefinition Height="60" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="28" />
+            <RowDefinition Height="36" />
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
@@ -29,13 +29,13 @@
                 BorderThickness="0,0,0,1">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="220" />
+                    <ColumnDefinition Width="228" />
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="82" />
-                    <ColumnDefinition Width="176" />
+                    <ColumnDefinition Width="124" />
+                    <ColumnDefinition Width="198" />
                     <ColumnDefinition Width="38" />
                     <ColumnDefinition Width="38" />
-                    <ColumnDefinition Width="174" />
+                    <ColumnDefinition Width="190" />
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0"
@@ -60,9 +60,11 @@
                 </StackPanel>
 
                 <Border Grid.Column="2"
-                        Width="74"
-                        Padding="8,5"
+                        Width="116"
+                        Height="42"
+                        Padding="8,4"
                         HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
                         BorderThickness="1"
                         CornerRadius="5">
                     <Border.Style>
@@ -85,27 +87,56 @@
                             </Style.Triggers>
                         </Style>
                     </Border.Style>
-                    <TextBlock HorizontalAlignment="Center"
-                               FontSize="12"
-                               FontWeight="SemiBold"
-                               Text="{Binding EarthquakePage.Display.DataStatusText}">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding EarthquakePage.Display.HasOnlineSource}" Value="True">
-                                        <Setter Property="Foreground" Value="{StaticResource OnlineBrush}" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding EarthquakePage.Display.IsOffline}" Value="True">
-                                        <Setter Property="Foreground" Value="{StaticResource OfflineBrush}" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding EarthquakePage.Display.HasError}" Value="True">
-                                        <Setter Property="Foreground" Value="{StaticResource OfflineBrush}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="7"
+                                Height="7"
+                                Margin="0,2,6,0"
+                                CornerRadius="4">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="{StaticResource MutedTextBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding EarthquakePage.Display.HasOnlineSource}" Value="True">
+                                            <Setter Property="Background" Value="{StaticResource OnlineBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding EarthquakePage.Display.IsOffline}" Value="True">
+                                            <Setter Property="Background" Value="{StaticResource OfflineBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding EarthquakePage.Display.HasError}" Value="True">
+                                            <Setter Property="Background" Value="{StaticResource OfflineBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                        </Border>
+                        <StackPanel>
+                            <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                                       FontSize="9"
+                                       Text="数据状态" />
+                            <TextBlock MaxWidth="82"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       Text="{Binding EarthquakePage.Display.DataStatusText}"
+                                       TextTrimming="CharacterEllipsis">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding EarthquakePage.Display.HasOnlineSource}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource OnlineBrush}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding EarthquakePage.Display.IsOffline}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource OfflineBrush}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding EarthquakePage.Display.HasError}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource OfflineBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
                 </Border>
 
                 <TextBlock Grid.Column="3"
@@ -132,16 +163,22 @@
                 </Button>
 
                 <Border Grid.Column="6"
-                        Padding="9,5"
+                        Height="42"
+                        Padding="10,5"
+                        VerticalAlignment="Center"
                         Background="{StaticResource SurfaceSubtleBrush}"
                         BorderBrush="{StaticResource BorderBrush}"
                         BorderThickness="1"
                         CornerRadius="5">
-                    <TextBlock HorizontalAlignment="Center"
-                               Foreground="{StaticResource MutedTextBrush}"
-                               FontFamily="Consolas"
-                               FontSize="12"
-                               Text="{Binding CurrentTime}" />
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                                   FontSize="9"
+                                   Text="当前时间" />
+                        <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                                   FontFamily="Consolas"
+                                   FontSize="11"
+                                   Text="{Binding CurrentTime}" />
+                    </StackPanel>
                 </Border>
             </Grid>
         </Border>
@@ -271,8 +308,8 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="190" />
+                    <ColumnDefinition Width="88" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0"
                            VerticalAlignment="Center"
@@ -315,14 +352,16 @@
                            Text="{Binding EarthquakePage.Display.WebSocketErrorText}"
                            TextTrimming="CharacterEllipsis" />
                 <TextBlock Grid.Column="6"
-                           Margin="20,0,0,0"
+                           Margin="16,0,0,0"
                            VerticalAlignment="Center"
                            Foreground="{StaticResource MutedTextBrush}"
                            FontSize="11"
                            Text="{Binding AutoRefreshStatus}"
                            TextTrimming="CharacterEllipsis" />
                 <TextBlock Grid.Column="7"
+                           Margin="12,0,0,0"
                            VerticalAlignment="Center"
+                           HorizontalAlignment="Right"
                            Foreground="{StaticResource MutedTextBrush}"
                            FontSize="11">
                     <Run Text="版本 " />
