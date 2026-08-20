@@ -44,19 +44,28 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
             while (true)
             {
                 bool receivedOnline = false;
+                bool rotationRequested = false;
                 DateTimeOffset? sessionConnectedAt = null;
+                using CancellationTokenSource sessionCancellation =
+                    CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                sessionCancellation.CancelAfter(_policy.MaxConnectionDuration);
+                CancellationToken sessionToken = sessionCancellation.Token;
                 IAsyncEnumerator<EarthquakeSourceFetchResult>? enumerator = null;
                 Exception? sessionException = null;
 
                 try
                 {
                     enumerator = _innerSource
-                        .StreamAsync(cancellationToken)
-                        .GetAsyncEnumerator(cancellationToken);
+                        .StreamAsync(sessionToken)
+                        .GetAsyncEnumerator(sessionToken);
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
                     throw;
+                }
+                catch (OperationCanceledException) when (sessionCancellation.IsCancellationRequested)
+                {
+                    rotationRequested = true;
                 }
                 catch (Exception exception) when (IsConnectionException(exception))
                 {
@@ -78,6 +87,11 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
                             {
                                 throw;
                             }
+                            catch (OperationCanceledException) when (sessionCancellation.IsCancellationRequested)
+                            {
+                                rotationRequested = true;
+                                break;
+                            }
                             catch (Exception exception) when (IsConnectionException(exception))
                             {
                                 sessionException = exception;
@@ -86,6 +100,12 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
 
                             if (!hasNext)
                             {
+                                if (sessionCancellation.IsCancellationRequested &&
+                                    !cancellationToken.IsCancellationRequested)
+                                {
+                                    rotationRequested = true;
+                                }
+
                                 break;
                             }
 
@@ -109,11 +129,22 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
                     }
                     finally
                     {
-                        await enumerator.DisposeAsync().ConfigureAwait(false);
+                        try
+                        {
+                            await enumerator.DisposeAsync().ConfigureAwait(false);
+                        }
+                        catch (OperationCanceledException) when (
+                            sessionCancellation.IsCancellationRequested &&
+                            !cancellationToken.IsCancellationRequested)
+                        {
+                            rotationRequested = true;
+                        }
                     }
                 }
 
-                if (sessionConnectedAt is not null && sessionException is null)
+                if (sessionConnectedAt is not null &&
+                    sessionException is null &&
+                    !rotationRequested)
                 {
                     connectionEndedAt = _utcNow();
                 }
@@ -142,6 +173,40 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
                             LastMessageAt: lastMessageAt,
                             ConnectionExceptionCount: connectionExceptionCount,
                             LastConnectionExceptionAt: lastConnectionExceptionAt));
+                }
+
+                if (rotationRequested)
+                {
+                    if (sessionConnectedAt is not null)
+                    {
+                        connectionEndedAt = _utcNow();
+                    }
+
+                    EarthquakeSourceFetchResult rotation = new(
+                        ImmutableArray<EarthquakeReport>.Empty,
+                        new SourceStatus(
+                            SourceId,
+                            SourceConnectionState.Disconnected,
+                            _utcNow(),
+                            Detail: $"{SourceId} 达到单连接轮换时间，准备重连",
+                            ConnectedAt: sessionConnectedAt ?? lastConnectedAt,
+                            ConnectionEndedAt: connectionEndedAt,
+                            LastError: lastError,
+                            LastMessageAt: lastMessageAt,
+                            ConnectionExceptionCount: connectionExceptionCount == 0
+                                ? null
+                                : connectionExceptionCount,
+                            LastConnectionExceptionAt: lastConnectionExceptionAt,
+                            IsExpectedDisconnect: true));
+                    yield return EnrichDiagnosticStatus(
+                        rotation,
+                        ref sessionConnectedAt,
+                        ref lastConnectedAt,
+                        ref connectionEndedAt,
+                        ref lastError,
+                        ref lastMessageAt,
+                        ref connectionExceptionCount,
+                        ref lastConnectionExceptionAt);
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
@@ -207,7 +272,7 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
         }
         else if (status.State == SourceConnectionState.Disconnected)
         {
-            if (!string.IsNullOrWhiteSpace(status.Detail))
+            if (!status.IsExpectedDisconnect && !string.IsNullOrWhiteSpace(status.Detail))
             {
                 lastError = status.Detail;
             }
@@ -235,6 +300,7 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
                     ? null
                     : connectionExceptionCount,
                 LastConnectionExceptionAt = lastConnectionExceptionAt,
+                IsExpectedDisconnect = status.IsExpectedDisconnect,
             },
         };
     }

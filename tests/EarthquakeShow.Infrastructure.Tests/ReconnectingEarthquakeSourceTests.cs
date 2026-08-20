@@ -19,6 +19,9 @@ public sealed class ReconnectingEarthquakeSourceTests
         Assert.Equal(TimeSpan.FromSeconds(10), policy.GetDelay(2));
         Assert.Equal(TimeSpan.FromSeconds(12), policy.GetDelay(3));
         Assert.Equal(TimeSpan.FromSeconds(12), policy.GetDelay(20));
+        Assert.Equal(TimeSpan.FromMinutes(9), policy.MaxConnectionDuration);
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new StreamingReconnectPolicy(maxConnectionDuration: TimeSpan.Zero));
     }
 
     [Fact]
@@ -153,6 +156,39 @@ public sealed class ReconnectingEarthquakeSourceTests
     }
 
     [Fact]
+    public async Task Source_RotatesConnectionBeforeMaximumDuration_WithoutCountingException()
+    {
+        DateTimeOffset now = new(2026, 8, 20, 1, 2, 3, TimeSpan.Zero);
+        var inner = new BlockingAfterOnlineSource();
+        var source = new ReconnectingEarthquakeSource(
+            inner,
+            new StreamingReconnectPolicy(
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromMinutes(5),
+                TimeSpan.FromMilliseconds(20)),
+            (_, _) => Task.CompletedTask,
+            () => now);
+
+        await using IAsyncEnumerator<EarthquakeSourceFetchResult> enumerator =
+            source.StreamAsync().GetAsyncEnumerator();
+
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(SourceConnectionState.Online, enumerator.Current.Status.State);
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(SourceConnectionState.Disconnected, enumerator.Current.Status.State);
+        Assert.True(enumerator.Current.Status.IsExpectedDisconnect);
+        Assert.Contains("单连接轮换时间", enumerator.Current.Status.Detail);
+        Assert.Null(enumerator.Current.Status.ConnectionExceptionCount);
+        Assert.Null(enumerator.Current.Status.LastError);
+
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(SourceConnectionState.Delayed, enumerator.Current.Status.State);
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(SourceConnectionState.Online, enumerator.Current.Status.State);
+        Assert.Equal(2, inner.SessionCount);
+    }
+
+    [Fact]
     public async Task Source_CancellationInterruptsReconnectDelay()
     {
         using var cancellation = new CancellationTokenSource();
@@ -247,6 +283,21 @@ public sealed class ReconnectingEarthquakeSourceTests
 
             cancellationToken.ThrowIfCancellationRequested();
             yield return _sessions.Dequeue();
+        }
+    }
+
+    private sealed class BlockingAfterOnlineSource : IStreamingEarthquakeSource
+    {
+        public string SourceId => "test";
+
+        public int SessionCount { get; private set; }
+
+        public async IAsyncEnumerable<EarthquakeSourceFetchResult> StreamAsync(
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            SessionCount++;
+            yield return Result(SourceConnectionState.Online, "online");
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
         }
     }
 }

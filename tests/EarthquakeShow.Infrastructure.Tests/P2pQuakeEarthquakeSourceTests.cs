@@ -88,6 +88,7 @@ public sealed class P2pQuakeEarthquakeSourceTests
     [Fact]
     public async Task WebSocket_SingleTextMessage_MapsReport()
     {
+        Assert.Equal(TimeSpan.FromSeconds(30), P2pQuakeWebSocketSource.KeepAliveInterval);
         var connection = new FakeWebSocketConnection(
             Frame.Text(ValidObjectPayload));
         var source = new P2pQuakeWebSocketSource(

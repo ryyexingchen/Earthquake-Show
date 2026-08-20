@@ -11,6 +11,7 @@ namespace EarthquakeShow.Infrastructure.Sources;
 public sealed class P2pQuakeWebSocketSource : IStreamingEarthquakeSource
 {
     public const string DefaultEndpoint = "wss://api.p2pquake.net/v2/ws";
+    public static readonly TimeSpan KeepAliveInterval = TimeSpan.FromSeconds(30);
     private const string SourceName = "p2pquake-ws";
     private readonly Func<IWebSocketConnection> _connectionFactory;
     private readonly Uri _endpoint;
@@ -206,7 +207,13 @@ public sealed class P2pQuakeWebSocketSource : IStreamingEarthquakeSource
 
     private sealed class ClientWebSocketConnection : IWebSocketConnection
     {
-        private readonly ClientWebSocket _client = new();
+        private readonly ClientWebSocket _client;
+
+        public ClientWebSocketConnection()
+        {
+            _client = new ClientWebSocket();
+            _client.Options.KeepAliveInterval = KeepAliveInterval;
+        }
 
         public Task ConnectAsync(Uri endpoint, CancellationToken cancellationToken) =>
             _client.ConnectAsync(endpoint, cancellationToken);

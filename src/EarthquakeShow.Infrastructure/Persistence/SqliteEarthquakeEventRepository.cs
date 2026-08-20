@@ -573,7 +573,8 @@ public sealed class SqliteEarthquakeEventRepository :
                     status.LastError is not null ||
                     status.LastMessageAt is not null ||
                     status.ConnectionExceptionCount is not null ||
-                    status.LastConnectionExceptionAt is not null))
+                    status.LastConnectionExceptionAt is not null ||
+                    status.IsExpectedDisconnect))
             {
                 result = ReplaceSourceStatus(result, status);
             }

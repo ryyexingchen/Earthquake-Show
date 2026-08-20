@@ -30,4 +30,5 @@ public sealed record SourceStatus(
     string? LastError = null,
     DateTimeOffset? LastMessageAt = null,
     int? ConnectionExceptionCount = null,
-    DateTimeOffset? LastConnectionExceptionAt = null);
+    DateTimeOffset? LastConnectionExceptionAt = null,
+    bool IsExpectedDisconnect = false);
