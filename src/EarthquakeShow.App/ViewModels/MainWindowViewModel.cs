@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Globalization;
+using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows.Threading;
@@ -23,6 +24,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         EarthquakePage = new EarthquakePageViewModel(
             new InMemoryEarthquakeEventRepository());
         EventList = new EarthquakeEventListViewModel(EarthquakePage);
+        Map = new EarthquakeMapViewModel(
+            EarthquakePage,
+            OfflineMapGeometry.LoadFromFile(
+                Path.Combine(AppContext.BaseDirectory, "Assets", "japan-overview.geojson")));
         Layout = new WindowLayoutViewModel();
         UpdateClock();
 
@@ -53,13 +58,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public string CacheStatus => "缓存：未初始化";
 
-    public string MapDataStatus => "地图：未安装";
+    public string MapDataStatus => Map.IsOfficialBoundary ? "地图：离线边界" : "地图：离线示意";
 
     public string AppVersion { get; }
 
     public EarthquakePageViewModel EarthquakePage { get; }
 
     public EarthquakeEventListViewModel EventList { get; }
+
+    public EarthquakeMapViewModel Map { get; }
 
     public WindowLayoutViewModel Layout { get; }
 
@@ -79,6 +86,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _lifetimeCancellation.Cancel();
         _clockTimer.Stop();
         _clockTimer.Tick -= OnClockTick;
+        Map.Dispose();
         EventList.Dispose();
         EarthquakePage.Dispose();
         _lifetimeCancellation.Dispose();

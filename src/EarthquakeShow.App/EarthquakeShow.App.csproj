@@ -10,4 +10,11 @@
     <ProjectReference Include="..\EarthquakeShow.Core\EarthquakeShow.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Assets\japan-overview.geojson">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
