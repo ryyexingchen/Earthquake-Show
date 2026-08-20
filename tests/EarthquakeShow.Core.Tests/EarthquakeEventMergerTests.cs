@@ -110,10 +110,18 @@ public sealed class EarthquakeEventMergerTests
             "xml-message",
             1,
             sourceId: "jma-xml");
+        EarthquakeReport p2p = CreateReport(
+            "P2P-551",
+            "p2p-message",
+            1,
+            sourceId: "p2pquake");
 
         EarthquakeEvent earthquakeEvent = Assert.Single(
-            EarthquakeEventMerger.Merge([json, xml]));
+            EarthquakeEventMerger.Merge([json, xml, p2p]));
 
+        Assert.Equal(
+            ["p2pquake", "jma-json", "jma-xml"],
+            earthquakeEvent.Reports.Select(report => report.Source.SourceId));
         Assert.Equal("jma-xml", earthquakeEvent.LatestReport?.Source.SourceId);
         Assert.Equal("VXSE53", earthquakeEvent.LatestReport?.ReportCode);
     }

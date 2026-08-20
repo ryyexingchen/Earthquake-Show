@@ -40,12 +40,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 Timeout = TimeSpan.FromSeconds(15),
             };
-            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.14.0");
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.15.0");
             _realtimeSource = new JmaJsonEarthquakeSource(_httpClient);
             JmaXmlEarthquakeSource xmlSource = new(
                 _httpClient,
                 FixedJmaXmlDataLoader.LoadStationCoordinates());
-            _realtimeSources = [_realtimeSource, xmlSource];
+            P2pQuakeEarthquakeSource p2pQuakeSource = new(_httpClient);
+            _realtimeSources = [_realtimeSource, xmlSource, p2pQuakeSource];
         }
 
         _repository = new SqliteEarthquakeEventRepository(

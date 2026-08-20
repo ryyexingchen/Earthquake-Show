@@ -1,0 +1,354 @@
+using System.Collections.Immutable;
+using System.Globalization;
+using System.Net;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using EarthquakeShow.Core.Models;
+
+namespace EarthquakeShow.Infrastructure.Sources;
+
+public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
+{
+    public const string DefaultEndpoint = "https://api.p2pquake.net/v2/jma/quake";
+    private const string SourceName = "p2pquake";
+    private static readonly TimeSpan JapanOffset = TimeSpan.FromHours(9);
+    private static readonly string[] SourceTimeFormats =
+    [
+        "yyyy/MM/dd HH:mm:ss.FFFFFFF",
+        "yyyy/MM/dd HH:mm:ss",
+        "yyyy-MM-dd'T'HH:mm:ss.FFFFFFF",
+        "yyyy-MM-dd'T'HH:mm:ss",
+    ];
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    private readonly HttpClient _httpClient;
+    private readonly Uri _endpoint;
+
+    public P2pQuakeEarthquakeSource(
+        HttpClient httpClient,
+        string endpoint = DefaultEndpoint)
+    {
+        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out Uri? endpointUri) ||
+            endpointUri.Scheme is not ("http" or "https"))
+        {
+            throw new ArgumentException("P2PQuake 地址必须是 HTTP 或 HTTPS URL。", nameof(endpoint));
+        }
+
+        _endpoint = endpointUri;
+    }
+
+    public string SourceId => SourceName;
+
+    public async Task<EarthquakeSourceFetchResult> FetchAsync(
+        CancellationToken cancellationToken = default)
+    {
+        DateTimeOffset checkedAt = DateTimeOffset.UtcNow;
+        try
+        {
+            using HttpResponseMessage response = await _httpClient
+                .GetAsync(_endpoint, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                .ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                return new EarthquakeSourceFetchResult(
+                    [],
+                    new SourceStatus(
+                        SourceId,
+                        response.StatusCode == HttpStatusCode.TooManyRequests
+                            ? SourceConnectionState.RateLimited
+                            : SourceConnectionState.Disconnected,
+                        checkedAt,
+                        Detail: $"P2PQuake HTTP {(int)response.StatusCode}"));
+            }
+
+            string payload = await response.Content.ReadAsStringAsync(cancellationToken)
+                .ConfigureAwait(false);
+            ImmutableArray<EarthquakeReport> reports = ParseReports(payload, checkedAt, _endpoint);
+            DateTimeOffset? latestReceivedAt = reports.IsDefaultOrEmpty
+                ? null
+                : reports.Max(report => (DateTimeOffset?)report.ReceivedAt);
+            return new EarthquakeSourceFetchResult(
+                reports,
+                new SourceStatus(
+                    SourceId,
+                    SourceConnectionState.Online,
+                    checkedAt,
+                    latestReceivedAt,
+                    $"P2PQuake：{reports.Length} 条"));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (JsonException exception)
+        {
+            return Failure(SourceConnectionState.ParseFailed, checkedAt, $"P2PQuake JSON 格式错误：{exception.Message}");
+        }
+        catch (HttpRequestException exception)
+        {
+            return Failure(SourceConnectionState.Disconnected, checkedAt, $"P2PQuake 网络错误：{exception.Message}");
+        }
+        catch (FormatException exception)
+        {
+            return Failure(SourceConnectionState.ParseFailed, checkedAt, $"P2PQuake 字段错误：{exception.Message}");
+        }
+        catch (ArgumentException exception)
+        {
+            return Failure(SourceConnectionState.ParseFailed, checkedAt, $"P2PQuake 字段越界：{exception.Message}");
+        }
+        catch (IOException exception)
+        {
+            return Failure(SourceConnectionState.Disconnected, checkedAt, $"P2PQuake 读取错误：{exception.Message}");
+        }
+    }
+
+    internal static ImmutableArray<EarthquakeReport> ParseReports(
+        string payload,
+        DateTimeOffset receivedAt,
+        Uri endpoint)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(payload);
+        using JsonDocument document = JsonDocument.Parse(payload);
+        if (document.RootElement.ValueKind != JsonValueKind.Array)
+        {
+            throw new JsonException("P2PQuake 顶层必须是数组。");
+        }
+
+        var reports = ImmutableArray.CreateBuilder<EarthquakeReport>();
+        foreach (JsonElement element in document.RootElement.EnumerateArray())
+        {
+            P2pQuakeItem item = element.Deserialize<P2pQuakeItem>(JsonOptions)
+                ?? throw new JsonException("P2PQuake 报文不能为空。");
+            reports.Add(ToReport(item, element.GetRawText(), receivedAt, endpoint));
+        }
+
+        return reports.ToImmutable();
+    }
+
+    private static EarthquakeReport ToReport(
+        P2pQuakeItem item,
+        string rawPayload,
+        DateTimeOffset receivedAt,
+        Uri endpoint)
+    {
+        if (string.IsNullOrWhiteSpace(item.Id))
+        {
+            throw new FormatException("P2PQuake 报文缺少 id。");
+        }
+
+        if (item.Issue is null || item.Earthquake is null || item.Earthquake.Hypocenter is null)
+        {
+            throw new FormatException("P2PQuake 报文缺少 issue 或 earthquake.hypocenter。");
+        }
+
+        DateTimeOffset issuedAt = ParseRequiredTime(item.Issue.Time, "issue.time");
+        DateTimeOffset reportReceivedAt = ParseOptionalTime(item.Time) ?? receivedAt;
+        P2pHypocenter sourceHypocenter = item.Earthquake.Hypocenter;
+        if (sourceHypocenter.Latitude is not double latitude ||
+            sourceHypocenter.Longitude is not double longitude)
+        {
+            throw new FormatException("P2PQuake earthquake.hypocenter 缺少有效坐标。");
+        }
+
+        GeoCoordinate coordinate = new(latitude, longitude);
+        Hypocenter hypocenter = new(
+            NullIfUnknown(sourceHypocenter.Name),
+            null,
+            coordinate,
+            sourceHypocenter.Depth);
+        Magnitude? magnitude = sourceHypocenter.Magnitude is double magnitudeValue
+            ? new Magnitude(magnitudeValue)
+            : null;
+        JmaIntensity maxIntensity = ParseIntensity(item.Earthquake.MaxScale);
+        ImmutableArray<IntensityStation> stations = ParseStations(item.Points);
+
+        return new EarthquakeReport
+        {
+            EventId = $"p2pquake:{item.Id}",
+            ReportCode = $"P2P-{item.Code}",
+            ReportType = ParseReportType(item.Issue.Type),
+            Status = ParseReportStatus(item.Issue.Correct),
+            Context = ReportContext.Normal,
+            OriginTime = ParseOptionalTime(item.Earthquake.Time),
+            IssuedAt = issuedAt,
+            ReceivedAt = reportReceivedAt,
+            Hypocenter = hypocenter,
+            Magnitude = magnitude,
+            MaxIntensity = maxIntensity,
+            IntensityStations = stations,
+            TsunamiComment = BuildTsunamiComment(
+                item.Earthquake.DomesticTsunami,
+                item.Earthquake.ForeignTsunami),
+            Source = new SourceReference(
+                SourceName,
+                item.Id,
+                endpoint,
+                rawPayload),
+        };
+    }
+
+    private static ImmutableArray<IntensityStation> ParseStations(
+        P2pPoint[]? points)
+    {
+        if (points is null or { Length: 0 })
+        {
+            return [];
+        }
+
+        var stations = ImmutableArray.CreateBuilder<IntensityStation>();
+        foreach (P2pPoint point in points)
+        {
+            if (string.IsNullOrWhiteSpace(point.Addr))
+            {
+                continue;
+            }
+
+            string prefecture = NullIfUnknown(point.Prefecture) ?? "unknown";
+            string address = point.Addr.Trim();
+            string key = $"p2p:{prefecture}:{address}";
+            stations.Add(new IntensityStation(
+                key,
+                address,
+                $"p2p-pref:{prefecture}",
+                ParseIntensity(point.Scale),
+                null));
+        }
+
+        return stations.ToImmutable();
+    }
+
+    private static JmaIntensity ParseIntensity(int scale)
+    {
+        return scale switch
+        {
+            10 => JmaIntensity.One,
+            20 => JmaIntensity.Two,
+            30 => JmaIntensity.Three,
+            40 => JmaIntensity.Four,
+            45 => JmaIntensity.FiveLower,
+            50 => JmaIntensity.FiveUpper,
+            55 => JmaIntensity.SixLower,
+            60 => JmaIntensity.SixUpper,
+            70 => JmaIntensity.Seven,
+            _ => JmaIntensity.Unknown,
+        };
+    }
+
+    private static EarthquakeReportType ParseReportType(string? value)
+    {
+        return value switch
+        {
+            "DetailScale" => EarthquakeReportType.HypocenterAndIntensity,
+            "ScalePrompt" => EarthquakeReportType.SeismicIntensity,
+            "Destination" => EarthquakeReportType.Hypocenter,
+            _ => EarthquakeReportType.Unknown,
+        };
+    }
+
+    private static ReportStatus ParseReportStatus(string? value)
+    {
+        return value switch
+        {
+            "None" or "" or null => ReportStatus.Issued,
+            "Correction" or "訂正" => ReportStatus.Correction,
+            "Cancel" or "Cancelled" or "取消" => ReportStatus.Cancelled,
+            _ => ReportStatus.Unknown,
+        };
+    }
+
+    private static string? BuildTsunamiComment(string? domestic, string? foreign)
+    {
+        string[] values = new[] { domestic, foreign }
+            .Where(value => !string.IsNullOrWhiteSpace(value) && value is not ("None" or "Unknown"))
+            .Select(value => value!.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        return values.Length == 0 ? null : string.Join("；", values);
+    }
+
+    private static DateTimeOffset ParseRequiredTime(string? value, string fieldName)
+    {
+        return ParseOptionalTime(value)
+            ?? throw new FormatException($"P2PQuake {fieldName} 时间无效：{value ?? "缺失"}。");
+    }
+
+    private static DateTimeOffset? ParseOptionalTime(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        string trimmed = value.Trim();
+        if (DateTimeOffset.TryParse(
+                trimmed,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind,
+                out DateTimeOffset withOffset) &&
+            (trimmed.EndsWith('Z') || trimmed.Contains('+', StringComparison.Ordinal) ||
+             trimmed.LastIndexOf('-') > trimmed.IndexOf('T', StringComparison.Ordinal)))
+        {
+            return withOffset;
+        }
+
+        if (DateTime.TryParseExact(
+                trimmed,
+                SourceTimeFormats,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AllowWhiteSpaces,
+                out DateTime localTime))
+        {
+            return new DateTimeOffset(localTime, JapanOffset);
+        }
+
+        return null;
+    }
+
+    private static string? NullIfUnknown(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) || value is "-" or "不明"
+            ? null
+            : value.Trim();
+    }
+
+    private static EarthquakeSourceFetchResult Failure(
+        SourceConnectionState state,
+        DateTimeOffset checkedAt,
+        string detail) => new(
+            [],
+            new SourceStatus(SourceName, state, checkedAt, Detail: detail));
+
+    private sealed record P2pQuakeItem(
+        [property: JsonPropertyName("code")] int Code,
+        [property: JsonPropertyName("id")] string? Id,
+        [property: JsonPropertyName("issue")] P2pIssue? Issue,
+        [property: JsonPropertyName("earthquake")] P2pEarthquake? Earthquake,
+        [property: JsonPropertyName("points")] P2pPoint[]? Points,
+        [property: JsonPropertyName("time")] string? Time);
+
+    private sealed record P2pIssue(
+        [property: JsonPropertyName("correct")] string? Correct,
+        [property: JsonPropertyName("time")] string? Time,
+        [property: JsonPropertyName("type")] string? Type);
+
+    private sealed record P2pEarthquake(
+        [property: JsonPropertyName("domesticTsunami")] string? DomesticTsunami,
+        [property: JsonPropertyName("foreignTsunami")] string? ForeignTsunami,
+        [property: JsonPropertyName("hypocenter")] P2pHypocenter? Hypocenter,
+        [property: JsonPropertyName("maxScale")] int MaxScale,
+        [property: JsonPropertyName("time")] string? Time);
+
+    private sealed record P2pHypocenter(
+        [property: JsonPropertyName("depth")] int? Depth,
+        [property: JsonPropertyName("latitude")] double? Latitude,
+        [property: JsonPropertyName("longitude")] double? Longitude,
+        [property: JsonPropertyName("magnitude")] double? Magnitude,
+        [property: JsonPropertyName("name")] string? Name);
+
+    private sealed record P2pPoint(
+        [property: JsonPropertyName("addr")] string? Addr,
+        [property: JsonPropertyName("pref")] string? Prefecture,
+        [property: JsonPropertyName("scale")] int Scale);
+}

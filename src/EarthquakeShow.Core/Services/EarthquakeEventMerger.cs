@@ -54,6 +54,7 @@ public static class EarthquakeEventMerger
     {
         return sourceId switch
         {
+            "p2pquake" => 5,
             "jma-json" => 10,
             "jma-xml" => 20,
             _ => 0,

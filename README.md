@@ -6,14 +6,14 @@
 
 - 正式技术路线：`C# + .NET 8 + WPF`
 - 产品形态：Windows 原生桌面应用，不使用浏览器、WebView 或本地 Web 服务
-- 当前版本：`0.14.0`
+- 当前版本：`0.15.0`
 - 已实现：原生主窗口三栏布局、固定 JMAXML 解析与真实样本接入、摘要/观测点/报文时间线/原始数据详情、报文快照切换、离线日本示意地图、震度区域/震源/观测点图层、虚拟化地震事件列表、搜索、五类筛选、三种排序、刷新、键盘选择和紧凑窗口详情抽屉
 - 固定数据：同一事件的官方 `VXSE51/52/53`、订正与缺字段夹具、75 个观测点坐标、7 个区域测试包络和震度定义
 - 领域模型：地震事件、报文、震源、震度区域/市町村/观测点、来源引用与来源状态
 - 事件归并：按事件合并报文、按来源消息去重、稳定排序，并生成支持订正和取消状态的事件摘要
-- 数据边界：通过仓储接口读取、查询、订阅和刷新事件；Infrastructure 使用 SQLite 保存报文和来源状态，并同时接入 JMA JSON 摘要与 JMA XML 详情
+- 数据边界：通过仓储接口读取、查询、订阅和刷新事件；Infrastructure 使用 SQLite 保存报文和来源状态，并接入 JMA JSON 摘要、JMA XML 详情与 P2PQuake 补充源
 - 页面状态：保存事件列表、当前事件、报文版本、搜索筛选、排序、地图、来源、加载、离线和错误状态
-- 下一步：评估 P2PQuake 补充源，并完善来源差异展示与自动刷新策略
+- 下一步：完善来源差异展示、跨源事件关联和自动刷新/退避策略
 
 `0.1.0` Tauri/Vue 技术原型已停止开发，并于 2026-08-19 按用户要求从工作区删除；历史决策保留在版本记录和工程实现文档中。
 
@@ -53,7 +53,7 @@ dotnet build EarthquakeShow.sln --configuration Release
 python -X utf8 tools\validate_test_data.py
 ```
 
-当前应用启动时优先读取 `%LOCALAPPDATA%\EarthquakeShow\earthquake-cache.db`。首次运行或缓存为空时写入随程序复制的官方 `VXSE51/52/53` 和订正夹具，页面可用后依次请求 JMA `list.json` 摘要和 `https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml` Atom Feed。XML Feed 条目继续下载 `VXSE51/52/53` 详情，复用统一 JMAXML 解析器并写入观测点和原始报文；相同事件、发布时间、报次和接收时间冲突时，JMA XML 优先于 JMA JSON。网络、限流或解析失败不会清空缓存，页面会显示对应来源状态。当前地图轮廓是随应用打包的非官方示意资源，不用于行政或预报区域判断。
+当前应用启动时优先读取 `%LOCALAPPDATA%\EarthquakeShow\earthquake-cache.db`。首次运行或缓存为空时写入随程序复制的官方 `VXSE51/52/53` 和订正夹具，页面可用后依次请求 JMA `list.json` 摘要、JMA XML Atom Feed 详情和 P2PQuake `https://api.p2pquake.net/v2/jma/quake` 补充数据。P2PQuake 只作为非官方补充/降级源，使用独立 `p2pquake:{id}` 事件身份，不与 JMA 事件强行合并；网络、限流或解析失败不会清空缓存，页面会显示对应来源状态。当前地图轮廓是随应用打包的非官方示意资源，不用于行政或预报区域判断。
 
 ## 项目文档
 
