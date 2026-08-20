@@ -204,10 +204,13 @@ public sealed record EarthquakePageDisplayState
         {
             DateTimeOffset japanTime = TimeZoneInfo.ConvertTime(nextRetryAt, JapanTimeZone);
             string previousDuration = duration is null ? string.Empty : $" · 上次连接 {duration}";
-            return $"WebSocket：第 {attempt} 次重连 · {japanTime:HH:mm:ss} JST{previousDuration}";
+            return AppendWebSocketActivity(
+                $"WebSocket：第 {attempt} 次重连 · {japanTime:HH:mm:ss} JST{previousDuration}",
+                status,
+                now);
         }
 
-        return status.State switch
+        string statusText = status.State switch
         {
             SourceConnectionState.Online => duration is null
                 ? "WebSocket：已连接"
@@ -220,6 +223,7 @@ public sealed record EarthquakePageDisplayState
             SourceConnectionState.Disabled => "WebSocket：未启用",
             _ => "WebSocket：状态未知",
         };
+        return AppendWebSocketActivity(statusText, status, now);
     }
 
     private static string GetWebSocketErrorText(EarthquakePageState state)
@@ -240,6 +244,37 @@ public sealed record EarthquakePageDisplayState
         return string.IsNullOrWhiteSpace(error)
             ? "最近错误：无"
             : $"最近错误：{error}";
+    }
+
+    private static string AppendWebSocketActivity(
+        string statusText,
+        SourceStatus status,
+        DateTimeOffset now)
+    {
+        List<string> details = [];
+        if (status.LastMessageAt is DateTimeOffset lastMessageAt)
+        {
+            TimeSpan age = now - lastMessageAt;
+            if (age < TimeSpan.Zero)
+            {
+                age = TimeSpan.Zero;
+            }
+
+            details.Add($"活性：最近消息 {FormatDuration(age)} 前");
+        }
+        else if (status.State == SourceConnectionState.Online)
+        {
+            details.Add("活性：等待首条消息");
+        }
+
+        if (status.ConnectionExceptionCount is int exceptionCount && exceptionCount > 0)
+        {
+            details.Add($"异常 {exceptionCount} 次");
+        }
+
+        return details.Count == 0
+            ? statusText
+            : $"{statusText} · {string.Join(" · ", details)}";
     }
 
     private static SourceStatus? FindWebSocketStatus(EarthquakePageState state)
@@ -264,6 +299,11 @@ public sealed record EarthquakePageDisplayState
             return null;
         }
 
+        return FormatDuration(duration);
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
         int totalSeconds = (int)Math.Min(int.MaxValue, duration.TotalSeconds);
         int hours = totalSeconds / 3600;
         int minutes = totalSeconds / 60 % 60;

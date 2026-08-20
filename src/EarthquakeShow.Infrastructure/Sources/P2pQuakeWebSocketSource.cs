@@ -57,7 +57,10 @@ public sealed class P2pQuakeWebSocketSource : IStreamingEarthquakeSource
 
         if (connectException is not null)
         {
-            yield return Failure(SourceConnectionState.Disconnected, $"P2PQuake WebSocket 连接失败：{connectException.Message}");
+            yield return Failure(
+                SourceConnectionState.Disconnected,
+                $"P2PQuake WebSocket 连接失败：{connectException.Message}",
+                connectionException: true);
             yield break;
         }
 
@@ -86,7 +89,10 @@ public sealed class P2pQuakeWebSocketSource : IStreamingEarthquakeSource
 
             if (receiveException is not null)
             {
-                yield return Failure(SourceConnectionState.Disconnected, $"P2PQuake WebSocket 读取失败：{receiveException.Message}");
+                yield return Failure(
+                    SourceConnectionState.Disconnected,
+                    $"P2PQuake WebSocket 读取失败：{receiveException.Message}",
+                    connectionException: true);
                 yield break;
             }
 
@@ -104,7 +110,10 @@ public sealed class P2pQuakeWebSocketSource : IStreamingEarthquakeSource
             {
                 message.SetLength(0);
                 messageType = received.MessageType;
-                yield return Failure(SourceConnectionState.ParseFailed, "P2PQuake WebSocket 消息类型发生变化。");
+                yield return Failure(
+                    SourceConnectionState.ParseFailed,
+                    "P2PQuake WebSocket 消息类型发生变化。",
+                    messageReceived: true);
             }
 
             message.Write(buffer, 0, received.Count);
@@ -119,7 +128,10 @@ public sealed class P2pQuakeWebSocketSource : IStreamingEarthquakeSource
             messageType = null;
             if (completedType != WebSocketMessageType.Text)
             {
-                yield return Failure(SourceConnectionState.ParseFailed, "P2PQuake WebSocket 仅支持文本 JSON 消息。");
+                yield return Failure(
+                    SourceConnectionState.ParseFailed,
+                    "P2PQuake WebSocket 仅支持文本 JSON 消息。",
+                    messageReceived: true);
                 continue;
             }
 
@@ -144,31 +156,52 @@ public sealed class P2pQuakeWebSocketSource : IStreamingEarthquakeSource
                         SourceConnectionState.Online,
                         receivedAt,
                         report.ReceivedAt,
-                        "P2PQuake WebSocket：1 条"));
+                        "P2PQuake WebSocket：1 条",
+                        LastMessageAt: receivedAt));
             }
             catch (JsonException exception)
             {
-                result = Failure(SourceConnectionState.ParseFailed, $"P2PQuake WebSocket JSON 格式错误：{exception.Message}");
+                result = Failure(
+                    SourceConnectionState.ParseFailed,
+                    $"P2PQuake WebSocket JSON 格式错误：{exception.Message}",
+                    messageReceived: true);
             }
             catch (FormatException exception)
             {
-                result = Failure(SourceConnectionState.ParseFailed, $"P2PQuake WebSocket 字段错误：{exception.Message}");
+                result = Failure(
+                    SourceConnectionState.ParseFailed,
+                    $"P2PQuake WebSocket 字段错误：{exception.Message}",
+                    messageReceived: true);
             }
             catch (ArgumentException exception)
             {
-                result = Failure(SourceConnectionState.ParseFailed, $"P2PQuake WebSocket 字段越界：{exception.Message}");
+                result = Failure(
+                    SourceConnectionState.ParseFailed,
+                    $"P2PQuake WebSocket 字段越界：{exception.Message}",
+                    messageReceived: true);
             }
 
             yield return result;
         }
     }
 
-    private EarthquakeSourceFetchResult Failure(SourceConnectionState state, string detail)
+    private EarthquakeSourceFetchResult Failure(
+        SourceConnectionState state,
+        string detail,
+        bool messageReceived = false,
+        bool connectionException = false)
     {
         DateTimeOffset checkedAt = DateTimeOffset.UtcNow;
         return new EarthquakeSourceFetchResult(
             [],
-            new SourceStatus(SourceId, state, checkedAt, Detail: detail));
+            new SourceStatus(
+                SourceId,
+                state,
+                checkedAt,
+                Detail: detail,
+                LastMessageAt: messageReceived ? checkedAt : null,
+                ConnectionExceptionCount: connectionException ? 1 : null,
+                LastConnectionExceptionAt: connectionException ? checkedAt : null));
     }
 
     private sealed class ClientWebSocketConnection : IWebSocketConnection

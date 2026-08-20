@@ -101,6 +101,7 @@ public sealed class P2pQuakeEarthquakeSourceTests
         EarthquakeSourceFetchResult result = enumerator.Current;
         EarthquakeReport report = Assert.Single(result.Reports);
         Assert.Equal(SourceConnectionState.Online, result.Status.State);
+        Assert.Equal(result.Status.CheckedAt, result.Status.LastMessageAt);
         Assert.Equal("p2pquake-ws", result.Status.SourceId);
         Assert.Equal("p2pquake:p2p-message-1", report.EventId);
         Assert.Equal("p2pquake", report.Source.SourceId);
@@ -147,6 +148,9 @@ public sealed class P2pQuakeEarthquakeSourceTests
 
         Assert.True(await enumerator.MoveNextAsync());
         Assert.Equal(SourceConnectionState.ParseFailed, enumerator.Current.Status.State);
+        Assert.Equal(
+            enumerator.Current.Status.CheckedAt,
+            enumerator.Current.Status.LastMessageAt);
         Assert.True(await enumerator.MoveNextAsync());
         Assert.Equal(SourceConnectionState.Online, enumerator.Current.Status.State);
     }

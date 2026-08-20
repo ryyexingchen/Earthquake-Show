@@ -97,7 +97,7 @@ public sealed class MainWindowViewModelTests
                     status.State == SourceConnectionState.Online);
             Assert.Contains("p2pquake-ws 已更新 1 条报文", viewModel.CacheStatus);
             Assert.Equal(
-                "WebSocket：已连接",
+                "WebSocket：已连接 · 活性：等待首条消息",
                 viewModel.EarthquakePage.Display.WebSocketStatusText);
 
             viewModel.Dispose();

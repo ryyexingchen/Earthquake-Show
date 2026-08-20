@@ -38,6 +38,9 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
             DateTimeOffset? lastConnectedAt = null;
             DateTimeOffset? connectionEndedAt = null;
             string? lastError = null;
+            DateTimeOffset? lastMessageAt = null;
+            int connectionExceptionCount = 0;
+            DateTimeOffset? lastConnectionExceptionAt = null;
             while (true)
             {
                 bool receivedOnline = false;
@@ -92,7 +95,10 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
                                 ref sessionConnectedAt,
                                 ref lastConnectedAt,
                                 ref connectionEndedAt,
-                                ref lastError);
+                                ref lastError,
+                                ref lastMessageAt,
+                                ref connectionExceptionCount,
+                                ref lastConnectionExceptionAt);
                             receivedOnline |= result.Status.State == SourceConnectionState.Online;
                             yield return result;
                             if (result.Status.State == SourceConnectionState.Disconnected)
@@ -116,6 +122,10 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
                 {
                     string detail = $"{SourceId} 流连接异常：{sessionException.Message}";
                     lastError = detail;
+                    connectionExceptionCount = Math.Min(
+                        int.MaxValue,
+                        connectionExceptionCount + 1);
+                    lastConnectionExceptionAt = _utcNow();
                     connectionEndedAt = sessionConnectedAt is null
                         ? connectionEndedAt
                         : _utcNow();
@@ -128,7 +138,10 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
                             Detail: detail,
                             ConnectedAt: sessionConnectedAt ?? lastConnectedAt,
                             ConnectionEndedAt: connectionEndedAt,
-                            LastError: lastError));
+                            LastError: lastError,
+                            LastMessageAt: lastMessageAt,
+                            ConnectionExceptionCount: connectionExceptionCount,
+                            LastConnectionExceptionAt: lastConnectionExceptionAt));
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
@@ -147,7 +160,10 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
                         NextRetryAt: checkedAt.Add(reconnectDelay),
                         ConnectedAt: lastConnectedAt,
                         ConnectionEndedAt: connectionEndedAt,
-                        LastError: lastError));
+                        LastError: lastError,
+                        LastMessageAt: lastMessageAt,
+                        ConnectionExceptionCount: connectionExceptionCount,
+                        LastConnectionExceptionAt: lastConnectionExceptionAt));
                 await _delay(reconnectDelay, cancellationToken)
                     .ConfigureAwait(false);
             }
@@ -163,9 +179,26 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
         ref DateTimeOffset? sessionConnectedAt,
         ref DateTimeOffset? lastConnectedAt,
         ref DateTimeOffset? connectionEndedAt,
-        ref string? lastError)
+        ref string? lastError,
+        ref DateTimeOffset? lastMessageAt,
+        ref int connectionExceptionCount,
+        ref DateTimeOffset? lastConnectionExceptionAt)
     {
         SourceStatus status = result.Status;
+        if (status.LastMessageAt is DateTimeOffset messageAt)
+        {
+            lastMessageAt = messageAt;
+        }
+
+        if (status.ConnectionExceptionCount is int sourceExceptionCount &&
+            sourceExceptionCount > 0)
+        {
+            connectionExceptionCount = (int)Math.Min(
+                int.MaxValue,
+                (long)connectionExceptionCount + sourceExceptionCount);
+            lastConnectionExceptionAt = status.LastConnectionExceptionAt ?? status.CheckedAt;
+        }
+
         if (status.State == SourceConnectionState.Online)
         {
             sessionConnectedAt ??= _utcNow();
@@ -197,6 +230,11 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
                 ConnectedAt = sessionConnectedAt ?? lastConnectedAt,
                 ConnectionEndedAt = connectionEndedAt,
                 LastError = lastError,
+                LastMessageAt = lastMessageAt,
+                ConnectionExceptionCount = connectionExceptionCount == 0
+                    ? null
+                    : connectionExceptionCount,
+                LastConnectionExceptionAt = lastConnectionExceptionAt,
             },
         };
     }

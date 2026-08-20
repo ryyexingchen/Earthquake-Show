@@ -28,7 +28,8 @@
 - `0.21.0` 已完成步骤 11 第九阶段：将 P2PQuake WebSocket 接入应用生命周期、SQLite 和页面状态，并通过 148 个 xUnit 测试。
 - `0.22.0` 已完成步骤 11 第十阶段：显示 P2PQuake WebSocket 重连次数和下次重试时间，并通过 149 个 xUnit 测试。
 - `0.23.0` 已完成步骤 11 第十一阶段：显示 P2PQuake WebSocket 连接持续时间和最近错误详情，并通过 151 个 xUnit 测试。
-- 下一实现步骤：补充 P2PQuake WebSocket 心跳状态和连接异常统计。
+- `0.24.0` 已完成步骤 11 第十二阶段：显示消息活性和连接异常统计，并通过 153 个 xUnit 测试。
+- 下一实现步骤：实现 P2PQuake WebSocket 主动心跳策略和连接轮换。
 
 ## 文档同步规则
 
@@ -436,7 +437,7 @@ SQLite 至少需要保存：
 
 ### 11. 分阶段接入真实数据源
 
-状态：第十一阶段 WebSocket 连接诊断已于 `0.23.0` 实现并验证；心跳状态、连接异常统计、nTool、人工关联确认和历史回放尚未实现。
+状态：第十二阶段 WebSocket 消息活性和连接异常统计已于 `0.24.0` 实现并验证；协议级主动心跳、连接轮换、nTool、人工关联确认和历史回放尚未实现。
 
 推荐接入顺序：
 
@@ -473,7 +474,8 @@ SQLite 至少需要保存：
 - [x] P2PQuake WebSocket 结果串行写入 SQLite，发布页面事件和独立 `p2pquake-ws` 通道状态。
 - [x] P2PQuake WebSocket 重连等待发布连续失败次数和下次重试时间，页面状态栏按 JST 显示。
 - [x] P2PQuake WebSocket 显示当前/最近连接持续时间和最近错误详情，主窗口时钟每秒刷新展示。
-- [ ] P2PQuake WebSocket 心跳状态、连接异常统计和 nTool。
+- [x] P2PQuake WebSocket 显示最近消息活性和累计连接异常次数；解析失败与正常 Close 不计入连接异常。
+- [ ] P2PQuake WebSocket 主动心跳、连接轮换和 nTool。
 
 ### 12. 完成页面级验证
 

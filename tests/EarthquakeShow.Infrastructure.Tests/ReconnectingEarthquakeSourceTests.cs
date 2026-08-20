@@ -127,6 +127,32 @@ public sealed class ReconnectingEarthquakeSourceTests
     }
 
     [Fact]
+    public async Task Source_AccumulatesConnectionExceptionCountAcrossReconnects()
+    {
+        DateTimeOffset now = new(2026, 8, 20, 1, 2, 3, TimeSpan.Zero);
+        var inner = new ScriptedSource(
+            ExceptionResult(now, "第一次连接异常"),
+            ExceptionResult(now, "第二次连接异常"));
+        var source = new ReconnectingEarthquakeSource(
+            inner,
+            new StreamingReconnectPolicy(TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(5)),
+            (_, _) => Task.CompletedTask,
+            () => now);
+
+        await using IAsyncEnumerator<EarthquakeSourceFetchResult> enumerator =
+            source.StreamAsync().GetAsyncEnumerator();
+
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(1, enumerator.Current.Status.ConnectionExceptionCount);
+        Assert.Equal(now, enumerator.Current.Status.LastConnectionExceptionAt);
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(1, enumerator.Current.Status.ConnectionExceptionCount);
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(2, enumerator.Current.Status.ConnectionExceptionCount);
+        Assert.Equal("第二次连接异常", enumerator.Current.Status.LastError);
+    }
+
+    [Fact]
     public async Task Source_CancellationInterruptsReconnectDelay()
     {
         using var cancellation = new CancellationTokenSource();
@@ -186,6 +212,19 @@ public sealed class ReconnectingEarthquakeSourceTests
         new(
             ImmutableArray<EarthquakeReport>.Empty,
             new SourceStatus("test", state, DateTimeOffset.UtcNow, Detail: detail));
+
+    private static EarthquakeSourceFetchResult ExceptionResult(
+        DateTimeOffset checkedAt,
+        string detail) =>
+        new(
+            ImmutableArray<EarthquakeReport>.Empty,
+            new SourceStatus(
+                "test",
+                SourceConnectionState.Disconnected,
+                checkedAt,
+                Detail: detail,
+                ConnectionExceptionCount: 1,
+                LastConnectionExceptionAt: checkedAt));
 
     private sealed class ScriptedSource(params EarthquakeSourceFetchResult[] sessions)
         : IStreamingEarthquakeSource

@@ -27,4 +27,7 @@ public sealed record SourceStatus(
     DateTimeOffset? NextRetryAt = null,
     DateTimeOffset? ConnectedAt = null,
     DateTimeOffset? ConnectionEndedAt = null,
-    string? LastError = null);
+    string? LastError = null,
+    DateTimeOffset? LastMessageAt = null,
+    int? ConnectionExceptionCount = null,
+    DateTimeOffset? LastConnectionExceptionAt = null);
