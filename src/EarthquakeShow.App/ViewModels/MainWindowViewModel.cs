@@ -24,8 +24,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly HttpClient? _httpClient;
     private readonly JmaJsonEarthquakeSource? _realtimeSource;
     private readonly IReadOnlyList<IRealtimeEarthquakeSource> _realtimeSources = [];
+    private readonly RefreshBackoffPolicy _refreshBackoffPolicy = new();
+    private Task? _refreshLoopTask;
     private string _currentTime = string.Empty;
     private string _cacheStatus = "缓存：初始化中";
+    private string _autoRefreshStatus = "自动刷新：未启动";
     private bool _isDisposed;
 
     public MainWindowViewModel(
@@ -40,7 +43,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 Timeout = TimeSpan.FromSeconds(15),
             };
-            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.17.0");
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.18.0");
             _realtimeSource = new JmaJsonEarthquakeSource(_httpClient);
             JmaXmlEarthquakeSource xmlSource = new(
                 _httpClient,
@@ -103,6 +106,21 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public string AutoRefreshStatus
+    {
+        get => _autoRefreshStatus;
+        private set
+        {
+            if (_autoRefreshStatus == value)
+            {
+                return;
+            }
+
+            _autoRefreshStatus = value;
+            OnPropertyChanged();
+        }
+    }
+
     public string MapDataStatus => Map.IsOfficialBoundary ? "地图：离线边界" : "地图：离线示意";
 
     public string AppVersion { get; }
@@ -132,6 +150,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (_realtimeSource is not null)
         {
             await RefreshFromNetworkAsync(token);
+            _refreshLoopTask ??= RunRefreshLoopAsync(_lifetimeCancellation.Token);
         }
     }
 
@@ -166,6 +185,37 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested)
         {
         }
+    }
+
+    private async Task RunRefreshLoopAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                TimeSpan delay = _refreshBackoffPolicy.GetNextDelay(
+                    EarthquakePage.State.SourceStatuses);
+                AutoRefreshStatus = $"自动刷新：{FormatDelay(delay)} 后检查";
+                await Task.Delay(delay, cancellationToken);
+                AutoRefreshStatus = "自动刷新：检查中";
+                await RefreshFromNetworkAsync(cancellationToken);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            AutoRefreshStatus = "自动刷新：已停止";
+        }
+        catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested)
+        {
+            AutoRefreshStatus = "自动刷新：已停止";
+        }
+    }
+
+    private static string FormatDelay(TimeSpan delay)
+    {
+        return delay.TotalMinutes >= 1
+            ? $"{delay.TotalMinutes:0.#} 分钟"
+            : $"{Math.Max(1, delay.TotalSeconds):0} 秒";
     }
 
     private static string GetDefaultCachePath()

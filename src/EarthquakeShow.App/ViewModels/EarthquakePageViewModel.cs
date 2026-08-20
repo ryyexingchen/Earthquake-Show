@@ -10,6 +10,7 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
 {
     private readonly IEarthquakeEventRepository _repository;
     private readonly SynchronizationContext? _synchronizationContext;
+    private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private EarthquakePageState _state = new();
     private EarthquakePageDisplayState _display;
     private bool _isDisposed;
@@ -78,6 +79,19 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
     public async ValueTask RefreshAsync(CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
+        await _refreshGate.WaitAsync(cancellationToken);
+        try
+        {
+            await RefreshCoreAsync(cancellationToken);
+        }
+        finally
+        {
+            _refreshGate.Release();
+        }
+    }
+
+    private async ValueTask RefreshCoreAsync(CancellationToken cancellationToken)
+    {
         State = State with
         {
             IsRefreshing = true,
@@ -248,6 +262,7 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
         }
 
         _repository.EventsChanged -= OnRepositoryEventsChanged;
+        _refreshGate.Dispose();
         _isDisposed = true;
     }
 

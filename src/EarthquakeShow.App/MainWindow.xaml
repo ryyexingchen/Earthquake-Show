@@ -271,6 +271,13 @@
                            Foreground="{StaticResource MutedTextBrush}"
                            FontSize="11"
                            Text="{Binding MapDataStatus}" />
+                <TextBlock Grid.Column="4"
+                           Margin="20,0,0,0"
+                           VerticalAlignment="Center"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           FontSize="11"
+                           Text="{Binding AutoRefreshStatus}"
+                           TextTrimming="CharacterEllipsis" />
                 <TextBlock Grid.Column="5"
                            VerticalAlignment="Center"
                            Foreground="{StaticResource MutedTextBrush}"
