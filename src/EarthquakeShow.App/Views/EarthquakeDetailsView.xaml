@@ -76,6 +76,56 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                            <Border Margin="0,0,0,10"
+                                    Padding="10,8"
+                                    BorderBrush="{StaticResource BorderBrush}"
+                                    BorderThickness="1">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{StaticResource SurfaceSubtleBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding TsunamiStatus.Kind}" Value="MinorChange">
+                                                <Setter Property="Background" Value="#DCEFF7" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding TsunamiStatus.Kind}" Value="Advisory">
+                                                <Setter Property="Background" Value="#F4E59C" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding TsunamiStatus.Kind}" Value="Warning">
+                                                <Setter Property="Background" Value="#E17467" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding TsunamiStatus.Kind}" Value="MajorWarning">
+                                                <Setter Property="Background" Value="#963F68" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontWeight="SemiBold" Text="海啸">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding TsunamiStatus.Kind}" Value="MajorWarning">
+                                                        <Setter Property="Foreground" Value="White" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Margin="12,0,0,0" Text="{Binding TsunamiStatus.Text}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding TsunamiStatus.Kind}" Value="MajorWarning">
+                                                        <Setter Property="Foreground" Value="White" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
                             <Border Margin="0,4,0,0"
                                     Padding="10,8"
                                     BorderBrush="{StaticResource BorderBrush}"

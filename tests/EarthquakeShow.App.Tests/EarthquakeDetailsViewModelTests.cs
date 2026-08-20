@@ -177,6 +177,49 @@ public sealed class EarthquakeDetailsViewModelTests
         Assert.Equal(2, page.State.Events.Length);
     }
 
+    [Fact]
+    public async Task Details_PersistsReceivedFieldsAndSkipsUnknownChanges()
+    {
+        EarthquakeReport intensity = CreateReport(
+            "intensity",
+            BaseTime,
+            reportType: EarthquakeReportType.SeismicIntensity,
+            magnitude: null,
+            includeHypocenter: false,
+            intensity: JmaIntensity.Three);
+        EarthquakeReport hypocenter = CreateReport(
+            "hypocenter",
+            BaseTime.AddMinutes(1),
+            reportType: EarthquakeReportType.Hypocenter,
+            magnitude: 3.8,
+            intensity: JmaIntensity.Unknown,
+            tsunamiComment: "この地震による津波の心配はありません。");
+        EarthquakeReport update = CreateReport(
+            "intensity-update",
+            BaseTime.AddMinutes(2),
+            reportType: EarthquakeReportType.SeismicIntensity,
+            magnitude: null,
+            includeHypocenter: false,
+            intensity: JmaIntensity.Four);
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([intensity, hypocenter, update]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+        using var details = new EarthquakeDetailsViewModel(page, map);
+
+        Assert.Contains("最大震度：3", details.TimelineItems[0].ChangeSummary);
+        Assert.Contains("震源・规模：调查中", details.TimelineItems[0].ChangeSummary);
+        Assert.Contains("海啸：津波 调查中", details.TimelineItems[0].ChangeSummary);
+        Assert.DoesNotContain("3 → 不明", details.TimelineItems[1].ChangeSummary);
+        Assert.Contains("最大震度 3 → 4", details.TimelineItems[2].ChangeSummary);
+        Assert.Contains("震级：M 3.8", details.TimelineItems[2].ChangeSummary);
+        Assert.Equal("M 3.8 (Mj)", GetField(details, "震级"));
+        Assert.Equal("津波の心配なし", details.TsunamiStatus.Text);
+        Assert.Equal("NoConcern", details.TsunamiStatus.Kind);
+    }
+
     private static string GetField(EarthquakeDetailsViewModel details, string label)
     {
         return details.SummaryFields.Single(field => field.Label == label).Value;
@@ -186,30 +229,35 @@ public sealed class EarthquakeDetailsViewModelTests
         string sourceMessageId,
         DateTimeOffset issuedAt,
         ReportStatus status = ReportStatus.Issued,
-        double magnitude = 3.8,
+        double? magnitude = 3.8,
         JmaIntensity intensity = JmaIntensity.Three,
         bool station = false,
         string? rawPayload = null,
         string sourceId = "jma-xml",
-        string eventId = "details-event")
+        string eventId = "details-event",
+        EarthquakeReportType reportType = EarthquakeReportType.HypocenterAndIntensity,
+        bool includeHypocenter = true,
+        string? tsunamiComment = null)
     {
         return new EarthquakeReport
         {
             EventId = eventId,
             ReportCode = "VXSE53",
-            ReportType = EarthquakeReportType.HypocenterAndIntensity,
+            ReportType = reportType,
             Status = status,
             Context = ReportContext.Normal,
             Serial = status == ReportStatus.Correction ? 2 : 1,
             OriginTime = BaseTime,
             IssuedAt = issuedAt,
             ReceivedAt = issuedAt.AddSeconds(1),
-            Hypocenter = new Hypocenter(
-                "熊本県熊本",
-                "741",
-                new GeoCoordinate(32.8, 130.7),
-                20),
-            Magnitude = new Magnitude(magnitude, "Mj"),
+            Hypocenter = includeHypocenter
+                ? new Hypocenter(
+                    "熊本県熊本",
+                    "741",
+                    new GeoCoordinate(32.8, 130.7),
+                    20)
+                : null,
+            Magnitude = magnitude is double value ? new Magnitude(value, "Mj") : null,
             MaxIntensity = intensity,
             IntensityAreas =
             [
@@ -223,6 +271,7 @@ public sealed class EarthquakeDetailsViewModelTests
                     intensity,
                     new GeoCoordinate(32.81, 130.71))]
                 : [],
+            TsunamiComment = tsunamiComment,
             Source = new SourceReference(
                 sourceId,
                 sourceMessageId,
