@@ -8,6 +8,55 @@
              mc:Ignorable="d">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <Style x:Key="IntensityBadgeBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="#E1E5E7" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Kind}" Value="One">
+                    <Setter Property="Background" Value="#DCEFF7" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="Two">
+                    <Setter Property="Background" Value="#BFE8DB" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="Three">
+                    <Setter Property="Background" Value="#F4E59C" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="Four">
+                    <Setter Property="Background" Value="#F4C37D" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="FiveLower">
+                    <Setter Property="Background" Value="#EB9B76" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="FiveUpper">
+                    <Setter Property="Background" Value="#E17467" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="SixLower">
+                    <Setter Property="Background" Value="#C95567" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="SixUpper">
+                    <Setter Property="Background" Value="#963F68" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="Seven">
+                    <Setter Property="Background" Value="#5D315D" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="IntensityBadgeTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Kind}" Value="FiveUpper">
+                    <Setter Property="Foreground" Value="White" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="SixLower">
+                    <Setter Property="Foreground" Value="White" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="SixUpper">
+                    <Setter Property="Foreground" Value="White" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="Seven">
+                    <Setter Property="Foreground" Value="White" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
     <TabControl x:Name="DetailsTabs">
@@ -66,33 +115,60 @@
                                         <TextBlock Foreground="{StaticResource MutedTextBrush}"
                                                    FontSize="12"
                                                    Text="最大震度" />
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{Binding SummaryOverview.MaximumIntensityText}" />
+                                        <Border Grid.Column="1"
+                                                HorizontalAlignment="Left"
+                                                Padding="4,1"
+                                                Style="{StaticResource IntensityBadgeBorderStyle}">
+                                            <TextBlock Style="{StaticResource IntensityBadgeTextStyle}"
+                                                       Text="{Binding SummaryOverview.MaximumIntensity.Text}" />
+                                        </Border>
                                     </Grid>
                                 </StackPanel>
                                 <StackPanel Margin="0,8,0,0"
-                                            Orientation="Horizontal"
-                                            Visibility="{Binding SummaryOverview.HasSourceDetails, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <StackPanel Orientation="Horizontal"
-                                                Visibility="{Binding SummaryOverview.HasMagnitude, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <TextBlock Foreground="{StaticResource MutedTextBrush}" Text="震级" />
-                                        <TextBlock Margin="4,0,0,0" Text="{Binding SummaryOverview.MagnitudeText}" />
-                                    </StackPanel>
-                                    <StackPanel Margin="16,0,0,0"
-                                                Orientation="Horizontal"
-                                                Visibility="{Binding SummaryOverview.HasHypocenter, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            Visibility="{Binding SummaryOverview.HasHypocenter, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="88" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
                                         <TextBlock Foreground="{StaticResource MutedTextBrush}" Text="震源地" />
-                                        <TextBlock Margin="4,0,0,0"
-                                                   MaxWidth="130"
+                                        <TextBlock Grid.Column="1"
                                                    Text="{Binding SummaryOverview.HypocenterText}"
                                                    TextTrimming="CharacterEllipsis" />
-                                    </StackPanel>
-                                    <StackPanel Margin="16,0,0,0"
-                                                Orientation="Horizontal"
-                                                Visibility="{Binding SummaryOverview.HasDepth, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    </Grid>
+                                </StackPanel>
+                                <StackPanel Margin="0,8,0,0"
+                                            Visibility="{Binding SummaryOverview.HasMagnitude, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="88" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Foreground="{StaticResource MutedTextBrush}" Text="震级" />
+                                        <TextBlock Grid.Column="1" Text="{Binding SummaryOverview.MagnitudeText}" />
+                                    </Grid>
+                                </StackPanel>
+                                <StackPanel Margin="0,8,0,0"
+                                            Visibility="{Binding SummaryOverview.HasDepth, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="88" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
                                         <TextBlock Foreground="{StaticResource MutedTextBrush}" Text="深度" />
-                                        <TextBlock Margin="4,0,0,0" Text="{Binding SummaryOverview.DepthText}" />
-                                    </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="{Binding SummaryOverview.DepthText}" />
+                                    </Grid>
+                                </StackPanel>
+                                <StackPanel Margin="0,8,0,0"
+                                            Visibility="{Binding SummaryOverview.HasSourceScaleInvestigation, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="88" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Foreground="{StaticResource MutedTextBrush}" Text="震源・规模" />
+                                        <TextBlock Grid.Column="1" Text="调查中" />
+                                    </Grid>
                                 </StackPanel>
                                 <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
                                     <TextBlock Foreground="{StaticResource MutedTextBrush}" Text="海啸" />
@@ -382,10 +458,108 @@
                                     <TextBlock Foreground="{StaticResource MutedTextBrush}"
                                                FontSize="11"
                                                Text="{Binding ReceivedAtText}" />
-                                    <TextBlock Margin="0,5,0,0"
-                                               FontSize="11"
-                                               Text="{Binding ChangeSummary}"
-                                               TextWrapping="Wrap" />
+                                    <StackPanel Margin="0,7,0,0">
+                                        <StackPanel Visibility="{Binding Summary.HasMaximumIntensity, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="64" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                                                           FontSize="11"
+                                                           Text="最大震度" />
+                                                <Border Grid.Column="1"
+                                                        HorizontalAlignment="Left"
+                                                        Padding="4,1"
+                                                        Style="{StaticResource IntensityBadgeBorderStyle}">
+                                                    <TextBlock Style="{StaticResource IntensityBadgeTextStyle}"
+                                                               Text="{Binding Summary.MaximumIntensity.Text}" />
+                                                </Border>
+                                            </Grid>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,6,0,0"
+                                                    Orientation="Horizontal"
+                                                    Visibility="{Binding Summary.HasSourceDetails, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <StackPanel Visibility="{Binding Summary.HasMagnitude, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                                                           FontSize="11"
+                                                           Text="震级" />
+                                                <TextBlock Text="{Binding Summary.MagnitudeText}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                            <StackPanel Margin="14,0,0,0"
+                                                        Visibility="{Binding Summary.HasHypocenter, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                                                           FontSize="11"
+                                                           Text="震源地" />
+                                                <TextBlock MaxWidth="135"
+                                                           Text="{Binding Summary.HypocenterText}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                            <StackPanel Margin="14,0,0,0"
+                                                        Visibility="{Binding Summary.HasDepth, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                                                           FontSize="11"
+                                                           Text="深度" />
+                                                <TextBlock Text="{Binding Summary.DepthText}" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,6,0,0"
+                                                    Visibility="{Binding Summary.HasSourceScaleInvestigation, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="64" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                                                           FontSize="11"
+                                                           Text="震源・规模" />
+                                                <TextBlock Grid.Column="1" Text="调查中" />
+                                            </Grid>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,6,0,0" Orientation="Horizontal">
+                                            <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                                                       FontSize="11"
+                                                       Text="海啸" />
+                                            <Border Margin="12,0,0,0"
+                                                    Padding="4,1">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="{StaticResource SurfaceSubtleBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Summary.TsunamiStatus.Kind}" Value="MinorChange">
+                                                                <Setter Property="Background" Value="#DCEFF7" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Summary.TsunamiStatus.Kind}" Value="Advisory">
+                                                                <Setter Property="Background" Value="#F4E59C" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Summary.TsunamiStatus.Kind}" Value="Warning">
+                                                                <Setter Property="Background" Value="#E17467" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Summary.TsunamiStatus.Kind}" Value="MajorWarning">
+                                                                <Setter Property="Background" Value="#963F68" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock Text="{Binding Summary.TsunamiStatus.Text}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Summary.TsunamiStatus.Kind}" Value="Warning">
+                                                                    <Setter Property="Foreground" Value="White" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Summary.TsunamiStatus.Kind}" Value="MajorWarning">
+                                                                    <Setter Property="Foreground" Value="White" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Border>
+                                        </StackPanel>
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
                         </DataTemplate>

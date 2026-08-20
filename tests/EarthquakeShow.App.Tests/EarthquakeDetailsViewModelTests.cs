@@ -211,12 +211,17 @@ public sealed class EarthquakeDetailsViewModelTests
 
         Assert.Contains("最大震度：3", details.TimelineItems[0].ChangeSummary);
         Assert.Contains("震源・规模：调查中", details.TimelineItems[0].ChangeSummary);
-        Assert.DoesNotContain("海啸", details.TimelineItems[0].ChangeSummary);
+        Assert.Contains("海啸：津波 调查中", details.TimelineItems[0].ChangeSummary);
         Assert.DoesNotContain("3 → 不明", details.TimelineItems[1].ChangeSummary);
         Assert.Contains("海啸：津波の心配なし", details.TimelineItems[1].ChangeSummary);
         Assert.Contains("最大震度 3 → 4", details.TimelineItems[2].ChangeSummary);
         Assert.Contains("震级：M 3.8", details.TimelineItems[2].ChangeSummary);
         Assert.Contains("海啸：津波の心配なし", details.TimelineItems[2].ChangeSummary);
+        Assert.Equal("Four", details.SummaryOverview.MaximumIntensity?.Kind);
+        Assert.Equal("Three", details.TimelineItems[0].Summary.MaximumIntensity?.Kind);
+        Assert.True(details.TimelineItems[0].Summary.HasSourceScaleInvestigation);
+        Assert.Equal("津波 调查中", details.TimelineItems[0].Summary.TsunamiStatus.Text);
+        Assert.Equal("津波の心配なし", details.TimelineItems[2].Summary.TsunamiStatus.Text);
         Assert.Equal("M 3.8 (Mj)", GetField(details, "震级"));
         Assert.Equal("津波の心配なし", details.TsunamiStatus.Text);
         Assert.Equal("NoConcern", details.TsunamiStatus.Kind);
