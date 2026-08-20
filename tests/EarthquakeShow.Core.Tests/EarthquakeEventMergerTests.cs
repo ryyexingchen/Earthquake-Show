@@ -98,6 +98,27 @@ public sealed class EarthquakeEventMergerTests
     }
 
     [Fact]
+    public void Merge_EqualReportIdentity_PrefersJmaXmlOverJson()
+    {
+        EarthquakeReport json = CreateReport(
+            "JMA-JSON",
+            "json-message",
+            1,
+            sourceId: "jma-json");
+        EarthquakeReport xml = CreateReport(
+            "VXSE53",
+            "xml-message",
+            1,
+            sourceId: "jma-xml");
+
+        EarthquakeEvent earthquakeEvent = Assert.Single(
+            EarthquakeEventMerger.Merge([json, xml]));
+
+        Assert.Equal("jma-xml", earthquakeEvent.LatestReport?.Source.SourceId);
+        Assert.Equal("VXSE53", earthquakeEvent.LatestReport?.ReportCode);
+    }
+
+    [Fact]
     public void Merge_MultipleEvents_OrdersNewestEventFirst()
     {
         EarthquakeReport older = CreateReport(

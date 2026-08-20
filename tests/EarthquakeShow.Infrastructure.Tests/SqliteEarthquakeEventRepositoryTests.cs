@@ -142,7 +142,7 @@ public sealed class SqliteEarthquakeEventRepositoryTests
         Assert.Equal(
             SourceConnectionState.Online,
             Assert.Single(repository.SourceStatuses, status => status.SourceId == "jma-json").State);
-        Assert.Contains("JMA JSON 已更新 1 条报文", repository.CacheStatus);
+        Assert.Contains("实时源已更新 1 条报文", repository.CacheStatus);
 
         var reloaded = new SqliteEarthquakeEventRepository(database.Path);
         await reloaded.InitializeAsync([]);

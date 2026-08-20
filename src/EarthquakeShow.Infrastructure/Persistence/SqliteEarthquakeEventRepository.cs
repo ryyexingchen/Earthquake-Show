@@ -22,7 +22,7 @@ public sealed class SqliteEarthquakeEventRepository :
 
     private readonly object _syncRoot = new();
     private readonly string _databasePath;
-    private readonly IRealtimeEarthquakeSource? _realtimeSource;
+    private readonly ImmutableArray<IRealtimeEarthquakeSource> _realtimeSources;
     private ImmutableArray<EarthquakeReport> _reports = [];
     private ImmutableArray<EarthquakeEvent> _events = [];
     private ImmutableArray<SourceStatus> _sourceStatuses = [];
@@ -31,10 +31,22 @@ public sealed class SqliteEarthquakeEventRepository :
     public SqliteEarthquakeEventRepository(
         string databasePath,
         IRealtimeEarthquakeSource? realtimeSource = null)
+        : this(
+            databasePath,
+            realtimeSource is null ? [] : [realtimeSource])
+    {
+    }
+
+    public SqliteEarthquakeEventRepository(
+        string databasePath,
+        IEnumerable<IRealtimeEarthquakeSource> realtimeSources)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
+        ArgumentNullException.ThrowIfNull(realtimeSources);
         _databasePath = Path.GetFullPath(databasePath);
-        _realtimeSource = realtimeSource;
+        _realtimeSources = realtimeSources
+            .Where(source => source is not null)
+            .ToImmutableArray();
     }
 
     public event EventHandler<EarthquakeEventsChangedEventArgs>? EventsChanged;
@@ -151,37 +163,48 @@ public sealed class SqliteEarthquakeEventRepository :
     public async ValueTask RefreshAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (_realtimeSource is null)
+        if (_realtimeSources.IsDefaultOrEmpty)
         {
             return;
         }
 
-        EarthquakeSourceFetchResult result;
-        try
+        var reports = ImmutableArray.CreateBuilder<EarthquakeReport>();
+        var statuses = ImmutableArray.CreateBuilder<SourceStatus>();
+        foreach (IRealtimeEarthquakeSource source in _realtimeSources)
         {
-            result = await _realtimeSource.FetchAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (HttpRequestException exception)
-        {
-            result = new EarthquakeSourceFetchResult(
-                [],
-                new SourceStatus(
-                    _realtimeSource.SourceId,
-                    SourceConnectionState.Disconnected,
-                    DateTimeOffset.UtcNow,
-                    Detail: $"数据源网络错误：{exception.Message}"));
+            EarthquakeSourceFetchResult result;
+            try
+            {
+                result = await source.FetchAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (HttpRequestException exception)
+            {
+                result = new EarthquakeSourceFetchResult(
+                    [],
+                    new SourceStatus(
+                        source.SourceId,
+                        SourceConnectionState.Disconnected,
+                        DateTimeOffset.UtcNow,
+                        Detail: $"数据源网络错误：{exception.Message}"));
+            }
+
+            reports.AddRange(result.Reports);
+            statuses.Add(result.Status);
         }
 
+        ImmutableArray<SourceStatus> sourceStatuses = statuses.ToImmutable();
+        bool allOnline = sourceStatuses.All(
+            status => status.State == SourceConnectionState.Online);
         await SaveReportsAndStatusAsync(
-            result.Reports,
-            result.Status,
-            result.Status.State == SourceConnectionState.Online
-                ? $"缓存：JMA JSON 已更新 {result.Reports.Length} 条报文"
-                : $"缓存：保留已有数据，来源状态为 {result.Status.State}",
+            reports.ToImmutable(),
+            sourceStatuses,
+            allOnline
+                ? $"缓存：实时源已更新 {reports.Count} 条报文"
+                : "缓存：保留已有数据，至少一个来源不可用",
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -194,14 +217,14 @@ public sealed class SqliteEarthquakeEventRepository :
         ImmutableArray<EarthquakeReport> incomingReports = reports.ToImmutableArray();
         await SaveReportsAndStatusAsync(
             incomingReports,
-            null,
+            [],
             $"缓存：已保存 {incomingReports.Length} 条报文",
             cancellationToken).ConfigureAwait(false);
     }
 
     private async Task SaveReportsAndStatusAsync(
         ImmutableArray<EarthquakeReport> incomingReports,
-        SourceStatus? sourceStatus,
+        ImmutableArray<SourceStatus> sourceStatuses,
         string cacheStatus,
         CancellationToken cancellationToken)
     {
@@ -221,9 +244,9 @@ public sealed class SqliteEarthquakeEventRepository :
         ImmutableArray<SourceStatus> existingStatuses =
             await ReadSourceStatusesAsync(connection, cancellationToken).ConfigureAwait(false);
         ImmutableArray<SourceStatus> statuses = BuildOfflineStatuses(allReports, existingStatuses);
-        if (sourceStatus is SourceStatus updatedStatus)
+        foreach (SourceStatus sourceStatus in sourceStatuses)
         {
-            statuses = ReplaceSourceStatus(statuses, updatedStatus);
+            statuses = ReplaceSourceStatus(statuses, sourceStatus);
         }
 
         await SaveSourceStatusesToConnectionAsync(connection, statuses, cancellationToken)

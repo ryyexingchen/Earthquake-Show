@@ -7,8 +7,8 @@ using System.Runtime.CompilerServices;
 using System.Windows.Threading;
 using EarthquakeShow.App.Services;
 using EarthquakeShow.Core.Models;
-using EarthquakeShow.Infrastructure.Persistence;
 using EarthquakeShow.Infrastructure.Sources;
+using EarthquakeShow.Infrastructure.Persistence;
 
 namespace EarthquakeShow.App.ViewModels;
 
@@ -23,6 +23,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly IReadOnlyList<EarthquakeReport> _seedReports;
     private readonly HttpClient? _httpClient;
     private readonly JmaJsonEarthquakeSource? _realtimeSource;
+    private readonly IReadOnlyList<IRealtimeEarthquakeSource> _realtimeSources = [];
     private string _currentTime = string.Empty;
     private string _cacheStatus = "缓存：初始化中";
     private bool _isDisposed;
@@ -39,13 +40,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 Timeout = TimeSpan.FromSeconds(15),
             };
-            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.13.0");
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.14.0");
             _realtimeSource = new JmaJsonEarthquakeSource(_httpClient);
+            JmaXmlEarthquakeSource xmlSource = new(
+                _httpClient,
+                FixedJmaXmlDataLoader.LoadStationCoordinates());
+            _realtimeSources = [_realtimeSource, xmlSource];
         }
 
         _repository = new SqliteEarthquakeEventRepository(
             cachePath ?? GetDefaultCachePath(),
-            _realtimeSource);
+            _realtimeSources);
         EarthquakePage = new EarthquakePageViewModel(
             _repository);
         EventList = new EarthquakeEventListViewModel(EarthquakePage);

@@ -18,7 +18,8 @@
 - `0.11.0` 已完成步骤 9：实现摘要、区域/观测点、报文时间线和原始数据详情，并通过 105 个 xUnit 测试。
 - `0.12.0` 已完成步骤 10：实现 SQLite 缓存和离线启动，并通过 111 个 xUnit 测试。
 - `0.13.0` 已完成步骤 11 第一阶段：接入 JMA JSON 实时摘要和刷新机制，并通过 117 个 xUnit 测试。
-- 下一实现步骤：接入 JMA XML 实时 Feed，并定义 JMA JSON/XML 来源优先级。
+- `0.14.0` 已完成步骤 11 第二阶段：接入 JMA XML 实时 Feed、详情报文和 JMA JSON/XML 来源优先级，并通过 122 个 xUnit 测试。
+- 下一实现步骤：评估 P2PQuake 补充源，并设计来源差异展示、自动轮询和退避策略。
 
 ## 文档同步规则
 
@@ -426,25 +427,29 @@ SQLite 至少需要保存：
 
 ### 11. 分阶段接入真实数据源
 
-状态：第一阶段已于 `0.13.0` 实现并验证，JMA XML、P2PQuake 和 nTool 尚未实现。
+状态：第二阶段已于 `0.14.0` 实现并验证，P2PQuake、nTool、来源差异展示和自动轮询尚未实现。
 
 推荐接入顺序：
 
-1. JMA JSON：先打通列表和详情。（已完成摘要、刷新、缓存和状态；完整详情依赖 XML）
-2. JMA XML：支持 `VXSE51/52/53`，作为权威来源。
+1. JMA JSON：先打通列表和详情。（已完成摘要、刷新、缓存和状态）
+2. JMA XML：支持 `VXSE51/52/53`，作为权威来源。（已完成 Feed、详情下载、缓存和状态）
 3. P2PQuake：用于补充和降级。
 4. nTool：仅在确有字段补充价值时接入。
 
 每个适配器只负责“获取、解析、转成统一模型”，不得直接操作页面。
+
+`JmaXmlEarthquakeSource` 使用 `https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml` 的 Atom `entry/id` 和 `link[type=application/xml]`，默认最多下载 20 条 `VXSE51/52/53` 详情，并复用 `JmaXmlParser` 和随应用复制的 `JmaStations.csv`。Feed 或单条报文失败只更新 `jma-xml` 来源状态；成功报文与 JSON 摘要一起写入 SQLite，由 `EarthquakeEventMerger` 按来源优先级派生页面快照。
 
 验证：
 
 - [x] JMA JSON API 失败不会清空已有内容。
 - [x] 相同 `json` 来源消息重复刷新不会生成重复报文。
 - [x] HTTP 429、断开和解析错误反映到数据源状态。
-- [x] 启动先显示 SQLite 缓存，再请求实时摘要；手动刷新复用同一路径。
-- [ ] 来源冲突时显示 JMA 官方 XML 值，并保留差异。
-- [ ] JMA XML、P2PQuake 和 nTool 适配器。
+- [x] 启动先显示 SQLite 缓存，再依次请求 JSON 摘要和 XML 详情；手动刷新复用同一路径。
+- [x] 同一事件、发布时间、报次和接收时间相同时，JMA XML 按来源优先级成为最新报文。
+- [x] XML Feed/详情失败不会清空已有内容；单条详情失败不阻止其他条目入库。
+- [ ] 来源冲突时显示 JMA 官方 XML 值，并逐字段保留差异。
+- [ ] P2PQuake 和 nTool 适配器。
 
 ### 12. 完成页面级验证
 

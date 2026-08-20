@@ -44,9 +44,20 @@ public static class EarthquakeEventMerger
             .ThenBy(report => report.Serial.HasValue ? 1 : 0)
             .ThenBy(report => report.Serial)
             .ThenBy(report => report.ReceivedAt)
+            .ThenBy(report => GetSourcePriority(report.Source.SourceId))
             .ThenBy(report => report.Source.SourceId, StringComparer.Ordinal)
             .ThenBy(report => report.Source.SourceMessageId, StringComparer.Ordinal)
             .ToImmutableArray();
+    }
+
+    private static int GetSourcePriority(string sourceId)
+    {
+        return sourceId switch
+        {
+            "jma-json" => 10,
+            "jma-xml" => 20,
+            _ => 0,
+        };
     }
 
     private static void ValidateReportIdentity(EarthquakeReport report)

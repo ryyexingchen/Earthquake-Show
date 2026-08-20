@@ -7,6 +7,15 @@ namespace EarthquakeShow.App.Services;
 
 internal static class FixedJmaXmlDataLoader
 {
+    public static IReadOnlyDictionary<string, GeoCoordinate> LoadStationCoordinates()
+    {
+        string stationPath = Path.Combine(
+            AppContext.BaseDirectory,
+            "Assets",
+            "JmaStations.csv");
+        return JmaStationCatalog.LoadFile(stationPath);
+    }
+
     public static ImmutableArray<EarthquakeReport> LoadReports()
     {
         string assetsRoot = Path.Combine(AppContext.BaseDirectory, "Assets");
