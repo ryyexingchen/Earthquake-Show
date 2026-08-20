@@ -254,6 +254,19 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
         };
     }
 
+    public void UpdateDisplayClock(DateTimeOffset now)
+    {
+        ThrowIfDisposed();
+        EarthquakePageDisplayState display = EarthquakePageDisplayState.Create(State, now);
+        if (_display == display)
+        {
+            return;
+        }
+
+        _display = display;
+        OnPropertyChanged(nameof(Display));
+    }
+
     public void Dispose()
     {
         if (_isDisposed)

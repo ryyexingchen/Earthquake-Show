@@ -46,7 +46,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 Timeout = TimeSpan.FromSeconds(15),
             };
-            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.22.0");
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.23.0");
             _realtimeSource = new JmaJsonEarthquakeSource(_httpClient);
             JmaXmlEarthquakeSource xmlSource = new(
                 _httpClient,
@@ -287,8 +287,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void UpdateClock()
     {
-        DateTimeOffset japanTime = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, JapanTimeZone);
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset japanTime = TimeZoneInfo.ConvertTime(now, JapanTimeZone);
         CurrentTime = japanTime.ToString("yyyy-MM-dd HH:mm:ss 'JST'", CultureInfo.InvariantCulture);
+        EarthquakePage.UpdateDisplayClock(now);
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)

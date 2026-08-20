@@ -215,7 +215,10 @@ public sealed class SqliteEarthquakeEventRepositoryTests
                 streamingReport.ReceivedAt,
                 "第 2 次重连等待",
                 RetryAttempt: 2,
-                NextRetryAt: nextRetryAt)));
+                NextRetryAt: nextRetryAt,
+                ConnectedAt: streamingReport.ReceivedAt.AddSeconds(-3),
+                ConnectionEndedAt: streamingReport.ReceivedAt.AddSeconds(2),
+                LastError: "远端主动关闭")));
         await repository.RefreshAsync();
 
         Assert.Contains(
@@ -227,6 +230,9 @@ public sealed class SqliteEarthquakeEventRepositoryTests
         Assert.Equal(SourceConnectionState.Delayed, webSocketStatus.State);
         Assert.Equal(2, webSocketStatus.RetryAttempt);
         Assert.Equal(nextRetryAt, webSocketStatus.NextRetryAt);
+        Assert.Equal(streamingReport.ReceivedAt.AddSeconds(-3), webSocketStatus.ConnectedAt);
+        Assert.Equal(streamingReport.ReceivedAt.AddSeconds(2), webSocketStatus.ConnectionEndedAt);
+        Assert.Equal("远端主动关闭", webSocketStatus.LastError);
         Assert.Equal(
             SourceConnectionState.Online,
             Assert.Single(

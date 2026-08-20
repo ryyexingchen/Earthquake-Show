@@ -145,6 +145,32 @@ public sealed class EarthquakePageDisplayStateTests
         Assert.Equal("WebSocket：第 3 次重连 · 07:10:20 JST", display.WebSocketStatusText);
     }
 
+    [Fact]
+    public void Create_WebSocketOnline_FormatsDurationAndRecentError()
+    {
+        var state = new EarthquakePageState
+        {
+            SourceStatuses =
+            [
+                new SourceStatus(
+                    "p2pquake-ws",
+                    SourceConnectionState.Online,
+                    BaseTime,
+                    Detail: "P2PQuake WebSocket：1 条",
+                    ConnectedAt: BaseTime,
+                    LastError: "上一次连接短暂断开"),
+            ],
+            LoadState = EarthquakePageLoadState.Ready,
+        };
+
+        EarthquakePageDisplayState display = EarthquakePageDisplayState.Create(
+            state,
+            BaseTime.AddSeconds(125));
+
+        Assert.Equal("WebSocket：已连接 · 持续 00:02:05", display.WebSocketStatusText);
+        Assert.Equal("最近错误：上一次连接短暂断开", display.WebSocketErrorText);
+    }
+
     private static EarthquakeReport CreateReport()
     {
         return new EarthquakeReport

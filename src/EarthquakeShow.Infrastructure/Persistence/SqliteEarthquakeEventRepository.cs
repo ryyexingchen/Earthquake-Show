@@ -565,7 +565,12 @@ public sealed class SqliteEarthquakeEventRepository :
         ImmutableArray<SourceStatus> result = persisted;
         foreach (SourceStatus status in current)
         {
-            if (status.RetryAttempt is not null || status.NextRetryAt is not null)
+            if (string.Equals(status.SourceId, "p2pquake-ws", StringComparison.Ordinal) &&
+                (status.RetryAttempt is not null ||
+                    status.NextRetryAt is not null ||
+                    status.ConnectedAt is not null ||
+                    status.ConnectionEndedAt is not null ||
+                    status.LastError is not null))
             {
                 result = ReplaceSourceStatus(result, status);
             }

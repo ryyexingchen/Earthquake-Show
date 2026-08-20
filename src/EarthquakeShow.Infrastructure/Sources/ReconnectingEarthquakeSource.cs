@@ -35,9 +35,13 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
         try
         {
             int consecutiveFailures = 0;
+            DateTimeOffset? lastConnectedAt = null;
+            DateTimeOffset? connectionEndedAt = null;
+            string? lastError = null;
             while (true)
             {
                 bool receivedOnline = false;
+                DateTimeOffset? sessionConnectedAt = null;
                 IAsyncEnumerator<EarthquakeSourceFetchResult>? enumerator = null;
                 Exception? sessionException = null;
 
@@ -83,6 +87,12 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
                             }
 
                             EarthquakeSourceFetchResult result = enumerator.Current;
+                            result = EnrichDiagnosticStatus(
+                                result,
+                                ref sessionConnectedAt,
+                                ref lastConnectedAt,
+                                ref connectionEndedAt,
+                                ref lastError);
                             receivedOnline |= result.Status.State == SourceConnectionState.Online;
                             yield return result;
                             if (result.Status.State == SourceConnectionState.Disconnected)
@@ -97,11 +107,28 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
                     }
                 }
 
+                if (sessionConnectedAt is not null && sessionException is null)
+                {
+                    connectionEndedAt = _utcNow();
+                }
+
                 if (sessionException is not null)
                 {
-                    yield return Failure(
-                        SourceConnectionState.Disconnected,
-                        $"{SourceId} 流连接异常：{sessionException.Message}");
+                    string detail = $"{SourceId} 流连接异常：{sessionException.Message}";
+                    lastError = detail;
+                    connectionEndedAt = sessionConnectedAt is null
+                        ? connectionEndedAt
+                        : _utcNow();
+                    yield return new EarthquakeSourceFetchResult(
+                        ImmutableArray<EarthquakeReport>.Empty,
+                        new SourceStatus(
+                            SourceId,
+                            SourceConnectionState.Disconnected,
+                            _utcNow(),
+                            Detail: detail,
+                            ConnectedAt: sessionConnectedAt ?? lastConnectedAt,
+                            ConnectionEndedAt: connectionEndedAt,
+                            LastError: lastError));
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
@@ -117,7 +144,10 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
                         checkedAt,
                         Detail: $"第 {consecutiveFailures} 次重连等待",
                         RetryAttempt: consecutiveFailures,
-                        NextRetryAt: checkedAt.Add(reconnectDelay)));
+                        NextRetryAt: checkedAt.Add(reconnectDelay),
+                        ConnectedAt: lastConnectedAt,
+                        ConnectionEndedAt: connectionEndedAt,
+                        LastError: lastError));
                 await _delay(reconnectDelay, cancellationToken)
                     .ConfigureAwait(false);
             }
@@ -128,13 +158,47 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
         }
     }
 
-    private EarthquakeSourceFetchResult Failure(
-        SourceConnectionState state,
-        string detail)
+    private EarthquakeSourceFetchResult EnrichDiagnosticStatus(
+        EarthquakeSourceFetchResult result,
+        ref DateTimeOffset? sessionConnectedAt,
+        ref DateTimeOffset? lastConnectedAt,
+        ref DateTimeOffset? connectionEndedAt,
+        ref string? lastError)
     {
-        return new EarthquakeSourceFetchResult(
-            ImmutableArray<EarthquakeReport>.Empty,
-            new SourceStatus(SourceId, state, DateTimeOffset.UtcNow, Detail: detail));
+        SourceStatus status = result.Status;
+        if (status.State == SourceConnectionState.Online)
+        {
+            sessionConnectedAt ??= _utcNow();
+            lastConnectedAt = sessionConnectedAt;
+            connectionEndedAt = null;
+        }
+        else if (status.State == SourceConnectionState.Disconnected)
+        {
+            if (!string.IsNullOrWhiteSpace(status.Detail))
+            {
+                lastError = status.Detail;
+            }
+
+            if (sessionConnectedAt is not null)
+            {
+                connectionEndedAt = _utcNow();
+            }
+        }
+        else if (status.State == SourceConnectionState.ParseFailed &&
+            !string.IsNullOrWhiteSpace(status.Detail))
+        {
+            lastError = status.Detail;
+        }
+
+        return result with
+        {
+            Status = status with
+            {
+                ConnectedAt = sessionConnectedAt ?? lastConnectedAt,
+                ConnectionEndedAt = connectionEndedAt,
+                LastError = lastError,
+            },
+        };
     }
 
     private static bool IsConnectionException(Exception exception) =>

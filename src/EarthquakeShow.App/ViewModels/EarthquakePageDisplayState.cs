@@ -19,6 +19,8 @@ public sealed record EarthquakePageDisplayState
 
     public required string WebSocketStatusText { get; init; }
 
+    public required string WebSocketErrorText { get; init; }
+
     public required string EventListTitle { get; init; }
 
     public required string EventListMessage { get; init; }
@@ -43,9 +45,12 @@ public sealed record EarthquakePageDisplayState
 
     public bool HasOnlineSource { get; init; }
 
-    public static EarthquakePageDisplayState Create(EarthquakePageState state)
+    public static EarthquakePageDisplayState Create(
+        EarthquakePageState state,
+        DateTimeOffset? displayAt = null)
     {
         ArgumentNullException.ThrowIfNull(state);
+        DateTimeOffset now = displayAt ?? DateTimeOffset.UtcNow;
 
         bool hasEvents = !state.Events.IsDefaultOrEmpty;
         bool isLoading = state.LoadState == EarthquakePageLoadState.Loading && !hasEvents;
@@ -67,7 +72,8 @@ public sealed record EarthquakePageDisplayState
             LastReceivedText = GetLastReceivedText(state),
             NetworkStatusText = GetNetworkStatusText(state, hasOnlineSource),
             SourceText = GetSourceText(state),
-            WebSocketStatusText = GetWebSocketStatusText(state),
+            WebSocketStatusText = GetWebSocketStatusText(state, now),
+            WebSocketErrorText = GetWebSocketErrorText(state),
             EventListTitle = listTitle,
             EventListMessage = listMessage,
             DetailsTitle = detailsTitle,
@@ -181,32 +187,88 @@ public sealed record EarthquakePageDisplayState
             : $"来源：{string.Join(", ", sourceIds)}";
     }
 
-    private static string GetWebSocketStatusText(EarthquakePageState state)
+    private static string GetWebSocketStatusText(
+        EarthquakePageState state,
+        DateTimeOffset now)
     {
-        SourceStatus? status = state.SourceStatuses.FirstOrDefault(item =>
-            string.Equals(item.SourceId, "p2pquake-ws", StringComparison.Ordinal));
+        SourceStatus? status = FindWebSocketStatus(state);
         if (status is null)
         {
             return "WebSocket：未启动";
         }
 
+        string? duration = GetConnectionDurationText(status, now);
         if (status.State == SourceConnectionState.Delayed &&
             status.RetryAttempt is int attempt &&
             status.NextRetryAt is DateTimeOffset nextRetryAt)
         {
             DateTimeOffset japanTime = TimeZoneInfo.ConvertTime(nextRetryAt, JapanTimeZone);
-            return $"WebSocket：第 {attempt} 次重连 · {japanTime:HH:mm:ss} JST";
+            string previousDuration = duration is null ? string.Empty : $" · 上次连接 {duration}";
+            return $"WebSocket：第 {attempt} 次重连 · {japanTime:HH:mm:ss} JST{previousDuration}";
         }
 
         return status.State switch
         {
-            SourceConnectionState.Online => "WebSocket：已连接",
+            SourceConnectionState.Online => duration is null
+                ? "WebSocket：已连接"
+                : $"WebSocket：已连接 · 持续 {duration}",
             SourceConnectionState.Delayed => "WebSocket：等待重连",
-            SourceConnectionState.Disconnected => "WebSocket：已断开",
+            SourceConnectionState.Disconnected => duration is null
+                ? "WebSocket：已断开"
+                : $"WebSocket：已断开 · 上次连接 {duration}",
             SourceConnectionState.ParseFailed => "WebSocket：消息解析失败",
             SourceConnectionState.Disabled => "WebSocket：未启用",
             _ => "WebSocket：状态未知",
         };
+    }
+
+    private static string GetWebSocketErrorText(EarthquakePageState state)
+    {
+        SourceStatus? status = FindWebSocketStatus(state);
+        if (status is null)
+        {
+            return "最近错误：--";
+        }
+
+        string? error = status.LastError;
+        if (string.IsNullOrWhiteSpace(error) &&
+            status.State is SourceConnectionState.Disconnected or SourceConnectionState.ParseFailed)
+        {
+            error = status.Detail;
+        }
+
+        return string.IsNullOrWhiteSpace(error)
+            ? "最近错误：无"
+            : $"最近错误：{error}";
+    }
+
+    private static SourceStatus? FindWebSocketStatus(EarthquakePageState state)
+    {
+        return state.SourceStatuses.FirstOrDefault(item =>
+            string.Equals(item.SourceId, "p2pquake-ws", StringComparison.Ordinal));
+    }
+
+    private static string? GetConnectionDurationText(
+        SourceStatus status,
+        DateTimeOffset now)
+    {
+        if (status.ConnectedAt is not DateTimeOffset connectedAt)
+        {
+            return null;
+        }
+
+        DateTimeOffset end = status.ConnectionEndedAt ?? now;
+        TimeSpan duration = end - connectedAt;
+        if (duration < TimeSpan.Zero)
+        {
+            return null;
+        }
+
+        int totalSeconds = (int)Math.Min(int.MaxValue, duration.TotalSeconds);
+        int hours = totalSeconds / 3600;
+        int minutes = totalSeconds / 60 % 60;
+        int seconds = totalSeconds % 60;
+        return $"{hours:00}:{minutes:00}:{seconds:00}";
     }
 
     private static (string Title, string Message) GetEventListText(

@@ -88,6 +88,45 @@ public sealed class ReconnectingEarthquakeSourceTests
     }
 
     [Fact]
+    public async Task Source_TracksConnectionDurationAndRecentErrorAcrossReconnect()
+    {
+        DateTimeOffset now = new(2026, 8, 20, 1, 2, 3, TimeSpan.Zero);
+        var inner = new ScriptedSource(
+            Result(SourceConnectionState.Online, "online"),
+            Result(SourceConnectionState.Disconnected, "远端主动关闭"));
+        var source = new ReconnectingEarthquakeSource(
+            inner,
+            new StreamingReconnectPolicy(TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(5)),
+            (_, _) => Task.CompletedTask,
+            () => now);
+
+        await using IAsyncEnumerator<EarthquakeSourceFetchResult> enumerator =
+            source.StreamAsync().GetAsyncEnumerator();
+
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(SourceConnectionState.Online, enumerator.Current.Status.State);
+        Assert.Equal(now, enumerator.Current.Status.ConnectedAt);
+        Assert.Null(enumerator.Current.Status.ConnectionEndedAt);
+        Assert.Null(enumerator.Current.Status.LastError);
+
+        now = now.AddSeconds(90);
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(SourceConnectionState.Delayed, enumerator.Current.Status.State);
+        Assert.Equal(now, enumerator.Current.Status.ConnectionEndedAt);
+
+        now = now.AddSeconds(10);
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(SourceConnectionState.Disconnected, enumerator.Current.Status.State);
+        Assert.Equal("远端主动关闭", enumerator.Current.Status.LastError);
+        Assert.Equal(now.AddSeconds(-100), enumerator.Current.Status.ConnectedAt);
+        Assert.Equal(now.AddSeconds(-10), enumerator.Current.Status.ConnectionEndedAt);
+
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(SourceConnectionState.Delayed, enumerator.Current.Status.State);
+        Assert.Equal("远端主动关闭", enumerator.Current.Status.LastError);
+    }
+
+    [Fact]
     public async Task Source_CancellationInterruptsReconnectDelay()
     {
         using var cancellation = new CancellationTokenSource();

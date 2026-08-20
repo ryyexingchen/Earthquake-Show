@@ -243,6 +243,7 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
@@ -273,7 +274,7 @@
                            FontSize="11"
                            Text="{Binding MapDataStatus}" />
                 <TextBlock Grid.Column="4"
-                           MaxWidth="230"
+                           MaxWidth="300"
                            Margin="20,0,0,0"
                            VerticalAlignment="Center"
                            Foreground="{StaticResource MutedTextBrush}"
@@ -285,9 +286,16 @@
                            VerticalAlignment="Center"
                            Foreground="{StaticResource MutedTextBrush}"
                            FontSize="11"
-                           Text="{Binding AutoRefreshStatus}"
+                           Text="{Binding EarthquakePage.Display.WebSocketErrorText}"
                            TextTrimming="CharacterEllipsis" />
                 <TextBlock Grid.Column="6"
+                           Margin="20,0,0,0"
+                           VerticalAlignment="Center"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           FontSize="11"
+                           Text="{Binding AutoRefreshStatus}"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="7"
                            VerticalAlignment="Center"
                            Foreground="{StaticResource MutedTextBrush}"
                            FontSize="11">
