@@ -119,12 +119,20 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
         var reports = ImmutableArray.CreateBuilder<EarthquakeReport>();
         foreach (JsonElement element in document.RootElement.EnumerateArray())
         {
-            P2pQuakeItem item = element.Deserialize<P2pQuakeItem>(JsonOptions)
-                ?? throw new JsonException("P2PQuake 报文不能为空。");
-            reports.Add(ToReport(item, element.GetRawText(), receivedAt, endpoint));
+            reports.Add(ParseReport(element, receivedAt, endpoint));
         }
 
         return reports.ToImmutable();
+    }
+
+    internal static EarthquakeReport ParseReport(
+        JsonElement element,
+        DateTimeOffset receivedAt,
+        Uri endpoint)
+    {
+        P2pQuakeItem item = element.Deserialize<P2pQuakeItem>(JsonOptions)
+            ?? throw new JsonException("P2PQuake 报文不能为空。");
+        return ToReport(item, element.GetRawText(), receivedAt, endpoint);
     }
 
     private static EarthquakeReport ToReport(

@@ -11,3 +11,4 @@ publish/
 *.user
 *.suo
 *.log
+resources/

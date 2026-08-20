@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.WebSockets;
+using System.Text;
 using EarthquakeShow.Core.Models;
 using EarthquakeShow.Infrastructure.Sources;
 using Xunit;
@@ -83,6 +85,91 @@ public sealed class P2pQuakeEarthquakeSourceTests
         Assert.Equal(SourceConnectionState.ParseFailed, result.Status.State);
     }
 
+    [Fact]
+    public async Task WebSocket_SingleTextMessage_MapsReport()
+    {
+        var connection = new FakeWebSocketConnection(
+            Frame.Text(ValidObjectPayload));
+        var source = new P2pQuakeWebSocketSource(
+            () => connection,
+            "wss://example.test/v2/ws");
+
+        await using IAsyncEnumerator<EarthquakeSourceFetchResult> enumerator =
+            source.StreamAsync().GetAsyncEnumerator();
+
+        Assert.True(await enumerator.MoveNextAsync());
+        EarthquakeSourceFetchResult result = enumerator.Current;
+        EarthquakeReport report = Assert.Single(result.Reports);
+        Assert.Equal(SourceConnectionState.Online, result.Status.State);
+        Assert.Equal("p2pquake:p2p-message-1", report.EventId);
+        Assert.Equal("wss://example.test/v2/ws", report.Source.RawMessageUri?.ToString());
+    }
+
+    [Fact]
+    public async Task WebSocket_ReassemblesFragments_AndPreservesMessageBoundaries()
+    {
+        const string secondPayload = """
+            {"code":552,"id":"p2p-message-2","issue":{"correct":"None","time":"2026/08/20 12:09:07","type":"Hypocenter"},"earthquake":{"hypocenter":{"depth":20,"latitude":32.5,"longitude":130.7,"magnitude":3.1,"name":"熊本県熊本地方"},"maxScale":20,"time":"2026/08/20 12:05:00"}}
+            """;
+        string firstPart = ValidObjectPayload[..(ValidObjectPayload.Length / 2)];
+        string secondPart = ValidObjectPayload[(ValidObjectPayload.Length / 2)..];
+        var connection = new FakeWebSocketConnection(
+            Frame.Text(firstPart, endOfMessage: false),
+            Frame.Text(secondPart),
+            Frame.Text(secondPayload));
+        var source = new P2pQuakeWebSocketSource(
+            () => connection,
+            "wss://example.test/v2/ws");
+
+        await using IAsyncEnumerator<EarthquakeSourceFetchResult> enumerator =
+            source.StreamAsync().GetAsyncEnumerator();
+
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal("p2pquake:p2p-message-1", Assert.Single(enumerator.Current.Reports).EventId);
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal("p2pquake:p2p-message-2", Assert.Single(enumerator.Current.Reports).EventId);
+    }
+
+    [Fact]
+    public async Task WebSocket_ArrayMessage_ReturnsParseFailed_AndContinues()
+    {
+        var connection = new FakeWebSocketConnection(
+            Frame.Text("[{\"id\":\"not-an-object\"}]"),
+            Frame.Text(ValidObjectPayload));
+        var source = new P2pQuakeWebSocketSource(
+            () => connection,
+            "wss://example.test/v2/ws");
+
+        await using IAsyncEnumerator<EarthquakeSourceFetchResult> enumerator =
+            source.StreamAsync().GetAsyncEnumerator();
+
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(SourceConnectionState.ParseFailed, enumerator.Current.Status.State);
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(SourceConnectionState.Online, enumerator.Current.Status.State);
+    }
+
+    [Fact]
+    public async Task WebSocket_Cancellation_IsPropagated()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var connection = new FakeWebSocketConnection(blockOnReceive: true);
+        var source = new P2pQuakeWebSocketSource(
+            () => connection,
+            "wss://example.test/v2/ws");
+        await using IAsyncEnumerator<EarthquakeSourceFetchResult> enumerator =
+            source.StreamAsync(cancellation.Token).GetAsyncEnumerator();
+
+        Task<bool> moveNext = enumerator.MoveNextAsync().AsTask();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => moveNext);
+    }
+
+    private const string ValidObjectPayload = """
+        {"code":551,"id":"p2p-message-1","issue":{"correct":"None","source":"気象庁","time":"2026/08/20 12:08:07","type":"DetailScale"},"earthquake":{"domesticTsunami":"None","foreignTsunami":"Unknown","hypocenter":{"depth":10,"latitude":32.4,"longitude":130.6,"magnitude":2.9,"name":"熊本県熊本地方"},"maxScale":40,"time":"2026/08/20 12:04:00"},"points":[{"addr":"八代市平山新町","isArea":false,"pref":"熊本県","scale":30}],"time":"2026/08/20 12:08:08.078"}
+        """;
+
     private static HttpResponseMessage Response(
         HttpStatusCode statusCode,
         string? content = null)
@@ -110,5 +197,64 @@ public sealed class P2pQuakeEarthquakeSourceTests
                     : new StringContent(response.Content.ReadAsStringAsync().GetAwaiter().GetResult()),
             });
         }
+    }
+
+    private sealed record Frame(
+        WebSocketMessageType MessageType,
+        string Payload,
+        bool EndOfMessage)
+    {
+        public static Frame Text(string payload, bool endOfMessage = true) =>
+            new(WebSocketMessageType.Text, payload, endOfMessage);
+    }
+
+    private sealed class FakeWebSocketConnection : IWebSocketConnection
+    {
+        private readonly Queue<Frame> _frames;
+        private readonly bool _blockOnReceive;
+
+        public FakeWebSocketConnection(params Frame[] frames)
+        {
+            _frames = new Queue<Frame>(frames);
+        }
+
+        public FakeWebSocketConnection(bool blockOnReceive)
+        {
+            _frames = new Queue<Frame>();
+            _blockOnReceive = blockOnReceive;
+        }
+
+        public Task ConnectAsync(Uri endpoint, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
+        public async Task<WebSocketReceiveResult> ReceiveAsync(
+            ArraySegment<byte> buffer,
+            CancellationToken cancellationToken)
+        {
+            if (_blockOnReceive)
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
+
+            if (_frames.Count == 0)
+            {
+                return new WebSocketReceiveResult(
+                    0,
+                    WebSocketMessageType.Close,
+                    true,
+                    WebSocketCloseStatus.NormalClosure,
+                    "测试结束");
+            }
+
+            Frame frame = _frames.Dequeue();
+            byte[] bytes = Encoding.UTF8.GetBytes(frame.Payload);
+            bytes.CopyTo(buffer.Array!, buffer.Offset);
+            return new WebSocketReceiveResult(
+                bytes.Length,
+                frame.MessageType,
+                frame.EndOfMessage);
+        }
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }
