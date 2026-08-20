@@ -62,10 +62,13 @@ public sealed class P2pQuakeWebSocketSource : IStreamingEarthquakeSource
 
         if (connectException is not null)
         {
+            bool rateLimited = IsRateLimitedHandshake(connectException);
             yield return Failure(
-                SourceConnectionState.Disconnected,
+                rateLimited
+                    ? SourceConnectionState.RateLimited
+                    : SourceConnectionState.Disconnected,
                 $"P2PQuake WebSocket 连接失败：{connectException.Message}",
-                connectionException: true);
+                connectionException: !rateLimited);
             yield break;
         }
 
@@ -150,19 +153,26 @@ public sealed class P2pQuakeWebSocketSource : IStreamingEarthquakeSource
                     throw new JsonException("P2PQuake WebSocket 顶层必须是对象。");
                 }
 
-                EarthquakeReport report = P2pQuakeEarthquakeSource.ParseReport(
-                    document.RootElement,
-                    receivedAt,
-                    _endpoint);
-                result = new EarthquakeSourceFetchResult(
-                    ImmutableArray.Create(report),
-                    new SourceStatus(
-                        SourceId,
-                        SourceConnectionState.Online,
+                if (IsNonEventMessage(document.RootElement))
+                {
+                    result = NonEventResult(receivedAt);
+                }
+                else
+                {
+                    EarthquakeReport report = P2pQuakeEarthquakeSource.ParseReport(
+                        document.RootElement,
                         receivedAt,
-                        report.ReceivedAt,
-                        "P2PQuake WebSocket：1 条",
-                        LastMessageAt: receivedAt));
+                        _endpoint);
+                    result = new EarthquakeSourceFetchResult(
+                        ImmutableArray.Create(report),
+                        new SourceStatus(
+                            SourceId,
+                            SourceConnectionState.Online,
+                            receivedAt,
+                            report.ReceivedAt,
+                            "P2PQuake WebSocket：1 条",
+                            LastMessageAt: receivedAt));
+                }
             }
             catch (JsonException exception)
             {
@@ -189,6 +199,28 @@ public sealed class P2pQuakeWebSocketSource : IStreamingEarthquakeSource
             yield return result;
         }
     }
+
+    private EarthquakeSourceFetchResult NonEventResult(DateTimeOffset receivedAt) =>
+        new(
+            [],
+            new SourceStatus(
+                SourceId,
+                SourceConnectionState.Online,
+                receivedAt,
+                Detail: "P2PQuake WebSocket：忽略非事件消息",
+                LastMessageAt: receivedAt));
+
+    private static bool IsNonEventMessage(JsonElement element)
+    {
+        // 控制/状态对象没有地震报文的事件结构；带事件结构但缺少 id 仍按格式错误处理。
+        return !element.TryGetProperty("id", out _) &&
+            !element.TryGetProperty("issue", out _) &&
+            !element.TryGetProperty("earthquake", out _);
+    }
+
+    private static bool IsRateLimitedHandshake(Exception exception) =>
+        exception is WebSocketException &&
+        exception.Message.Contains("status code '429'", StringComparison.OrdinalIgnoreCase);
 
     private EarthquakeSourceFetchResult Failure(
         SourceConnectionState state,

@@ -227,7 +227,9 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
                         ConnectionEndedAt: connectionEndedAt,
                         LastError: lastError,
                         LastMessageAt: lastMessageAt,
-                        ConnectionExceptionCount: connectionExceptionCount,
+                        ConnectionExceptionCount: connectionExceptionCount == 0
+                            ? null
+                            : connectionExceptionCount,
                         LastConnectionExceptionAt: lastConnectionExceptionAt));
                 await _delay(reconnectDelay, cancellationToken)
                     .ConfigureAwait(false);
@@ -270,7 +272,7 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
             lastConnectedAt = sessionConnectedAt;
             connectionEndedAt = null;
         }
-        else if (status.State == SourceConnectionState.Disconnected)
+        else if (status.State is SourceConnectionState.Disconnected or SourceConnectionState.RateLimited)
         {
             if (!status.IsExpectedDisconnect && !string.IsNullOrWhiteSpace(status.Detail))
             {

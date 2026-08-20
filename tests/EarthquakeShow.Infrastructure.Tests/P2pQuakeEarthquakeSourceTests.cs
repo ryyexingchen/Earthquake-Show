@@ -167,6 +167,70 @@ public sealed class P2pQuakeEarthquakeSourceTests
     }
 
     [Fact]
+    public async Task WebSocket_NonEventMessage_IsIgnored_AndContinues()
+    {
+        var connection = new FakeWebSocketConnection(
+            Frame.Text("{\"code\":999,\"time\":\"2026/08/20 12:09:00\"}"),
+            Frame.Text(ValidObjectPayload));
+        var source = new P2pQuakeWebSocketSource(
+            () => connection,
+            "wss://example.test/v2/ws");
+
+        await using IAsyncEnumerator<EarthquakeSourceFetchResult> enumerator =
+            source.StreamAsync().GetAsyncEnumerator();
+
+        Assert.True(await enumerator.MoveNextAsync());
+        EarthquakeSourceFetchResult ignored = enumerator.Current;
+        Assert.Empty(ignored.Reports);
+        Assert.Equal(SourceConnectionState.Online, ignored.Status.State);
+        Assert.Equal("P2PQuake WebSocket：忽略非事件消息", ignored.Status.Detail);
+        Assert.Equal(ignored.Status.CheckedAt, ignored.Status.LastMessageAt);
+
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal("p2pquake:p2p-message-1", Assert.Single(enumerator.Current.Reports).EventId);
+    }
+
+    [Fact]
+    public async Task WebSocket_EventShapeWithoutId_RemainsParseFailed()
+    {
+        const string payload =
+            "{\"code\":551,\"issue\":{\"time\":\"2026/08/20 12:08:07\",\"type\":\"DetailScale\"}," +
+            "\"earthquake\":{\"hypocenter\":{\"depth\":10,\"latitude\":32.4,\"longitude\":130.6}}}";
+        var connection = new FakeWebSocketConnection(Frame.Text(payload));
+        var source = new P2pQuakeWebSocketSource(
+            () => connection,
+            "wss://example.test/v2/ws");
+
+        await using IAsyncEnumerator<EarthquakeSourceFetchResult> enumerator =
+            source.StreamAsync().GetAsyncEnumerator();
+
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Empty(enumerator.Current.Reports);
+        Assert.Equal(SourceConnectionState.ParseFailed, enumerator.Current.Status.State);
+        Assert.Contains("缺少 id", enumerator.Current.Status.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task WebSocket_Handshake429_ReturnsRateLimitedWithoutConnectionException()
+    {
+        var connection = new FakeWebSocketConnection(
+            connectException: new WebSocketException(
+                "The server returned status code '429' when status code '101' was expected."));
+        var source = new P2pQuakeWebSocketSource(
+            () => connection,
+            "wss://example.test/v2/ws");
+
+        await using IAsyncEnumerator<EarthquakeSourceFetchResult> enumerator =
+            source.StreamAsync().GetAsyncEnumerator();
+
+        Assert.True(await enumerator.MoveNextAsync());
+        EarthquakeSourceFetchResult result = enumerator.Current;
+        Assert.Empty(result.Reports);
+        Assert.Equal(SourceConnectionState.RateLimited, result.Status.State);
+        Assert.Null(result.Status.ConnectionExceptionCount);
+    }
+
+    [Fact]
     public async Task WebSocket_Cancellation_IsPropagated()
     {
         using var cancellation = new CancellationTokenSource();
@@ -229,10 +293,17 @@ public sealed class P2pQuakeEarthquakeSourceTests
     {
         private readonly Queue<Frame> _frames;
         private readonly bool _blockOnReceive;
+        private readonly Exception? _connectException;
 
         public FakeWebSocketConnection(params Frame[] frames)
         {
             _frames = new Queue<Frame>(frames);
+        }
+
+        public FakeWebSocketConnection(Exception connectException, params Frame[] frames)
+        {
+            _frames = new Queue<Frame>(frames);
+            _connectException = connectException;
         }
 
         public FakeWebSocketConnection(bool blockOnReceive)
@@ -241,8 +312,12 @@ public sealed class P2pQuakeEarthquakeSourceTests
             _blockOnReceive = blockOnReceive;
         }
 
-        public Task ConnectAsync(Uri endpoint, CancellationToken cancellationToken) =>
-            Task.CompletedTask;
+        public Task ConnectAsync(Uri endpoint, CancellationToken cancellationToken)
+        {
+            return _connectException is null
+                ? Task.CompletedTask
+                : Task.FromException(_connectException);
+        }
 
         public async Task<WebSocketReceiveResult> ReceiveAsync(
             ArraySegment<byte> buffer,

@@ -156,6 +156,33 @@ public sealed class ReconnectingEarthquakeSourceTests
     }
 
     [Fact]
+    public async Task Source_RateLimitedPreservesLastErrorWithoutCountingConnectionException()
+    {
+        var inner = new ScriptedSource(
+            Result(SourceConnectionState.RateLimited, "上游限流"),
+            Result(SourceConnectionState.Online, "恢复在线"));
+        var source = new ReconnectingEarthquakeSource(
+            inner,
+            new StreamingReconnectPolicy(TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(5)),
+            (_, _) => Task.CompletedTask);
+
+        await using IAsyncEnumerator<EarthquakeSourceFetchResult> enumerator =
+            source.StreamAsync().GetAsyncEnumerator();
+
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(SourceConnectionState.RateLimited, enumerator.Current.Status.State);
+        Assert.Null(enumerator.Current.Status.ConnectionExceptionCount);
+
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(SourceConnectionState.Delayed, enumerator.Current.Status.State);
+        Assert.Equal("上游限流", enumerator.Current.Status.LastError);
+        Assert.Null(enumerator.Current.Status.ConnectionExceptionCount);
+
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(SourceConnectionState.Online, enumerator.Current.Status.State);
+    }
+
+    [Fact]
     public async Task Source_RotatesConnectionBeforeMaximumDuration_WithoutCountingException()
     {
         DateTimeOffset now = new(2026, 8, 20, 1, 2, 3, TimeSpan.Zero);
