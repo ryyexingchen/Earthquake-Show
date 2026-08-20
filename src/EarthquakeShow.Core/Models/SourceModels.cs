@@ -22,4 +22,6 @@ public sealed record SourceStatus(
     SourceConnectionState State,
     DateTimeOffset CheckedAt,
     DateTimeOffset? LastReceivedAt = null,
-    string? Detail = null);
+    string? Detail = null,
+    int? RetryAttempt = null,
+    DateTimeOffset? NextRetryAt = null);

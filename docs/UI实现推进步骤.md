@@ -26,7 +26,8 @@
 - `0.19.0` 已完成步骤 11 第七阶段的连接契约切片：建立 P2PQuake WebSocket 文本消息边界、单对象解析和取消行为，并通过 141 个 xUnit 测试。
 - `0.20.0` 已完成步骤 11 第八阶段的生命周期切片：实现 P2PQuake WebSocket 顺序重连、指数退避、在线重置和取消等待，并通过 146 个 xUnit 测试。
 - `0.21.0` 已完成步骤 11 第九阶段：将 P2PQuake WebSocket 接入应用生命周期、SQLite 和页面状态，并通过 148 个 xUnit 测试。
-- 下一实现步骤：显示 P2PQuake WebSocket 重连次数和下次重试时间。
+- `0.22.0` 已完成步骤 11 第十阶段：显示 P2PQuake WebSocket 重连次数和下次重试时间，并通过 149 个 xUnit 测试。
+- 下一实现步骤：显示 P2PQuake WebSocket 连接持续时间和最近错误详情。
 
 ## 文档同步规则
 
@@ -434,7 +435,7 @@ SQLite 至少需要保存：
 
 ### 11. 分阶段接入真实数据源
 
-状态：第九阶段仓储/UI 数据接入已于 `0.21.0` 实现并验证；WebSocket 重连诊断、nTool、人工关联确认和历史回放尚未实现。
+状态：第十阶段 WebSocket 重连诊断已于 `0.22.0` 实现并验证；连接持续时间、最近错误详情、nTool、人工关联确认和历史回放尚未实现。
 
 推荐接入顺序：
 
@@ -469,7 +470,8 @@ SQLite 至少需要保存：
 - [x] P2PQuake WebSocket 单连接文本消息边界、分片重组、解析失败恢复和取消行为有 Infrastructure 测试。
 - [x] P2PQuake WebSocket 按单连接顺序重连，连续失败指数退避，在线后重置失败次数，取消可中断等待。
 - [x] P2PQuake WebSocket 结果串行写入 SQLite，发布页面事件和独立 `p2pquake-ws` 通道状态。
-- [ ] P2PQuake WebSocket 重连诊断和 nTool。
+- [x] P2PQuake WebSocket 重连等待发布连续失败次数和下次重试时间，页面状态栏按 JST 显示。
+- [ ] P2PQuake WebSocket 连接持续时间、最近错误详情和 nTool。
 
 ### 12. 完成页面级验证
 

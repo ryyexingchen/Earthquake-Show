@@ -11,16 +11,19 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
     private readonly IStreamingEarthquakeSource _innerSource;
     private readonly StreamingReconnectPolicy _policy;
     private readonly Func<TimeSpan, CancellationToken, Task> _delay;
+    private readonly Func<DateTimeOffset> _utcNow;
     private readonly SemaphoreSlim _streamGate = new(1, 1);
 
     public ReconnectingEarthquakeSource(
         IStreamingEarthquakeSource innerSource,
         StreamingReconnectPolicy? policy = null,
-        Func<TimeSpan, CancellationToken, Task>? delay = null)
+        Func<TimeSpan, CancellationToken, Task>? delay = null,
+        Func<DateTimeOffset>? utcNow = null)
     {
         _innerSource = innerSource ?? throw new ArgumentNullException(nameof(innerSource));
         _policy = policy ?? new StreamingReconnectPolicy();
         _delay = delay ?? Task.Delay;
+        _utcNow = utcNow ?? (() => DateTimeOffset.UtcNow);
     }
 
     public string SourceId => _innerSource.SourceId;
@@ -104,7 +107,18 @@ public sealed class ReconnectingEarthquakeSource : IStreamingEarthquakeSource
                 cancellationToken.ThrowIfCancellationRequested();
                 consecutiveFailures = receivedOnline ? 0 : consecutiveFailures;
                 consecutiveFailures++;
-                await _delay(_policy.GetDelay(consecutiveFailures), cancellationToken)
+                TimeSpan reconnectDelay = _policy.GetDelay(consecutiveFailures);
+                DateTimeOffset checkedAt = _utcNow();
+                yield return new EarthquakeSourceFetchResult(
+                    ImmutableArray<EarthquakeReport>.Empty,
+                    new SourceStatus(
+                        SourceId,
+                        SourceConnectionState.Delayed,
+                        checkedAt,
+                        Detail: $"第 {consecutiveFailures} 次重连等待",
+                        RetryAttempt: consecutiveFailures,
+                        NextRetryAt: checkedAt.Add(reconnectDelay)));
+                await _delay(reconnectDelay, cancellationToken)
                     .ConfigureAwait(false);
             }
         }

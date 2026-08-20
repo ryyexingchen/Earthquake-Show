@@ -24,6 +24,7 @@ public sealed class ReconnectingEarthquakeSourceTests
     [Fact]
     public async Task Source_ReconnectsAfterDisconnected_AndCreatesOnlyOneSessionAtATime()
     {
+        DateTimeOffset now = new(2026, 8, 20, 1, 2, 3, TimeSpan.Zero);
         var inner = new ScriptedSource(
             Result(SourceConnectionState.Disconnected, "first connection closed"),
             Result(SourceConnectionState.Online, "second connection online"));
@@ -35,13 +36,18 @@ public sealed class ReconnectingEarthquakeSourceTests
             {
                 delays.Add(delay);
                 return Task.CompletedTask;
-            });
+            },
+            () => now);
 
         await using IAsyncEnumerator<EarthquakeSourceFetchResult> enumerator =
             source.StreamAsync().GetAsyncEnumerator();
 
         Assert.True(await enumerator.MoveNextAsync());
         Assert.Equal(SourceConnectionState.Disconnected, enumerator.Current.Status.State);
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(SourceConnectionState.Delayed, enumerator.Current.Status.State);
+        Assert.Equal(1, enumerator.Current.Status.RetryAttempt);
+        Assert.Equal(now.AddSeconds(5), enumerator.Current.Status.NextRetryAt);
         Assert.True(await enumerator.MoveNextAsync());
         Assert.Equal(SourceConnectionState.Online, enumerator.Current.Status.State);
         Assert.Equal(2, inner.SessionCount);
@@ -70,6 +76,10 @@ public sealed class ReconnectingEarthquakeSourceTests
 
         Assert.True(await enumerator.MoveNextAsync());
         Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(1, enumerator.Current.Status.RetryAttempt);
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(2, enumerator.Current.Status.RetryAttempt);
         Assert.True(await enumerator.MoveNextAsync());
 
         Assert.Equal(
@@ -91,6 +101,8 @@ public sealed class ReconnectingEarthquakeSourceTests
             source.StreamAsync(cancellation.Token).GetAsyncEnumerator();
 
         Assert.True(await enumerator.MoveNextAsync());
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(SourceConnectionState.Delayed, enumerator.Current.Status.State);
         Task<bool> moveNext = enumerator.MoveNextAsync().AsTask();
         cancellation.Cancel();
 

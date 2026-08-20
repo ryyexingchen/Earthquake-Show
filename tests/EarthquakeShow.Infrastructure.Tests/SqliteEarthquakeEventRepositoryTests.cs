@@ -205,16 +205,33 @@ public sealed class SqliteEarthquakeEventRepositoryTests
                 streamingReport.ReceivedAt,
                 streamingReport.ReceivedAt,
                 "WebSocket 测试源在线")));
+        DateTimeOffset nextRetryAt = streamingReport.ReceivedAt.AddSeconds(10);
+        await repository.ApplyStreamingResultAsync(new EarthquakeSourceFetchResult(
+            [],
+            new SourceStatus(
+                "p2pquake-ws",
+                SourceConnectionState.Delayed,
+                streamingReport.ReceivedAt.AddSeconds(2),
+                streamingReport.ReceivedAt,
+                "第 2 次重连等待",
+                RetryAttempt: 2,
+                NextRetryAt: nextRetryAt)));
         await repository.RefreshAsync();
 
         Assert.Contains(
             await repository.ListEventsAsync(),
             item => item.EventId == streamingReport.EventId);
+        SourceStatus webSocketStatus = Assert.Single(
+            repository.SourceStatuses,
+            status => status.SourceId == "p2pquake-ws");
+        Assert.Equal(SourceConnectionState.Delayed, webSocketStatus.State);
+        Assert.Equal(2, webSocketStatus.RetryAttempt);
+        Assert.Equal(nextRetryAt, webSocketStatus.NextRetryAt);
         Assert.Equal(
             SourceConnectionState.Online,
             Assert.Single(
                 repository.SourceStatuses,
-                status => status.SourceId == "p2pquake-ws").State);
+                status => status.SourceId == "jma-json").State);
 
         var reloaded = new SqliteEarthquakeEventRepository(database.Path);
         await reloaded.InitializeAsync([]);

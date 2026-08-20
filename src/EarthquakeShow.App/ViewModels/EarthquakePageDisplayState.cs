@@ -17,6 +17,8 @@ public sealed record EarthquakePageDisplayState
 
     public required string SourceText { get; init; }
 
+    public required string WebSocketStatusText { get; init; }
+
     public required string EventListTitle { get; init; }
 
     public required string EventListMessage { get; init; }
@@ -65,6 +67,7 @@ public sealed record EarthquakePageDisplayState
             LastReceivedText = GetLastReceivedText(state),
             NetworkStatusText = GetNetworkStatusText(state, hasOnlineSource),
             SourceText = GetSourceText(state),
+            WebSocketStatusText = GetWebSocketStatusText(state),
             EventListTitle = listTitle,
             EventListMessage = listMessage,
             DetailsTitle = detailsTitle,
@@ -176,6 +179,34 @@ public sealed record EarthquakePageDisplayState
         return sourceIds.Length == 0
             ? "来源：未选择"
             : $"来源：{string.Join(", ", sourceIds)}";
+    }
+
+    private static string GetWebSocketStatusText(EarthquakePageState state)
+    {
+        SourceStatus? status = state.SourceStatuses.FirstOrDefault(item =>
+            string.Equals(item.SourceId, "p2pquake-ws", StringComparison.Ordinal));
+        if (status is null)
+        {
+            return "WebSocket：未启动";
+        }
+
+        if (status.State == SourceConnectionState.Delayed &&
+            status.RetryAttempt is int attempt &&
+            status.NextRetryAt is DateTimeOffset nextRetryAt)
+        {
+            DateTimeOffset japanTime = TimeZoneInfo.ConvertTime(nextRetryAt, JapanTimeZone);
+            return $"WebSocket：第 {attempt} 次重连 · {japanTime:HH:mm:ss} JST";
+        }
+
+        return status.State switch
+        {
+            SourceConnectionState.Online => "WebSocket：已连接",
+            SourceConnectionState.Delayed => "WebSocket：等待重连",
+            SourceConnectionState.Disconnected => "WebSocket：已断开",
+            SourceConnectionState.ParseFailed => "WebSocket：消息解析失败",
+            SourceConnectionState.Disabled => "WebSocket：未启用",
+            _ => "WebSocket：状态未知",
+        };
     }
 
     private static (string Title, string Message) GetEventListText(

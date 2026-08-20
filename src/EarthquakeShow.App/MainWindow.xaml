@@ -245,6 +245,7 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0"
                            VerticalAlignment="Center"
@@ -272,13 +273,21 @@
                            FontSize="11"
                            Text="{Binding MapDataStatus}" />
                 <TextBlock Grid.Column="4"
+                           MaxWidth="230"
+                           Margin="20,0,0,0"
+                           VerticalAlignment="Center"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           FontSize="11"
+                           Text="{Binding EarthquakePage.Display.WebSocketStatusText}"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="5"
                            Margin="20,0,0,0"
                            VerticalAlignment="Center"
                            Foreground="{StaticResource MutedTextBrush}"
                            FontSize="11"
                            Text="{Binding AutoRefreshStatus}"
                            TextTrimming="CharacterEllipsis" />
-                <TextBlock Grid.Column="5"
+                <TextBlock Grid.Column="6"
                            VerticalAlignment="Center"
                            Foreground="{StaticResource MutedTextBrush}"
                            FontSize="11">

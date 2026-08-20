@@ -262,6 +262,9 @@ public sealed class SqliteEarthquakeEventRepository :
                 await ReadReportsAsync(connection, cancellationToken).ConfigureAwait(false);
             ImmutableArray<SourceStatus> existingStatuses =
                 await ReadSourceStatusesAsync(connection, cancellationToken).ConfigureAwait(false);
+            existingStatuses = MergeTransientSourceStatuses(
+                existingStatuses,
+                GetSourceStatusesSnapshot());
             ImmutableArray<SourceStatus> statuses = EnsureSourceStatuses(
                 allReports,
                 existingStatuses);
@@ -545,6 +548,30 @@ public sealed class SqliteEarthquakeEventRepository :
         }
 
         return statuses;
+    }
+
+    private ImmutableArray<SourceStatus> GetSourceStatusesSnapshot()
+    {
+        lock (_syncRoot)
+        {
+            return _sourceStatuses;
+        }
+    }
+
+    private static ImmutableArray<SourceStatus> MergeTransientSourceStatuses(
+        ImmutableArray<SourceStatus> persisted,
+        ImmutableArray<SourceStatus> current)
+    {
+        ImmutableArray<SourceStatus> result = persisted;
+        foreach (SourceStatus status in current)
+        {
+            if (status.RetryAttempt is not null || status.NextRetryAt is not null)
+            {
+                result = ReplaceSourceStatus(result, status);
+            }
+        }
+
+        return result;
     }
 
     private static ImmutableArray<SourceStatus> ReplaceSourceStatus(
