@@ -140,6 +140,43 @@ public sealed class EarthquakeDetailsViewModelTests
         Assert.Contains("观测点 1 → 0", difference.DifferenceText);
     }
 
+    [Fact]
+    public async Task Details_ShowsCandidateAssociationWithoutMergingEvents()
+    {
+        EarthquakeReport jma = CreateReport(
+            "jma-report",
+            BaseTime,
+            magnitude: 3.8,
+            intensity: JmaIntensity.Three,
+            station: false,
+            sourceId: "jma-xml",
+            eventId: "jma-event");
+        EarthquakeReport p2p = CreateReport(
+            "p2p-report",
+            BaseTime.AddSeconds(5),
+            magnitude: 3.9,
+            intensity: JmaIntensity.Three,
+            station: false,
+            sourceId: "p2pquake",
+            eventId: "p2pquake:p2p-report");
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([jma, p2p]));
+        await page.LoadAsync();
+        Assert.True(page.SelectEvent("jma-event"));
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+        using var details = new EarthquakeDetailsViewModel(page, map);
+
+        EarthquakeEventAssociationItemViewModel association =
+            Assert.Single(details.EventAssociations);
+        Assert.Equal("p2pquake:p2p-report", association.EventId);
+        Assert.Equal("p2pquake", association.SourceId);
+        Assert.Equal("高置信度", association.ConfidenceText);
+        Assert.Contains("时间差 0 秒", association.MatchText);
+        Assert.Equal(2, page.State.Events.Length);
+    }
+
     private static string GetField(EarthquakeDetailsViewModel details, string label)
     {
         return details.SummaryFields.Single(field => field.Label == label).Value;

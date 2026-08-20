@@ -105,6 +105,39 @@
                                     </ItemsControl>
                                 </StackPanel>
                             </Border>
+                            <Border Margin="0,8,0,0"
+                                    Padding="10,8"
+                                    BorderBrush="{StaticResource BorderBrush}"
+                                    BorderThickness="1"
+                                    Visibility="{Binding HasEventAssociations, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock FontWeight="SemiBold" Text="可能关联来源" />
+                                    <ItemsControl Margin="0,6,0,0" ItemsSource="{Binding EventAssociations}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Margin="0,0,0,8">
+                                                    <TextBlock FontWeight="SemiBold">
+                                                        <Run Text="{Binding SourceId}" />
+                                                        <Run Text=" · " />
+                                                        <Run Text="{Binding ConfidenceText}" />
+                                                    </TextBlock>
+                                                    <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                                                               FontSize="11"
+                                                               Text="{Binding EventId}"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                                                               FontSize="11"
+                                                               Text="{Binding SourceMessageId}"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Margin="0,2,0,0"
+                                                               Text="{Binding MatchText}"
+                                                               TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </ScrollViewer>
                     <Border Grid.Row="2"

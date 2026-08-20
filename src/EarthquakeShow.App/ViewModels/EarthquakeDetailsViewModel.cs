@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using EarthquakeShow.Core.Models;
+using EarthquakeShow.Core.Services;
 
 namespace EarthquakeShow.App.ViewModels;
 
@@ -11,6 +12,13 @@ public sealed record EarthquakeSourceDifferenceItemViewModel(
     string SourceMessageId,
     string DifferenceText,
     string PriorityText);
+
+public sealed record EarthquakeEventAssociationItemViewModel(
+    string EventId,
+    string SourceId,
+    string SourceMessageId,
+    string ConfidenceText,
+    string MatchText);
 
 public sealed record EarthquakeObservationItemViewModel(
     string Kind,
@@ -74,6 +82,10 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
     public IReadOnlyList<EarthquakeSourceDifferenceItemViewModel> SourceDifferences { get; private set; } = [];
 
     public bool HasSourceDifferences => SourceDifferences.Count > 0;
+
+    public IReadOnlyList<EarthquakeEventAssociationItemViewModel> EventAssociations { get; private set; } = [];
+
+    public bool HasEventAssociations => EventAssociations.Count > 0;
 
     public IReadOnlyList<EarthquakeObservationItemViewModel> Observations { get; private set; } = [];
 
@@ -224,6 +236,7 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             SnapshotText = "请选择一个地震事件";
             SummaryFields = [];
             SourceDifferences = [];
+            EventAssociations = [];
             _allObservations = [];
             Observations = [];
             TimelineItems = [];
@@ -241,6 +254,7 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             $"{GetReportTypeText(report)} · {GetStatusText(report.Status)}";
         SummaryFields = BuildSummaryFields(earthquakeEvent.EventId, report);
         SourceDifferences = BuildSourceDifferences(earthquakeEvent, report);
+        EventAssociations = BuildEventAssociations(earthquakeEvent);
         _allObservations = BuildObservations(report);
         RebuildVisibleObservations();
         TimelineItems = BuildTimeline(earthquakeEvent, report);
@@ -334,6 +348,37 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             "p2pquake" => "第三方补充",
             _ => "其他来源",
         };
+    }
+
+    private IReadOnlyList<EarthquakeEventAssociationItemViewModel> BuildEventAssociations(
+        EarthquakeEvent selectedEvent)
+    {
+        return EarthquakeEventAssociator.Associate(_page.State.Events)
+            .Where(association =>
+                string.Equals(association.LeftEventId, selectedEvent.EventId, StringComparison.Ordinal) ||
+                string.Equals(association.RightEventId, selectedEvent.EventId, StringComparison.Ordinal))
+            .Select(association =>
+            {
+                bool isLeft = string.Equals(
+                    association.LeftEventId,
+                    selectedEvent.EventId,
+                    StringComparison.Ordinal);
+                return new EarthquakeEventAssociationItemViewModel(
+                    isLeft ? association.RightEventId : association.LeftEventId,
+                    isLeft ? association.RightSourceId : association.LeftSourceId,
+                    isLeft ? association.RightSourceMessageId : association.LeftSourceMessageId,
+                    association.Confidence == EarthquakeAssociationConfidence.High
+                        ? "高置信度"
+                        : "中置信度",
+                    $"时间差 {association.TimeDifferenceSeconds:0.#} 秒 · " +
+                    $"距离 {association.DistanceKm:0.#} km" +
+                    (association.MagnitudeDifference is double magnitudeDifference
+                        ? $" · 震级差 {magnitudeDifference:0.0}"
+                        : " · 震级差不明"));
+            })
+            .OrderByDescending(item => item.ConfidenceText, StringComparer.Ordinal)
+            .ThenBy(item => item.EventId, StringComparer.Ordinal)
+            .ToArray();
     }
 
     private static IReadOnlyList<EarthquakeObservationItemViewModel> BuildObservations(
@@ -563,6 +608,8 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         OnPropertyChanged(nameof(SummaryFields));
         OnPropertyChanged(nameof(SourceDifferences));
         OnPropertyChanged(nameof(HasSourceDifferences));
+        OnPropertyChanged(nameof(EventAssociations));
+        OnPropertyChanged(nameof(HasEventAssociations));
         OnPropertyChanged(nameof(Observations));
         OnPropertyChanged(nameof(TimelineItems));
         OnPropertyChanged(nameof(RawPayload));
