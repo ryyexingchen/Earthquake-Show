@@ -1,8 +1,12 @@
 using EarthquakeShow.App.ViewModels;
 using EarthquakeShow.App.Services;
+using EarthquakeShow.App.Views;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using EarthquakeShow.Core.Models;
 using EarthquakeShow.Infrastructure.Sources;
 using Xunit;
@@ -50,6 +54,33 @@ public sealed class MainWindowViewModelTests
                 var app = new App();
                 app.InitializeComponent();
                 var window = new MainWindow(cachePath, enableNetwork: false);
+                var detailsView = new EarthquakeDetailsView
+                {
+                    DataContext = new IntensityBadgeTestContext(
+                        new EarthquakeSummaryOverviewViewModel(
+                            new EarthquakeIntensityDisplayViewModel("6强", "SixUpper"),
+                            string.Empty,
+                            false,
+                            string.Empty,
+                            false,
+                            string.Empty,
+                            false,
+                            false,
+                            new EarthquakeTsunamiStatusViewModel("津波 调查中", "Investigating"))),
+                };
+                detailsView.Measure(new Size(380, 720));
+                detailsView.Arrange(new Rect(0, 0, 380, 720));
+                detailsView.UpdateLayout();
+
+                Border badge = Assert.IsType<Border>(
+                    detailsView.FindName("SummaryMaximumIntensityBadge"));
+                Assert.Equal(
+                    Color.FromRgb(150, 63, 104),
+                    Assert.IsType<SolidColorBrush>(badge.Background).Color);
+                TextBlock badgeText = Assert.IsType<TextBlock>(badge.Child);
+                Assert.Equal(
+                    Colors.White,
+                    Assert.IsType<SolidColorBrush>(badgeText.Foreground).Color);
                 window.Close();
                 app.Shutdown();
             }
@@ -67,6 +98,9 @@ public sealed class MainWindowViewModelTests
         Assert.True(thread.Join(TimeSpan.FromSeconds(10)), "WPF 窗口初始化超时。");
         Assert.Null(capturedException);
     }
+
+    private sealed record IntensityBadgeTestContext(
+        EarthquakeSummaryOverviewViewModel SummaryOverview);
 
     [Fact]
     public async Task Initialize_StreamingSource_PublishesReportAndStopsOnDispose()

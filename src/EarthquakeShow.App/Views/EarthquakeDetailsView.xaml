@@ -115,12 +115,14 @@
                                         <TextBlock Foreground="{StaticResource MutedTextBrush}"
                                                    FontSize="12"
                                                    Text="最大震度" />
-                                        <Border Grid.Column="1"
+                                        <Border x:Name="SummaryMaximumIntensityBadge"
+                                                Grid.Column="1"
+                                                DataContext="{Binding SummaryOverview.MaximumIntensity}"
                                                 HorizontalAlignment="Left"
                                                 Padding="4,1"
                                                 Style="{StaticResource IntensityBadgeBorderStyle}">
                                             <TextBlock Style="{StaticResource IntensityBadgeTextStyle}"
-                                                       Text="{Binding SummaryOverview.MaximumIntensity.Text}" />
+                                                       Text="{Binding Text}" />
                                         </Border>
                                     </Grid>
                                 </StackPanel>
@@ -469,11 +471,12 @@
                                                            FontSize="11"
                                                            Text="最大震度" />
                                                 <Border Grid.Column="1"
+                                                        DataContext="{Binding Summary.MaximumIntensity}"
                                                         HorizontalAlignment="Left"
                                                         Padding="4,1"
                                                         Style="{StaticResource IntensityBadgeBorderStyle}">
                                                     <TextBlock Style="{StaticResource IntensityBadgeTextStyle}"
-                                                               Text="{Binding Summary.MaximumIntensity.Text}" />
+                                                               Text="{Binding Text}" />
                                                 </Border>
                                             </Grid>
                                         </StackPanel>

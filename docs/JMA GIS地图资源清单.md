@@ -1,0 +1,98 @@
+# JMA GIS 地图资源清单
+
+## 1. 文档用途
+
+本文档长期记录 JMA GIS 原始资源的文件版本、包内结构、用途、实现阶段和发布边界。地图实现、区域代码映射或资源更新前必须先核对本文档。
+
+- 官方来源：<https://www.data.jma.go.jp/developer/gis.html>
+- 本次审计日期：2026-08-20
+- 当前暂存目录：`resources/map/`
+- 当前文件数量：10 个 ZIP，共约 1.366 GiB
+- 当前状态：只完成只读结构审计，尚未转换、接入运行时或进入发布包
+
+## 2. 包内通用结构
+
+10 个 ZIP 均包含一组 Shapefile：`.shp`、`.shx`、`.dbf`，没有 `.prj` 或 `.cpg`。文件名使用 CP932/Shift-JIS，DBF 属性值按 UTF-8 可正确读取。所有图层范围约为东经 `122.9337–153.9868`、北纬 `20.4227–45.5572`。
+
+原始 ZIP 不能直接随正式应用发布：体积过大，且运行时不应解析和简化 Shapefile。正式流程应在开发期转换为带来源、版本、坐标系和简化参数的派生 GeoJSON 或后续确认的本地矢量格式。
+
+JMA 页面说明地图制作使用了国土地理院数据。发布前仍需记录 JMA 使用条款、国土地理院署名要求和明确的坐标系元数据；不能仅凭经纬度范围推断后静默写入 EPSG。
+
+## 3. 资源用途总表
+
+| 原始 ZIP | 包内图层 | 几何/数量 | 主要用途 | 工程使用阶段 |
+| --- | --- | ---: | --- | --- |
+| `20190125_AreaForecast_GIS.zip` | 全国・地方予報区等 | Polygon / 67 | 全国和地方预报区层级，包含重叠的全国、地方等多级区域；不是日本基础轮廓 | 当前地震应用不接入；未来一般气象页面再评估 |
+| `20190125_AreaForecastEEW_GIS.zip` | 緊急地震速報／地方予報区 | Polygon / 14 | EEW 地方预报区，适合大范围 EEW 告警着色和区域摘要 | EEW 页面 |
+| `20190125_AreaForecastLocalEEW_GIS.zip` | 緊急地震速報／府県予報区 | Polygon / 56 | EEW 府县预报区，适合更细的 EEW 预计震度和告警范围 | EEW 页面 |
+| `20190125_AreaForecastLocalM_1saibun_GIS.zip` | 一次細分区域等 | Polygon / 143 | 一般气象预报/警报的一次细分区域 | 当前地震、EEW、海啸功能不使用 |
+| `20190125_AreaForecastLocalM_prefecture_GIS.zip` | 府県予報区等 | Polygon / 64 | 一般气象业务的府县预报区 | 当前地震、EEW、海啸功能不使用 |
+| `20190125_AreaInformationPrefectureEarthquake_GIS.zip` | 地震情報／都道府県等 | Polygon / 47 | 地震信息都道府县聚合边界，可用于全国概览和都道府县级摘要 | 地震页面辅助层，非区域树主键 |
+| `20230517_AreaForecastLocalM_matome_GIS.zip` | 市町村等をまとめた地域等 | Polygon / 384 | 一般气象业务中若干市町村的组合发布区 | 当前地震、EEW、海啸功能不使用 |
+| `20240520_AreaForecastLocalE_GIS.zip` | 地震情報／細分区域 | Polygon / 194 | 地震信息细分区域，代码对应 JMAXML 地震区域代码 | `0.30.0` 地震区域着色和区域树第一层，最高优先级 |
+| `20240520_AreaTsunami_GIS.zip` | 津波予報区 | PolyLine / 70 | 海啸预报区沿岸线，按预报区代码着色；不是可直接填充的面 | 海啸页面和地震详情海啸范围 |
+| `20241128_AreaInformationCity_quake_GIS.zip` | 市町村等（地震津波関係） | Polygon / 1910 | 地震/海啸业务市町村边界，代码用于市町村震度映射 | `0.30.0` 市町村着色、`0.30.1` 三层树，最高优先级 |
+
+## 4. 字段和样例
+
+| 图层 | 关键字段 | 样例 |
+| --- | --- | --- |
+| 全国・地方予報区等 | `code`, `name` | `010000 全国`、`010100 北海道地方` |
+| EEW 地方预报区 | `code`, `name`, `namekana` | `9910 北海道`、`9920 東北` |
+| EEW 府县预报区 | `code`, `name`, `namekana` | `9011 北海道道央` |
+| 一次细分区域/府县预报区 | `code`, `name` | `011000 宗谷地方` |
+| 地震信息都道府县 | `code`, `name` | `01 北海道`、`02 青森県` |
+| 市町村组合区域 | `code`, `name` | `011011 宗谷北部` |
+| 地震信息细分区域 | `code`, `name`, `namekana` | `100 石狩地方北部` |
+| 海啸预报区 | `code`, `name`, `namekana` | `120 オホーツク海沿岸` |
+| 地震/海啸市町村 | `regioncode`, `regionname`, `name`, `namekana` | `0110100 札幌中央区` |
+
+正式转换时必须保留代码字符串的前导零，禁止转换为整数。名称只用于显示和诊断，区域关联必须使用代码。
+
+## 5. 按功能选择地图
+
+### 5.1 当前地震情报页面
+
+必须使用：
+
+1. `20240520_AreaForecastLocalE_GIS.zip`：把 `IntensityArea.Code` 映射到地震信息细分区域，绘制区域最大震度。
+2. `20241128_AreaInformationCity_quake_GIS.zip`：把 `IntensityMunicipality.Code` 映射到市町村边界，支持市町村着色、点选和三层观测树。
+
+可选辅助：
+
+- `20190125_AreaInformationPrefectureEarthquake_GIS.zip`：用于都道府县级概览、无细分区域数据时的降级摘要或代码覆盖诊断。它不能替代 194 个地震细分区域。
+
+这些 GIS 包不包含观测点坐标。观测点层仍需要独立、带 JMAXML 观测点代码的正式站点目录。
+
+### 5.2 EEW 页面
+
+- `20190125_AreaForecastEEW_GIS.zip`：14 个地方预报区，用于宽范围告警。
+- `20190125_AreaForecastLocalEEW_GIS.zip`：56 个府县预报区，用于细化预计震度和告警范围。
+
+不能用普通气象的府县预报区替代 EEW 专用区；名称相近不表示代码或边界等价。
+
+### 5.3 海啸页面
+
+- `20240520_AreaTsunami_GIS.zip`：70 条海啸预报区沿岸线，按注意报、警报和大海啸警报等级改变线色和线宽。
+- `20241128_AreaInformationCity_quake_GIS.zip`：需要市町村级详情或关联地震观测时作为辅助面图层。
+
+海啸预报区是 `PolyLine`，不能按普通 Polygon 直接填充。正式渲染器必须支持沿岸线选中、命中测试和多段线。
+
+### 5.4 当前不使用的普通气象图层
+
+`AreaForecast_GIS`、`AreaForecastLocalM_prefecture`、`AreaForecastLocalM_1saibun` 和 `AreaForecastLocalM_matome` 属于一般气象预报/警报区域。当前产品范围是地震、EEW 和海啸，不应为了“补齐地图”把这些图层混入地震代码映射。
+
+## 6. 接入顺序
+
+1. 先转换和验证地震细分区域、市町村、都道府县三个 Polygon 图层。
+2. 建立 `IntensityArea.Code` 和 `IntensityMunicipality.Code` 的精确覆盖率报告，保留未映射诊断。
+3. 生成全国概览简化层和按需加载的市町村详情层；原始 ZIP 留在开发资源目录。
+4. 完成地震页面真实地图和三层观测树后，再转换 EEW 两级图层。
+5. 实现海啸页面时单独增加 PolyLine 资源和渲染测试。
+
+## 7. 当前审计结论
+
+- 10 个 ZIP 均可打开并读取 `.shp/.shx/.dbf` 结构。
+- 三个当前关键包 `AreaForecastLocalE`、`AreaInformationCity_quake`、`AreaTsunami` 已通过现有严格资源审计工具。
+- 当前文件没有进入 `src/EarthquakeShow.App/Assets`，应用仍使用示意轮廓。
+- 下一步不是直接让 WPF 加载这些大 ZIP，而是实现可重复的离线转换、代码覆盖率检查和派生资源版本清单。

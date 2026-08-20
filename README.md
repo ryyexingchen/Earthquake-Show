@@ -15,9 +15,9 @@
 - WebSocket 状态：P2PQuake 文本消息流已接入应用生命周期和 SQLite，支持单连接、传输层 keep-alive、主动连接轮换、断线重连、HTTP/WS 状态分离、状态栏显示重连次数、JST 下次重试时间、连接持续时间、最近错误详情、最近消息活性和连接异常统计，以及窗口关闭取消；设置页可调整 keep-alive 和连接轮换参数并即时重连
 - 页面状态：保存事件列表、当前事件、报文版本、来源差异、可能关联来源、自动刷新状态、搜索筛选、排序、地图、来源、加载、离线和错误状态
 - nTool 评估：事件 API 与现有来源重叠；逐站实时 JSON 仅保留为隔离研究对象，未进入正式数据链路
-- 资源审计：已核对临时 JMA 站点目录 4,368 条；正式 GIS 压缩包和完整站点代码目录仍待补齐
+- 资源审计：已核对临时 JMA 站点目录 4,368 条和 10 个正式 JMA GIS 压缩包；完整站点代码目录仍待补齐
 - `0.29.4` 已完善报文时间线和详情摘要：缺失字段不再显示为未知变化，已收到的震源/规模/海啸信息在后续报文中持续显示，海啸状态使用分级颜色
-- 下一步：获取可用的 JMA GIS 压缩包和带观测点代码的完整目录，再开始 `0.30.0` 地图实现
+- 下一步：转换地震细分区域、市町村和都道府县 GIS 并生成代码覆盖率报告；同时继续获取带观测点代码的完整目录
 
 `0.1.0` Tauri/Vue 技术原型已停止开发，并于 2026-08-19 按用户要求从工作区删除；历史决策保留在版本记录和工程实现文档中。
 
@@ -53,7 +53,7 @@ dotnet test EarthquakeShow.sln --configuration Release
 ## 地图资源审计入口
 
 ```powershell
-python -X utf8 tools\audit_jma_resources.py --stations-json tmp\jma-stations.json --fixed-csv tests\TestData\JmaStations.csv --gis-zip tmp\20240520_AreaForecastLocalE_GIS.zip --strict
+python -X utf8 tools\audit_jma_resources.py --stations-json tmp\jma-stations.json --fixed-csv tests\TestData\JmaStations.csv --gis-zip resources\map\20240520_AreaForecastLocalE_GIS.zip --strict
 ```
 
 ## 真实网络验证入口
