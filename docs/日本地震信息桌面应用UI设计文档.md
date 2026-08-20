@@ -242,7 +242,7 @@
 - `自动换行`。
 - `打开来源链接`，仅在存在有效链接时启用。
 
-`0.28.0` 已实现摘要、区域/市町村/观测点、报文时间线、只读原始 XML、P2PQuake HTTP/WebSocket 补充来源、同事件来源差异展示、跨源候选关联提示、自动刷新状态、完整 WebSocket 连接诊断、连接策略设置和非事件消息忽略。启动时优先读取 SQLite 缓存，再读取独立 JSON 设置并请求 JMA JSON、JMA XML 和 P2PQuake HTTP，随后按设置启动带重连的 P2PQuake WebSocket；新报文写入缓存并通过仓储更新列表、详情和地图。HTTP 状态使用 `p2pquake`，WebSocket 通道状态使用 `p2pquake-ws`，连接异常时保留已有数据。正式 WebSocket 默认使用 30 秒传输层 keep-alive，并在默认 9 分钟主动轮换连接；设置页可在约束范围内修改并立即重建 WebSocket，预期轮换不显示为连接异常。0.26.1 的真实验证工具已确认握手和默认轮换路径；应用层 heartbeat/ping-pong 展示、人工关联确认和历史回放留待后续版本。无事件结构的控制/状态对象只显示在线活性，不显示为解析错误；开发期原始消息捕获不属于用户界面功能。
+`0.29.0` 已实现摘要、区域/市町村/观测点、报文时间线、只读原始 XML、P2PQuake HTTP/WebSocket 补充来源、同事件来源差异展示、跨源候选关联提示、自动刷新状态、完整 WebSocket 连接诊断、连接策略设置和非事件消息分类。启动时优先读取 SQLite 缓存，再读取独立 JSON 设置并请求 JMA JSON、JMA XML 和 P2PQuake HTTP，随后按设置启动带重连的 P2PQuake WebSocket；新报文写入缓存并通过仓储更新列表、详情和地图。HTTP 状态使用 `p2pquake`，WebSocket 通道状态使用 `p2pquake-ws`，连接异常时保留已有数据。正式 WebSocket 默认使用 30 秒传输层 keep-alive，并在默认 9 分钟主动轮换连接；设置页可在约束范围内修改并立即重建 WebSocket，预期轮换不显示为连接异常。真实捕获已确认 `code=555` 是不定期网络节点统计，不显示为 heartbeat；人工关联确认和历史回放留待后续版本。开发期原始消息捕获不属于用户界面功能。
 
 ### 5.5 页面状态
 

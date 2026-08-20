@@ -212,6 +212,29 @@ public sealed class P2pQuakeEarthquakeSourceTests
     }
 
     [Fact]
+    public async Task WebSocket_Code555PeerStatistics_IsOnlineWithoutReport()
+    {
+        const string payload =
+            "{\"_id\":\"peer-stats-1\",\"areas\":[{\"id\":250,\"peer\":290}]," +
+            "\"code\":555,\"time\":\"2026/08/20 18:05:32.766\",\"ver\":\"20150406\"}";
+        var connection = new FakeWebSocketConnection(Frame.Text(payload));
+        var source = new P2pQuakeWebSocketSource(
+            () => connection,
+            "wss://example.test/v2/ws");
+
+        await using IAsyncEnumerator<EarthquakeSourceFetchResult> enumerator =
+            source.StreamAsync().GetAsyncEnumerator();
+
+        Assert.True(await enumerator.MoveNextAsync());
+        EarthquakeSourceFetchResult result = enumerator.Current;
+        Assert.Empty(result.Reports);
+        Assert.Equal(SourceConnectionState.Online, result.Status.State);
+        Assert.Equal("P2PQuake WebSocket：网络节点统计（code 555）", result.Status.Detail);
+        Assert.Equal(result.Status.CheckedAt, result.Status.LastMessageAt);
+        Assert.Null(result.Status.ConnectionExceptionCount);
+    }
+
+    [Fact]
     public async Task WebSocket_EventShapeWithoutId_RemainsParseFailed()
     {
         const string payload =

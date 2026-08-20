@@ -160,9 +160,17 @@ public sealed class P2pQuakeWebSocketSource : IStreamingEarthquakeSource
                     throw new JsonException("P2PQuake WebSocket 顶层必须是对象。");
                 }
 
-                if (IsNonEventMessage(document.RootElement))
+                if (IsPeerStatisticsMessage(document.RootElement))
                 {
-                    result = NonEventResult(receivedAt);
+                    result = NonEventResult(
+                        receivedAt,
+                        "P2PQuake WebSocket：网络节点统计（code 555）");
+                }
+                else if (IsNonEventMessage(document.RootElement))
+                {
+                    result = NonEventResult(
+                        receivedAt,
+                        "P2PQuake WebSocket：忽略非事件消息");
                 }
                 else
                 {
@@ -207,15 +215,25 @@ public sealed class P2pQuakeWebSocketSource : IStreamingEarthquakeSource
         }
     }
 
-    private EarthquakeSourceFetchResult NonEventResult(DateTimeOffset receivedAt) =>
+    private EarthquakeSourceFetchResult NonEventResult(
+        DateTimeOffset receivedAt,
+        string detail) =>
         new(
             [],
             new SourceStatus(
                 SourceId,
                 SourceConnectionState.Online,
                 receivedAt,
-                Detail: "P2PQuake WebSocket：忽略非事件消息",
+                Detail: detail,
                 LastMessageAt: receivedAt));
+
+    private static bool IsPeerStatisticsMessage(JsonElement element) =>
+        element.TryGetProperty("code", out JsonElement code) &&
+        code.ValueKind == JsonValueKind.Number &&
+        code.TryGetInt32(out int codeValue) &&
+        codeValue == 555 &&
+        element.TryGetProperty("areas", out JsonElement areas) &&
+        areas.ValueKind == JsonValueKind.Array;
 
     private static bool IsNonEventMessage(JsonElement element)
     {
