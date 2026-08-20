@@ -6,6 +6,12 @@ namespace EarthquakeShow.App.ViewModels;
 
 public sealed record EarthquakeDetailField(string Label, string Value);
 
+public sealed record EarthquakeSourceDifferenceItemViewModel(
+    string SourceId,
+    string SourceMessageId,
+    string DifferenceText,
+    string PriorityText);
+
 public sealed record EarthquakeObservationItemViewModel(
     string Kind,
     string Name,
@@ -64,6 +70,10 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
     public string SnapshotText { get; private set; } = "请选择一个地震事件";
 
     public IReadOnlyList<EarthquakeDetailField> SummaryFields { get; private set; } = [];
+
+    public IReadOnlyList<EarthquakeSourceDifferenceItemViewModel> SourceDifferences { get; private set; } = [];
+
+    public bool HasSourceDifferences => SourceDifferences.Count > 0;
 
     public IReadOnlyList<EarthquakeObservationItemViewModel> Observations { get; private set; } = [];
 
@@ -213,6 +223,7 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             Title = "未选择事件";
             SnapshotText = "请选择一个地震事件";
             SummaryFields = [];
+            SourceDifferences = [];
             _allObservations = [];
             Observations = [];
             TimelineItems = [];
@@ -229,6 +240,7 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         SnapshotText = $"第 {viewedIndex + 1} / {earthquakeEvent.Reports.Length} 报 · " +
             $"{GetReportTypeText(report)} · {GetStatusText(report.Status)}";
         SummaryFields = BuildSummaryFields(earthquakeEvent.EventId, report);
+        SourceDifferences = BuildSourceDifferences(earthquakeEvent, report);
         _allObservations = BuildObservations(report);
         RebuildVisibleObservations();
         TimelineItems = BuildTimeline(earthquakeEvent, report);
@@ -272,6 +284,56 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             new("状态", $"{GetStatusText(report.Status)} · {GetContextText(report.Context)}"),
             new("来源", report.Source.SourceId),
         ];
+    }
+
+    private static IReadOnlyList<EarthquakeSourceDifferenceItemViewModel> BuildSourceDifferences(
+        EarthquakeEvent earthquakeEvent,
+        EarthquakeReport selectedReport)
+    {
+        return earthquakeEvent.Reports
+            .Where(report => !IsSameSource(report.Source, selectedReport.Source))
+            .GroupBy(report => report.Source.SourceId, StringComparer.Ordinal)
+            .Select(group => group
+                .OrderByDescending(report => report.IssuedAt)
+                .ThenByDescending(report => report.ReceivedAt)
+                .First())
+            .Select(report => new EarthquakeSourceDifferenceItemViewModel(
+                report.Source.SourceId,
+                report.Source.SourceMessageId,
+                GetSourceDifferenceText(selectedReport, report),
+                GetSourcePriorityText(report.Source.SourceId)))
+            .OrderBy(item => item.SourceId, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static string GetSourceDifferenceText(
+        EarthquakeReport selected,
+        EarthquakeReport other)
+    {
+        var changes = new List<string>();
+        AddChange(changes, "状态", GetStatusText(selected.Status), GetStatusText(other.Status));
+        AddChange(changes, "震度", GetIntensityText(selected.MaxIntensity), GetIntensityText(other.MaxIntensity));
+        AddChange(changes, "震级", GetMagnitudeText(selected), GetMagnitudeText(other));
+        AddChange(changes, "震源", selected.Hypocenter?.Name ?? "不明", other.Hypocenter?.Name ?? "不明");
+        AddChange(changes, "深度", GetDepthText(selected), GetDepthText(other));
+        AddChange(changes, "观测点", selected.IntensityStations.Length.ToString(), other.IntensityStations.Length.ToString());
+        return changes.Count == 0 ? "无字段差异" : string.Join("；", changes);
+    }
+
+    private static string GetDepthText(EarthquakeReport report)
+    {
+        return report.Hypocenter?.DepthKm is int depth ? $"{depth} km" : "不明";
+    }
+
+    private static string GetSourcePriorityText(string sourceId)
+    {
+        return sourceId switch
+        {
+            "jma-xml" => "JMA XML 优先",
+            "jma-json" => "JMA JSON 摘要",
+            "p2pquake" => "第三方补充",
+            _ => "其他来源",
+        };
     }
 
     private static IReadOnlyList<EarthquakeObservationItemViewModel> BuildObservations(
@@ -499,6 +561,8 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(SnapshotText));
         OnPropertyChanged(nameof(SummaryFields));
+        OnPropertyChanged(nameof(SourceDifferences));
+        OnPropertyChanged(nameof(HasSourceDifferences));
         OnPropertyChanged(nameof(Observations));
         OnPropertyChanged(nameof(TimelineItems));
         OnPropertyChanged(nameof(RawPayload));

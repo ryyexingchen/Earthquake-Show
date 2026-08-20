@@ -107,6 +107,39 @@ public sealed class EarthquakeDetailsViewModelTests
         Assert.Equal("raw", page.State.ViewedReport?.Source.SourceMessageId);
     }
 
+    [Fact]
+    public async Task Details_ShowsDifferencesBetweenSourcesInSameEvent()
+    {
+        EarthquakeReport json = CreateReport(
+            "json-summary",
+            BaseTime,
+            magnitude: 3.7,
+            intensity: JmaIntensity.Two,
+            station: false,
+            sourceId: "jma-json");
+        EarthquakeReport xml = CreateReport(
+            "xml-detail",
+            BaseTime,
+            magnitude: 3.8,
+            intensity: JmaIntensity.Three,
+            station: true,
+            sourceId: "jma-xml");
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([json, xml]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+        using var details = new EarthquakeDetailsViewModel(page, map);
+
+        EarthquakeSourceDifferenceItemViewModel difference = Assert.Single(details.SourceDifferences);
+        Assert.Equal("jma-json", difference.SourceId);
+        Assert.Equal("JMA JSON 摘要", difference.PriorityText);
+        Assert.Contains("震度 3 → 2", difference.DifferenceText);
+        Assert.Contains("震级 M 3.8 → M 3.7", difference.DifferenceText);
+        Assert.Contains("观测点 1 → 0", difference.DifferenceText);
+    }
+
     private static string GetField(EarthquakeDetailsViewModel details, string label)
     {
         return details.SummaryFields.Single(field => field.Label == label).Value;
@@ -119,11 +152,13 @@ public sealed class EarthquakeDetailsViewModelTests
         double magnitude = 3.8,
         JmaIntensity intensity = JmaIntensity.Three,
         bool station = false,
-        string? rawPayload = null)
+        string? rawPayload = null,
+        string sourceId = "jma-xml",
+        string eventId = "details-event")
     {
         return new EarthquakeReport
         {
-            EventId = "details-event",
+            EventId = eventId,
             ReportCode = "VXSE53",
             ReportType = EarthquakeReportType.HypocenterAndIntensity,
             Status = status,
@@ -152,7 +187,7 @@ public sealed class EarthquakeDetailsViewModelTests
                     new GeoCoordinate(32.81, 130.71))]
                 : [],
             Source = new SourceReference(
-                "jma-xml",
+                sourceId,
                 sourceMessageId,
                 SourcePayload: rawPayload),
         };

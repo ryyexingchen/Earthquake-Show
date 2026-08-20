@@ -55,27 +55,57 @@
                         </StackPanel>
                     </Border>
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                        <ItemsControl Margin="16,12,16,8"
-                                      Grid.IsSharedSizeScope="True"
-                                      ItemsSource="{Binding SummaryFields}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Margin="0,0,0,10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="88" SharedSizeGroup="SummaryLabel" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0"
-                                                   Foreground="{StaticResource MutedTextBrush}"
-                                                   FontSize="12"
-                                                   Text="{Binding Label}" />
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{Binding Value}"
-                                                   TextWrapping="Wrap" />
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <StackPanel Margin="16,12,16,8">
+                            <ItemsControl Grid.IsSharedSizeScope="True"
+                                          ItemsSource="{Binding SummaryFields}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="88" SharedSizeGroup="SummaryLabel" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0"
+                                                       Foreground="{StaticResource MutedTextBrush}"
+                                                       FontSize="12"
+                                                       Text="{Binding Label}" />
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Value}"
+                                                       TextWrapping="Wrap" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Border Margin="0,4,0,0"
+                                    Padding="10,8"
+                                    BorderBrush="{StaticResource BorderBrush}"
+                                    BorderThickness="1"
+                                    Visibility="{Binding HasSourceDifferences, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock FontWeight="SemiBold" Text="来源差异" />
+                                    <ItemsControl Margin="0,6,0,0" ItemsSource="{Binding SourceDifferences}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Margin="0,0,0,8">
+                                                    <TextBlock FontWeight="SemiBold">
+                                                        <Run Text="{Binding SourceId}" />
+                                                        <Run Text=" · " />
+                                                        <Run Text="{Binding PriorityText}" />
+                                                    </TextBlock>
+                                                    <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                                                               FontSize="11"
+                                                               Text="{Binding SourceMessageId}"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Margin="0,2,0,0"
+                                                               Text="{Binding DifferenceText}"
+                                                               TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
                     </ScrollViewer>
                     <Border Grid.Row="2"
                             Padding="12,10"
