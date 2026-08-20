@@ -5,6 +5,8 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows.Threading;
 using EarthquakeShow.App.Services;
+using EarthquakeShow.Core.Models;
+using EarthquakeShow.Infrastructure.Persistence;
 
 namespace EarthquakeShow.App.ViewModels;
 
@@ -15,14 +17,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private readonly DispatcherTimer _clockTimer;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly SqliteEarthquakeEventRepository _repository;
+    private readonly IReadOnlyList<EarthquakeReport> _seedReports;
     private string _currentTime = string.Empty;
+    private string _cacheStatus = "缓存：初始化中";
     private bool _isDisposed;
 
-    public MainWindowViewModel()
+    public MainWindowViewModel(string? cachePath = null)
     {
         AppVersion = GetAppVersion();
+        _seedReports = FixedJmaXmlDataLoader.LoadReports();
+        _repository = new SqliteEarthquakeEventRepository(
+            cachePath ?? GetDefaultCachePath());
         EarthquakePage = new EarthquakePageViewModel(
-            FixedJmaXmlDataLoader.CreateRepository());
+            _repository);
         EventList = new EarthquakeEventListViewModel(EarthquakePage);
         Map = new EarthquakeMapViewModel(
             EarthquakePage,
@@ -57,7 +65,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public string CacheStatus => "缓存：未初始化";
+    public string CacheStatus
+    {
+        get => _cacheStatus;
+        private set
+        {
+            if (_cacheStatus == value)
+            {
+                return;
+            }
+
+            _cacheStatus = value;
+            OnPropertyChanged();
+        }
+    }
 
     public string MapDataStatus => Map.IsOfficialBoundary ? "地图：离线边界" : "地图：离线示意";
 
@@ -73,9 +94,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public WindowLayoutViewModel Layout { get; }
 
-    public ValueTask InitializeAsync()
+    public async ValueTask InitializeAsync(
+        CancellationToken cancellationToken = default)
     {
-        return EarthquakePage.LoadAsync(_lifetimeCancellation.Token);
+        CancellationToken token = cancellationToken.CanBeCanceled
+            ? cancellationToken
+            : _lifetimeCancellation.Token;
+        await _repository.InitializeAsync(_seedReports, token);
+        CacheStatus = _repository.CacheStatus;
+        EarthquakePage.SetSourceState(
+            _repository.SourceStatuses,
+            isOffline: true);
+        await EarthquakePage.LoadAsync(token);
     }
 
     public void Dispose()
@@ -94,6 +124,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         EventList.Dispose();
         EarthquakePage.Dispose();
         _lifetimeCancellation.Dispose();
+    }
+
+    private static string GetDefaultCachePath()
+    {
+        string root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(root))
+        {
+            root = AppContext.BaseDirectory;
+        }
+
+        return Path.Combine(root, "EarthquakeShow", "earthquake-cache.db");
     }
 
     private static string GetAppVersion()

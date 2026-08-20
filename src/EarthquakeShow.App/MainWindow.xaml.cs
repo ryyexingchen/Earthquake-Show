@@ -7,11 +7,17 @@ namespace EarthquakeShow.App;
 /// </summary>
 public partial class MainWindow : Window
 {
-    private readonly ViewModels.MainWindowViewModel _viewModel = new();
+    private readonly ViewModels.MainWindowViewModel _viewModel;
     private bool _isInitialized;
 
     public MainWindow()
+        : this(null)
     {
+    }
+
+    public MainWindow(string? cachePath)
+    {
+        _viewModel = new ViewModels.MainWindowViewModel(cachePath);
         InitializeComponent();
         DataContext = _viewModel;
         SizeChanged += OnWindowSizeChanged;

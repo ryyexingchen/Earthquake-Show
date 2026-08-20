@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\EarthquakeShow.Core\EarthquakeShow.Core.csproj" />
+    <ProjectReference Include="..\EarthquakeShow.Infrastructure\EarthquakeShow.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

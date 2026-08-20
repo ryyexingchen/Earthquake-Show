@@ -1,11 +1,13 @@
+using System.Collections.Immutable;
 using System.IO;
+using EarthquakeShow.Core.Models;
 using EarthquakeShow.Core.Services;
 
 namespace EarthquakeShow.App.Services;
 
 internal static class FixedJmaXmlDataLoader
 {
-    public static InMemoryEarthquakeEventRepository CreateRepository()
+    public static ImmutableArray<EarthquakeReport> LoadReports()
     {
         string assetsRoot = Path.Combine(AppContext.BaseDirectory, "Assets");
         string stationPath = Path.Combine(assetsRoot, "JmaStations.csv");
@@ -23,8 +25,7 @@ internal static class FixedJmaXmlDataLoader
         try
         {
             var stations = JmaStationCatalog.LoadFile(stationPath);
-            return new InMemoryEarthquakeEventRepository(
-                JmaXmlParser.LoadFixtures(fixtures, stations));
+            return JmaXmlParser.LoadFixtures(fixtures, stations);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or FormatException)
         {

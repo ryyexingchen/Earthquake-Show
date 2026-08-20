@@ -10,20 +10,28 @@ public sealed class MainWindowViewModelTests
     [Fact]
     public async Task Initialize_FixedJmaXml_LoadsMergedCorrectionEvent()
     {
-        using var viewModel = new MainWindowViewModel();
+        string cachePath = CreateTemporaryCachePath();
+        using var viewModel = new MainWindowViewModel(cachePath);
 
-        await viewModel.InitializeAsync();
+        try
+        {
+            await viewModel.InitializeAsync();
 
-        EarthquakeEvent earthquakeEvent = Assert.Single(viewModel.EarthquakePage.State.Events);
-        Assert.Equal(4, earthquakeEvent.Reports.Length);
-        Assert.Equal(ReportStatus.Correction, earthquakeEvent.Summary?.Status);
-        Assert.Equal(3.9, earthquakeEvent.Summary?.Magnitude?.Value);
-        Assert.Equal(75, earthquakeEvent.LatestReport?.IntensityStations.Length);
-        Assert.All(
-            earthquakeEvent.LatestReport!.IntensityStations,
-            station => Assert.NotNull(station.Coordinate));
-        Assert.Single(viewModel.EventList.Items);
-        Assert.Equal(76, viewModel.Map.Markers.Count);
+            EarthquakeEvent earthquakeEvent = Assert.Single(viewModel.EarthquakePage.State.Events);
+            Assert.Equal(4, earthquakeEvent.Reports.Length);
+            Assert.Equal(ReportStatus.Correction, earthquakeEvent.Summary?.Status);
+            Assert.Equal(3.9, earthquakeEvent.Summary?.Magnitude?.Value);
+            Assert.Equal(75, earthquakeEvent.LatestReport?.IntensityStations.Length);
+            Assert.All(
+                earthquakeEvent.LatestReport!.IntensityStations,
+                station => Assert.NotNull(station.Coordinate));
+            Assert.Single(viewModel.EventList.Items);
+            Assert.Equal(76, viewModel.Map.Markers.Count);
+        }
+        finally
+        {
+            DeleteTemporaryCache(cachePath);
+        }
     }
 
     [Fact]
@@ -32,11 +40,12 @@ public sealed class MainWindowViewModelTests
         Exception? capturedException = null;
         var thread = new Thread(() =>
         {
+            string cachePath = CreateTemporaryCachePath();
             try
             {
                 var app = new App();
                 app.InitializeComponent();
-                var window = new MainWindow();
+                var window = new MainWindow(cachePath);
                 window.Close();
                 app.Shutdown();
             }
@@ -44,10 +53,33 @@ public sealed class MainWindowViewModelTests
             {
                 capturedException = exception;
             }
+            finally
+            {
+                DeleteTemporaryCache(cachePath);
+            }
         });
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
         Assert.True(thread.Join(TimeSpan.FromSeconds(10)), "WPF 窗口初始化超时。");
         Assert.Null(capturedException);
+    }
+
+    private static string CreateTemporaryCachePath()
+    {
+        string directory = Path.Combine(
+            Path.GetTempPath(),
+            "EarthquakeShowAppTests",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        return Path.Combine(directory, "cache.db");
+    }
+
+    private static void DeleteTemporaryCache(string path)
+    {
+        string? directory = Path.GetDirectoryName(path);
+        if (directory is not null && Directory.Exists(directory))
+        {
+            Directory.Delete(directory, recursive: true);
+        }
     }
 }
