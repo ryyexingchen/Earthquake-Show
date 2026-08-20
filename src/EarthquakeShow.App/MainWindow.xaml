@@ -125,7 +125,7 @@
 
                 <Button Grid.Column="5"
                         AutomationProperties.Name="设置"
-                        IsEnabled="False"
+                        Click="OnSettingsClick"
                         Style="{StaticResource HeaderIconButtonStyle}"
                         ToolTip="设置">
                     <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xE713;" />
@@ -146,7 +146,18 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Row="1">
+        <Grid x:Name="MainWorkspace"
+              Grid.Row="1">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Visibility" Value="Visible" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Settings.IsVisible}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="68" />
                 <ColumnDefinition Width="280" />
@@ -231,6 +242,21 @@
                 </Grid>
             </Border>
         </Grid>
+
+        <views:SettingsView Grid.Row="1"
+                            DataContext="{Binding Settings}"
+                            RequestClose="OnSettingsRequestClose">
+            <views:SettingsView.Style>
+                <Style TargetType="views:SettingsView">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsVisible}" Value="True">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </views:SettingsView.Style>
+        </views:SettingsView>
 
         <Border Grid.Row="2"
                 Padding="12,0"

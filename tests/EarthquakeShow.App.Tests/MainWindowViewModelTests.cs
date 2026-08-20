@@ -1,4 +1,5 @@
 using EarthquakeShow.App.ViewModels;
+using EarthquakeShow.App.Services;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -102,6 +103,55 @@ public sealed class MainWindowViewModelTests
 
             viewModel.Dispose();
             await source.Stopped.WaitAsync(TimeSpan.FromSeconds(2));
+        }
+        finally
+        {
+            viewModel.Dispose();
+            DeleteTemporaryCache(cachePath);
+        }
+    }
+
+    [Fact]
+    public async Task ApplySettings_PersistsAndRecreatesInjectedStreamingSource()
+    {
+        string cachePath = CreateTemporaryCachePath();
+        string settingsPath = Path.Combine(
+            Path.GetDirectoryName(cachePath)!,
+            "settings.json");
+        int factoryCalls = 0;
+        EarthquakeReport report = CreateStreamingReport();
+        var viewModel = new MainWindowViewModel(
+            cachePath,
+            enableNetwork: false,
+            settingsPath: settingsPath,
+            streamingSourceFactory: _ =>
+            {
+                factoryCalls++;
+                return new StubStreamingSource(new EarthquakeSourceFetchResult(
+                    [report],
+                    new SourceStatus(
+                        "p2pquake-ws",
+                        SourceConnectionState.Online,
+                        report.ReceivedAt,
+                        report.ReceivedAt,
+                        "测试 WebSocket 在线")));
+            });
+
+        try
+        {
+            await viewModel.InitializeAsync();
+            Assert.Equal(1, factoryCalls);
+
+            viewModel.Settings.KeepAliveSeconds = 60;
+            viewModel.Settings.MaxConnectionDurationMinutes = 8;
+            await viewModel.Settings.ApplyAsync();
+
+            Assert.Equal(2, factoryCalls);
+            ApplicationSettingsLoadResult loaded =
+                new ApplicationSettingsStore(settingsPath).Load();
+            Assert.Equal(
+                new WebSocketConnectionSettings(60, 8),
+                loaded.Settings.WebSocketSettings);
         }
         finally
         {

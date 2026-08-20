@@ -1,0 +1,150 @@
+<UserControl x:Class="EarthquakeShow.App.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+    <Grid Background="{StaticResource BackgroundBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="240" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0"
+                Background="{StaticResource NavigationBrush}"
+                BorderBrush="{StaticResource BorderStrongBrush}"
+                BorderThickness="0,0,1,0">
+            <StackPanel Margin="18,20">
+                <Button AutomationProperties.Name="返回地震情报"
+                        Click="OnBackClick"
+                        HorizontalContentAlignment="Left"
+                        Style="{StaticResource HeaderIconButtonStyle}"
+                        ToolTip="返回地震情报">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Margin="0,0,9,0"
+                                   FontFamily="Segoe Fluent Icons"
+                                   Text="&#xE72B;" />
+                        <TextBlock Text="返回地震情报" />
+                    </StackPanel>
+                </Button>
+                <TextBlock Margin="4,28,0,18"
+                           Foreground="White"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           Text="设置" />
+                <RadioButton IsChecked="True"
+                             GroupName="SettingsNavigation"
+                             Style="{StaticResource NavigationButtonStyle}">
+                    <TextBlock Text="数据源" />
+                </RadioButton>
+                <TextBlock Margin="16,20,0,0"
+                           Foreground="#8E9BA2"
+                           Text="常规" />
+                <TextBlock Margin="16,14,0,0"
+                           Foreground="#8E9BA2"
+                           Text="显示与地图" />
+                <TextBlock Margin="16,14,0,0"
+                           Foreground="#8E9BA2"
+                           Text="通知" />
+                <TextBlock Margin="16,14,0,0"
+                           Foreground="#8E9BA2"
+                           Text="存储与日志" />
+                <TextBlock Margin="16,14,0,0"
+                           Foreground="#8E9BA2"
+                           Text="关于" />
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer Grid.Column="1"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+            <StackPanel MaxWidth="760"
+                        Margin="48,38,48,48"
+                        HorizontalAlignment="Left">
+                <TextBlock Style="{StaticResource PaneTitleTextStyle}"
+                           Text="数据源设置" />
+                <TextBlock Margin="0,8,0,30"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           Text="管理 P2PQuake WebSocket 的连接保活和轮换策略。" />
+
+                <Border Padding="0,0,0,24"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="0,0,0,1">
+                    <StackPanel>
+                        <TextBlock FontSize="15"
+                                   FontWeight="SemiBold"
+                                   Text="P2PQuake WebSocket" />
+                        <TextBlock Margin="0,6,0,24"
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   Text="连接策略修改后会结束当前连接并按新参数重新连接。" />
+
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="260" />
+                                <ColumnDefinition Width="180" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Row="0"
+                                       VerticalAlignment="Center"
+                                       Text="传输层 keep-alive 间隔" />
+                            <ComboBox Grid.Row="0"
+                                      Grid.Column="1"
+                                      MinWidth="140"
+                                      AutomationProperties.Name="传输层 keep-alive 间隔"
+                                      ItemsSource="{Binding KeepAliveOptions}"
+                                      SelectedItem="{Binding KeepAliveSeconds, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Grid.Row="0"
+                                       Grid.Column="2"
+                                       Margin="12,0,0,0"
+                                       VerticalAlignment="Center"
+                                       Foreground="{StaticResource MutedTextBrush}"
+                                       Text="秒" />
+
+                            <TextBlock Grid.Row="1"
+                                       Margin="0,20,0,0"
+                                       VerticalAlignment="Center"
+                                       Text="单连接最大持续时间" />
+                            <ComboBox Grid.Row="1"
+                                      Grid.Column="1"
+                                      Margin="0,20,0,0"
+                                      MinWidth="140"
+                                      AutomationProperties.Name="单连接最大持续时间"
+                                      ItemsSource="{Binding MaxConnectionDurationOptions}"
+                                      SelectedItem="{Binding MaxConnectionDurationMinutes, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Grid.Row="1"
+                                       Grid.Column="2"
+                                       Margin="12,20,0,0"
+                                       VerticalAlignment="Center"
+                                       Foreground="{StaticResource MutedTextBrush}"
+                                       Text="分钟" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Margin="0,20,0,0"
+                            Orientation="Horizontal">
+                    <Button AutomationProperties.Name="恢复连接策略默认值"
+                            Click="OnRestoreDefaultsClick"
+                            Content="恢复默认值"
+                            IsEnabled="{Binding IsDirty}"
+                            Padding="14,7" />
+                    <Button Margin="10,0,0,0"
+                            AutomationProperties.Name="应用并重新连接"
+                            Click="OnApplyClick"
+                            Content="应用并重新连接"
+                            IsEnabled="{Binding IsDirty}"
+                            Padding="14,7" />
+                </StackPanel>
+                <TextBlock Margin="0,14,0,0"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           Text="{Binding StatusText}"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

@@ -89,6 +89,16 @@ public sealed class P2pQuakeEarthquakeSourceTests
     public async Task WebSocket_SingleTextMessage_MapsReport()
     {
         Assert.Equal(TimeSpan.FromSeconds(30), P2pQuakeWebSocketSource.KeepAliveInterval);
+        var configuredSource = new P2pQuakeWebSocketSource(
+            "wss://example.test/v2/ws",
+            TimeSpan.FromSeconds(60));
+        Assert.Equal(
+            TimeSpan.FromSeconds(60),
+            configuredSource.ConfiguredKeepAliveInterval);
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new P2pQuakeWebSocketSource(
+                "wss://example.test/v2/ws",
+                TimeSpan.FromSeconds(5)));
         var connection = new FakeWebSocketConnection(
             Frame.Text(ValidObjectPayload));
         var source = new P2pQuakeWebSocketSource(

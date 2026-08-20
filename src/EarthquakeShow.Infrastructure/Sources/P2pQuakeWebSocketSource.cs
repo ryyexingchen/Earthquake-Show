@@ -15,28 +15,32 @@ public sealed class P2pQuakeWebSocketSource : IStreamingEarthquakeSource
     private const string SourceName = "p2pquake-ws";
     private readonly Func<IWebSocketConnection> _connectionFactory;
     private readonly Uri _endpoint;
+    private readonly TimeSpan _keepAliveInterval;
 
-    public P2pQuakeWebSocketSource(string endpoint = DefaultEndpoint)
-        : this(static () => new ClientWebSocketConnection(), endpoint)
+    public P2pQuakeWebSocketSource(
+        string endpoint = DefaultEndpoint,
+        TimeSpan? keepAliveInterval = null)
     {
+        _connectionFactory = () => new ClientWebSocketConnection(_keepAliveInterval);
+        _endpoint = ParseEndpoint(endpoint);
+        _keepAliveInterval = ValidateKeepAliveInterval(
+            keepAliveInterval ?? KeepAliveInterval);
     }
 
     public P2pQuakeWebSocketSource(
         Func<IWebSocketConnection> connectionFactory,
-        string endpoint = DefaultEndpoint)
+        string endpoint = DefaultEndpoint,
+        TimeSpan? keepAliveInterval = null)
     {
         _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
-        ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
-        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out Uri? endpointUri) ||
-            endpointUri.Scheme is not ("ws" or "wss"))
-        {
-            throw new ArgumentException("P2PQuake WebSocket 地址必须是 WS 或 WSS URL。", nameof(endpoint));
-        }
-
-        _endpoint = endpointUri;
+        _endpoint = ParseEndpoint(endpoint);
+        _keepAliveInterval = ValidateKeepAliveInterval(
+            keepAliveInterval ?? KeepAliveInterval);
     }
 
     public string SourceId => SourceName;
+
+    public TimeSpan ConfiguredKeepAliveInterval => _keepAliveInterval;
 
     public async IAsyncEnumerable<EarthquakeSourceFetchResult> StreamAsync(
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -205,14 +209,38 @@ public sealed class P2pQuakeWebSocketSource : IStreamingEarthquakeSource
                 LastConnectionExceptionAt: connectionException ? checkedAt : null));
     }
 
+    private static Uri ParseEndpoint(string endpoint)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out Uri? endpointUri) ||
+            endpointUri.Scheme is not ("ws" or "wss"))
+        {
+            throw new ArgumentException("P2PQuake WebSocket 地址必须是 WS 或 WSS URL。", nameof(endpoint));
+        }
+
+        return endpointUri;
+    }
+
+    private static TimeSpan ValidateKeepAliveInterval(TimeSpan interval)
+    {
+        if (interval < TimeSpan.FromSeconds(10) || interval > TimeSpan.FromSeconds(120))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(interval),
+                "WebSocket keep-alive 必须在 10 到 120 秒之间。");
+        }
+
+        return interval;
+    }
+
     private sealed class ClientWebSocketConnection : IWebSocketConnection
     {
         private readonly ClientWebSocket _client;
 
-        public ClientWebSocketConnection()
+        public ClientWebSocketConnection(TimeSpan keepAliveInterval)
         {
             _client = new ClientWebSocket();
-            _client.Options.KeepAliveInterval = KeepAliveInterval;
+            _client.Options.KeepAliveInterval = keepAliveInterval;
         }
 
         public Task ConnectAsync(Uri endpoint, CancellationToken cancellationToken) =>

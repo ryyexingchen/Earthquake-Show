@@ -46,6 +46,16 @@ public partial class MainWindow : Window
         EventListView.FocusSearch();
     }
 
+    private void OnSettingsClick(object sender, RoutedEventArgs e)
+    {
+        _viewModel.OpenSettings();
+    }
+
+    private void OnSettingsRequestClose(object? sender, EventArgs e)
+    {
+        _viewModel.CloseSettings();
+    }
+
     private void OnEventListRequestOpenDetails(object? sender, EventArgs e)
     {
         _viewModel.Layout.OpenDetailsPane();

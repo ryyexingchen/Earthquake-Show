@@ -19,26 +19,38 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private readonly DispatcherTimer _clockTimer;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly SemaphoreSlim _streamingRestartGate = new(1, 1);
+    private readonly ApplicationSettingsStore _settingsStore;
     private readonly SqliteEarthquakeEventRepository _repository;
     private readonly IReadOnlyList<EarthquakeReport> _seedReports;
     private readonly HttpClient? _httpClient;
     private readonly JmaJsonEarthquakeSource? _realtimeSource;
     private readonly IReadOnlyList<IRealtimeEarthquakeSource> _realtimeSources = [];
-    private readonly IStreamingEarthquakeSource? _streamingSource;
+    private readonly Func<WebSocketConnectionSettings, IStreamingEarthquakeSource>? _streamingSourceFactory;
+    private IStreamingEarthquakeSource? _streamingSource;
     private readonly RefreshBackoffPolicy _refreshBackoffPolicy = new();
     private Task? _refreshLoopTask;
     private Task? _streamingLoopTask;
+    private CancellationTokenSource? _streamingSessionCancellation;
     private string _currentTime = string.Empty;
     private string _cacheStatus = "缓存：初始化中";
     private string _autoRefreshStatus = "自动刷新：未启动";
+    private ApplicationSettings _applicationSettings;
+    private bool _isInitialized;
     private bool _isDisposed;
 
     public MainWindowViewModel(
         string? cachePath = null,
         bool enableNetwork = true,
-        IStreamingEarthquakeSource? streamingSource = null)
+        IStreamingEarthquakeSource? streamingSource = null,
+        string? settingsPath = null,
+        Func<WebSocketConnectionSettings, IStreamingEarthquakeSource>? streamingSourceFactory = null)
     {
         AppVersion = GetAppVersion();
+        _settingsStore = new(settingsPath ?? GetDefaultSettingsPath());
+        ApplicationSettingsLoadResult settingsLoad = _settingsStore.Load();
+        _applicationSettings = settingsLoad.Settings;
+        Settings = new(settingsLoad, ApplyWebSocketSettingsAsync);
         _seedReports = FixedJmaXmlDataLoader.LoadReports();
         if (enableNetwork)
         {
@@ -46,19 +58,25 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 Timeout = TimeSpan.FromSeconds(15),
             };
-            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.25.0");
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.26.0");
             _realtimeSource = new JmaJsonEarthquakeSource(_httpClient);
             JmaXmlEarthquakeSource xmlSource = new(
                 _httpClient,
                 FixedJmaXmlDataLoader.LoadStationCoordinates());
             P2pQuakeEarthquakeSource p2pQuakeSource = new(_httpClient);
             _realtimeSources = [_realtimeSource, xmlSource, p2pQuakeSource];
-            _streamingSource = streamingSource ?? new ReconnectingEarthquakeSource(
-                new P2pQuakeWebSocketSource());
+            _streamingSourceFactory = streamingSource is null
+                ? streamingSourceFactory ?? CreateStreamingSource
+                : streamingSourceFactory;
+            _streamingSource = streamingSource ??
+                (_streamingSourceFactory ?? CreateStreamingSource)(
+                    _applicationSettings.WebSocketSettings);
         }
         else
         {
-            _streamingSource = streamingSource;
+            _streamingSourceFactory = streamingSourceFactory;
+            _streamingSource = streamingSource ??
+                streamingSourceFactory?.Invoke(_applicationSettings.WebSocketSettings);
         }
 
         _repository = new SqliteEarthquakeEventRepository(
@@ -144,6 +162,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public WindowLayoutViewModel Layout { get; }
 
+    public SettingsViewModel Settings { get; }
+
     public async ValueTask InitializeAsync(
         CancellationToken cancellationToken = default)
     {
@@ -164,8 +184,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         if (_streamingSource is not null)
         {
-            _streamingLoopTask ??= RunStreamingLoopAsync(_lifetimeCancellation.Token);
+            StartStreamingLoop();
         }
+
+        _isInitialized = true;
     }
 
     public void Dispose()
@@ -176,6 +198,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         _isDisposed = true;
+        _streamingSessionCancellation?.Cancel();
         _lifetimeCancellation.Cancel();
         _httpClient?.Dispose();
         _clockTimer.Stop();
@@ -186,6 +209,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         EarthquakePage.Dispose();
         _lifetimeCancellation.Dispose();
     }
+
+    public void OpenSettings() => Settings.IsVisible = true;
+
+    public void CloseSettings() => Settings.IsVisible = false;
 
     private async Task RefreshFromNetworkAsync(CancellationToken cancellationToken)
     {
@@ -225,12 +252,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private async Task RunStreamingLoopAsync(CancellationToken cancellationToken)
+    private async Task RunStreamingLoopAsync(
+        IStreamingEarthquakeSource source,
+        CancellationToken cancellationToken)
     {
         try
         {
             await foreach (EarthquakeSourceFetchResult result in
-                _streamingSource!.StreamAsync(cancellationToken))
+                source.StreamAsync(cancellationToken))
             {
                 await _repository.ApplyStreamingResultAsync(result, cancellationToken);
                 if (!_isDisposed)
@@ -254,6 +283,70 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    private void StartStreamingLoop()
+    {
+        if (_streamingSource is null || _streamingLoopTask is not null || _isDisposed)
+        {
+            return;
+        }
+
+        _streamingSessionCancellation =
+            CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCancellation.Token);
+        _streamingLoopTask = RunStreamingLoopAsync(
+            _streamingSource,
+            _streamingSessionCancellation.Token);
+    }
+
+    private async Task ApplyWebSocketSettingsAsync(WebSocketConnectionSettings settings)
+    {
+        settings.Validate();
+        ApplicationSettings applicationSettings = new(
+            ApplicationSettings.CurrentSchemaVersion,
+            settings);
+        await _settingsStore.SaveAsync(applicationSettings, _lifetimeCancellation.Token)
+            .ConfigureAwait(true);
+        _applicationSettings = applicationSettings;
+
+        if (_streamingSourceFactory is null || _isDisposed)
+        {
+            return;
+        }
+
+        await _streamingRestartGate.WaitAsync(_lifetimeCancellation.Token)
+            .ConfigureAwait(true);
+        try
+        {
+            CancellationTokenSource? previousCancellation = _streamingSessionCancellation;
+            Task? previousLoop = _streamingLoopTask;
+            previousCancellation?.Cancel();
+            if (previousLoop is not null)
+            {
+                await previousLoop.ConfigureAwait(true);
+            }
+
+            previousCancellation?.Dispose();
+            _streamingSessionCancellation = null;
+            _streamingLoopTask = null;
+            _streamingSource = _streamingSourceFactory(settings);
+            if (_isInitialized)
+            {
+                StartStreamingLoop();
+            }
+        }
+        finally
+        {
+            _streamingRestartGate.Release();
+        }
+    }
+
+    private static IStreamingEarthquakeSource CreateStreamingSource(
+        WebSocketConnectionSettings settings) =>
+        new ReconnectingEarthquakeSource(
+            new P2pQuakeWebSocketSource(
+                keepAliveInterval: settings.KeepAliveInterval),
+            new StreamingReconnectPolicy(
+                maxConnectionDuration: settings.MaxConnectionDuration));
+
     private static string FormatDelay(TimeSpan delay)
     {
         return delay.TotalMinutes >= 1
@@ -270,6 +363,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         return Path.Combine(root, "EarthquakeShow", "earthquake-cache.db");
+    }
+
+    private static string GetDefaultSettingsPath()
+    {
+        string root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(root))
+        {
+            root = AppContext.BaseDirectory;
+        }
+
+        return Path.Combine(root, "EarthquakeShow", "settings.json");
     }
 
     private static string GetAppVersion()
