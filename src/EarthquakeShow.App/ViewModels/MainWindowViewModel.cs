@@ -28,6 +28,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             EarthquakePage,
             OfflineMapGeometry.LoadFromFile(
                 Path.Combine(AppContext.BaseDirectory, "Assets", "japan-overview.geojson")));
+        Details = new EarthquakeDetailsViewModel(EarthquakePage, Map);
         Layout = new WindowLayoutViewModel();
         UpdateClock();
 
@@ -68,6 +69,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public EarthquakeMapViewModel Map { get; }
 
+    public EarthquakeDetailsViewModel Details { get; }
+
     public WindowLayoutViewModel Layout { get; }
 
     public ValueTask InitializeAsync()
@@ -86,6 +89,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _lifetimeCancellation.Cancel();
         _clockTimer.Stop();
         _clockTimer.Tick -= OnClockTick;
+        Details.Dispose();
         Map.Dispose();
         EventList.Dispose();
         EarthquakePage.Dispose();

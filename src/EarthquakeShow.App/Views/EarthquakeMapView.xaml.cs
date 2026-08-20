@@ -90,6 +90,7 @@ public partial class EarthquakeMapView : UserControl
             ViewModel.Outline,
             ViewModel.Markers,
             ViewModel.EffectiveFocusMode,
+            ViewModel.FocusedCoordinate,
             ViewModel.ZoomLevel,
             MapCanvas.ActualWidth,
             MapCanvas.ActualHeight);
@@ -221,13 +222,19 @@ public partial class EarthquakeMapView : UserControl
             IReadOnlyList<MapPolygonGeometry> outline,
             IReadOnlyList<EarthquakeMapMarker> markers,
             EarthquakeMapFocusMode focusMode,
+            GeoCoordinate? focusedCoordinate,
             double zoomLevel,
             double width,
             double height)
         {
             double centerLongitude = (MinLongitude + MaxLongitude) / 2;
             double centerLatitude = (MinLatitude + MaxLatitude) / 2;
-            if (focusMode == EarthquakeMapFocusMode.SelectedEvent && markers.Count > 0)
+            if (focusedCoordinate is GeoCoordinate location)
+            {
+                centerLongitude = location.Longitude;
+                centerLatitude = location.Latitude;
+            }
+            else if (focusMode == EarthquakeMapFocusMode.SelectedEvent && markers.Count > 0)
             {
                 centerLongitude = markers.Average(item => item.Coordinate.Longitude);
                 centerLatitude = markers.Average(item => item.Coordinate.Latitude);

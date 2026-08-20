@@ -41,7 +41,7 @@ public partial class MainWindow : Window
     private void OnEventListRequestOpenDetails(object? sender, EventArgs e)
     {
         _viewModel.Layout.OpenDetailsPane();
-        DetailsTabs.Focus();
+        DetailsView.FocusDetails();
     }
 
     protected override async void OnContentRendered(EventArgs e)

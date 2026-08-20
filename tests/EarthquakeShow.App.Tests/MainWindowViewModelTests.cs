@@ -1,4 +1,5 @@
 using EarthquakeShow.App.ViewModels;
+using System.Threading;
 using EarthquakeShow.Core.Models;
 using Xunit;
 
@@ -23,5 +24,30 @@ public sealed class MainWindowViewModelTests
             station => Assert.NotNull(station.Coordinate));
         Assert.Single(viewModel.EventList.Items);
         Assert.Equal(76, viewModel.Map.Markers.Count);
+    }
+
+    [Fact]
+    public void MainWindow_XamlResources_LoadOnStaThread()
+    {
+        Exception? capturedException = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var app = new App();
+                app.InitializeComponent();
+                var window = new MainWindow();
+                window.Close();
+                app.Shutdown();
+            }
+            catch (Exception exception)
+            {
+                capturedException = exception;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(10)), "WPF 窗口初始化超时。");
+        Assert.Null(capturedException);
     }
 }
