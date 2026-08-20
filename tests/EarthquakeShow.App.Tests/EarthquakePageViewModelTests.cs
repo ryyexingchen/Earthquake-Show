@@ -107,6 +107,26 @@ public sealed class EarthquakePageViewModelTests
     }
 
     [Fact]
+    public async Task Refresh_SourceStatusProvider_UpdatesOnlineState()
+    {
+        var status = new SourceStatus(
+            "jma-json",
+            SourceConnectionState.Online,
+            BaseTime,
+            BaseTime);
+        var repository = new TestRepository
+        {
+            SourceStatuses = [status],
+        };
+        using var viewModel = new EarthquakePageViewModel(repository);
+
+        await viewModel.RefreshAsync();
+
+        Assert.Equal(status, Assert.Single(viewModel.State.SourceStatuses));
+        Assert.False(viewModel.State.IsOffline);
+    }
+
+    [Fact]
     public void PageOptions_AreStoredAsListAndMapState()
     {
         using var viewModel = new EarthquakePageViewModel(new TestRepository());
@@ -160,13 +180,17 @@ public sealed class EarthquakePageViewModelTests
         };
     }
 
-    private sealed class TestRepository : IEarthquakeEventRepository
+    private sealed class TestRepository :
+        IEarthquakeEventRepository,
+        IEarthquakeSourceStatusProvider
     {
         public event EventHandler<EarthquakeEventsChangedEventArgs>? EventsChanged;
 
         public ImmutableArray<EarthquakeEvent> Events { get; init; } = [];
 
         public Exception? ListException { get; init; }
+
+        public ImmutableArray<SourceStatus> SourceStatuses { get; init; } = [];
 
         public int RefreshCount { get; private set; }
 

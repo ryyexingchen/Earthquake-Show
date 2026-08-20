@@ -11,7 +11,7 @@ public sealed class MainWindowViewModelTests
     public async Task Initialize_FixedJmaXml_LoadsMergedCorrectionEvent()
     {
         string cachePath = CreateTemporaryCachePath();
-        using var viewModel = new MainWindowViewModel(cachePath);
+        using var viewModel = new MainWindowViewModel(cachePath, enableNetwork: false);
 
         try
         {
@@ -45,7 +45,7 @@ public sealed class MainWindowViewModelTests
             {
                 var app = new App();
                 app.InitializeComponent();
-                var window = new MainWindow(cachePath);
+                var window = new MainWindow(cachePath, enableNetwork: false);
                 window.Close();
                 app.Shutdown();
             }

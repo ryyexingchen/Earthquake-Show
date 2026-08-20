@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using EarthquakeShow.Core.Models;
 using EarthquakeShow.Core.Services;
 using EarthquakeShow.Infrastructure.Persistence;
+using EarthquakeShow.Infrastructure.Sources;
 using Microsoft.Data.Sqlite;
 using Xunit;
 
@@ -119,6 +120,87 @@ public sealed class SqliteEarthquakeEventRepositoryTests
             await repository.InitializeAsync(LoadReports(), cancellation.Token));
     }
 
+    [Fact]
+    public async Task Refresh_OnlineSource_PersistsAndPublishesNewEvent()
+    {
+        using var database = new TemporaryDatabase();
+        EarthquakeReport onlineReport = CreateOnlineReport();
+        var source = new StubRealtimeSource(new EarthquakeSourceFetchResult(
+            [onlineReport],
+            new SourceStatus(
+                "jma-json",
+                SourceConnectionState.Online,
+                onlineReport.ReceivedAt,
+                onlineReport.ReceivedAt,
+                "测试在线源")));
+        var repository = new SqliteEarthquakeEventRepository(database.Path, source);
+        await repository.InitializeAsync(LoadReports());
+
+        await repository.RefreshAsync();
+
+        Assert.Equal(2, (await repository.ListEventsAsync()).Length);
+        Assert.Equal(
+            SourceConnectionState.Online,
+            Assert.Single(repository.SourceStatuses, status => status.SourceId == "jma-json").State);
+        Assert.Contains("JMA JSON 已更新 1 条报文", repository.CacheStatus);
+
+        var reloaded = new SqliteEarthquakeEventRepository(database.Path);
+        await reloaded.InitializeAsync([]);
+        Assert.Equal(2, (await reloaded.ListEventsAsync()).Length);
+    }
+
+    [Fact]
+    public async Task Refresh_FailedSource_KeepsCachedEventsAndUpdatesStatus()
+    {
+        using var database = new TemporaryDatabase();
+        var source = new StubRealtimeSource(new EarthquakeSourceFetchResult(
+            [],
+            new SourceStatus(
+                "jma-json",
+                SourceConnectionState.Disconnected,
+                DateTimeOffset.UtcNow,
+                Detail: "测试断开")));
+        var repository = new SqliteEarthquakeEventRepository(database.Path, source);
+        await repository.InitializeAsync(LoadReports());
+        ImmutableArray<EarthquakeEvent> before = await repository.ListEventsAsync();
+
+        await repository.RefreshAsync();
+
+        ImmutableArray<EarthquakeEvent> after = await repository.ListEventsAsync();
+        Assert.Equal(before.Select(item => item.EventId), after.Select(item => item.EventId));
+        Assert.Equal(
+            SourceConnectionState.Disconnected,
+            Assert.Single(repository.SourceStatuses, status => status.SourceId == "jma-json").State);
+        Assert.Contains("保留已有数据", repository.CacheStatus);
+    }
+
+    private static EarthquakeReport CreateOnlineReport()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 20, 10, 1, 0, TimeSpan.FromHours(9));
+        return new EarthquakeReport
+        {
+            EventId = "20260820010000",
+            ReportCode = "JMA-JSON",
+            ReportType = EarthquakeReportType.HypocenterAndIntensity,
+            Status = ReportStatus.Issued,
+            Context = ReportContext.Normal,
+            OriginTime = issuedAt.AddMinutes(-1),
+            IssuedAt = issuedAt,
+            ReceivedAt = issuedAt.AddSeconds(1),
+            Hypocenter = new Hypocenter(
+                "相模湾",
+                null,
+                new GeoCoordinate(35.1, 139.2),
+                10),
+            Magnitude = new Magnitude(4.2),
+            MaxIntensity = JmaIntensity.Four,
+            Source = new SourceReference(
+                "jma-json",
+                "20260820010100_0",
+                SourcePayload: "{\"eid\":\"20260820010000\"}"),
+        };
+    }
+
     private static ImmutableArray<EarthquakeReport> LoadReports()
     {
         string root = Path.Combine(
@@ -172,6 +254,19 @@ public sealed class SqliteEarthquakeEventRepositoryTests
             {
                 Directory.Delete(_directory, recursive: true);
             }
+        }
+    }
+
+    private sealed class StubRealtimeSource(
+        EarthquakeSourceFetchResult result) : IRealtimeEarthquakeSource
+    {
+        public string SourceId => result.Status.SourceId;
+
+        public Task<EarthquakeSourceFetchResult> FetchAsync(
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(result);
         }
     }
 }

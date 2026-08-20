@@ -59,6 +59,7 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
             ImmutableArray<EarthquakeEvent> events =
                 await _repository.ListEventsAsync(cancellationToken);
             ApplyEvents(events);
+            ApplyRepositorySourceState();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -89,6 +90,7 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
             ImmutableArray<EarthquakeEvent> events =
                 await _repository.ListEventsAsync(cancellationToken);
             ApplyEvents(events);
+            ApplyRepositorySourceState();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -283,6 +285,20 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
             LoadState = EarthquakePageLoadState.Ready,
             ErrorMessage = null,
         };
+    }
+
+    private void ApplyRepositorySourceState()
+    {
+        if (_repository is not IEarthquakeSourceStatusProvider provider ||
+            provider.SourceStatuses.IsDefaultOrEmpty)
+        {
+            return;
+        }
+
+        ImmutableArray<SourceStatus> statuses = provider.SourceStatuses;
+        SetSourceState(
+            statuses,
+            statuses.All(status => status.State != SourceConnectionState.Online));
     }
 
     private EarthquakeEvent? FindSelectedEvent(ImmutableArray<EarthquakeEvent> events)

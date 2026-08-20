@@ -1,12 +1,14 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
+using System.Net.Http;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows.Threading;
 using EarthquakeShow.App.Services;
 using EarthquakeShow.Core.Models;
 using EarthquakeShow.Infrastructure.Persistence;
+using EarthquakeShow.Infrastructure.Sources;
 
 namespace EarthquakeShow.App.ViewModels;
 
@@ -19,16 +21,31 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly SqliteEarthquakeEventRepository _repository;
     private readonly IReadOnlyList<EarthquakeReport> _seedReports;
+    private readonly HttpClient? _httpClient;
+    private readonly JmaJsonEarthquakeSource? _realtimeSource;
     private string _currentTime = string.Empty;
     private string _cacheStatus = "缓存：初始化中";
     private bool _isDisposed;
 
-    public MainWindowViewModel(string? cachePath = null)
+    public MainWindowViewModel(
+        string? cachePath = null,
+        bool enableNetwork = true)
     {
         AppVersion = GetAppVersion();
         _seedReports = FixedJmaXmlDataLoader.LoadReports();
+        if (enableNetwork)
+        {
+            _httpClient = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(15),
+            };
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.13.0");
+            _realtimeSource = new JmaJsonEarthquakeSource(_httpClient);
+        }
+
         _repository = new SqliteEarthquakeEventRepository(
-            cachePath ?? GetDefaultCachePath());
+            cachePath ?? GetDefaultCachePath(),
+            _realtimeSource);
         EarthquakePage = new EarthquakePageViewModel(
             _repository);
         EventList = new EarthquakeEventListViewModel(EarthquakePage);
@@ -106,6 +123,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _repository.SourceStatuses,
             isOffline: true);
         await EarthquakePage.LoadAsync(token);
+        if (_realtimeSource is not null)
+        {
+            await RefreshFromNetworkAsync(token);
+        }
     }
 
     public void Dispose()
@@ -117,6 +138,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         _isDisposed = true;
         _lifetimeCancellation.Cancel();
+        _httpClient?.Dispose();
         _clockTimer.Stop();
         _clockTimer.Tick -= OnClockTick;
         Details.Dispose();
@@ -124,6 +146,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         EventList.Dispose();
         EarthquakePage.Dispose();
         _lifetimeCancellation.Dispose();
+    }
+
+    private async Task RefreshFromNetworkAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await EarthquakePage.RefreshAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
     }
 
     private static string GetDefaultCachePath()

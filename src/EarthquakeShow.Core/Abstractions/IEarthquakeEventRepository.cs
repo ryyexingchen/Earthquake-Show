@@ -17,6 +17,11 @@ public interface IEarthquakeEventRepository
     ValueTask RefreshAsync(CancellationToken cancellationToken = default);
 }
 
+public interface IEarthquakeSourceStatusProvider
+{
+    ImmutableArray<SourceStatus> SourceStatuses { get; }
+}
+
 public sealed class EarthquakeEventsChangedEventArgs(
     ImmutableArray<EarthquakeEvent> events) : EventArgs
 {

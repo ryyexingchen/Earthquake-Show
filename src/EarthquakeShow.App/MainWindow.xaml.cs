@@ -11,13 +11,15 @@ public partial class MainWindow : Window
     private bool _isInitialized;
 
     public MainWindow()
-        : this(null)
+        : this(null, enableNetwork: true)
     {
     }
 
-    public MainWindow(string? cachePath)
+    public MainWindow(
+        string? cachePath,
+        bool enableNetwork = true)
     {
-        _viewModel = new ViewModels.MainWindowViewModel(cachePath);
+        _viewModel = new ViewModels.MainWindowViewModel(cachePath, enableNetwork);
         InitializeComponent();
         DataContext = _viewModel;
         SizeChanged += OnWindowSizeChanged;
