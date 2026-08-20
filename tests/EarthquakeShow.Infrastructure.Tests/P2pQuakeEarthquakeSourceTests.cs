@@ -120,6 +120,27 @@ public sealed class P2pQuakeEarthquakeSourceTests
     }
 
     [Fact]
+    public async Task WebSocket_RawMessageObserver_ReceivesCompleteTextPayload()
+    {
+        string? captured = null;
+        string firstPart = ValidObjectPayload[..(ValidObjectPayload.Length / 2)];
+        string secondPart = ValidObjectPayload[(ValidObjectPayload.Length / 2)..];
+        var connection = new FakeWebSocketConnection(
+            Frame.Text(firstPart, endOfMessage: false),
+            Frame.Text(secondPart));
+        var source = new P2pQuakeWebSocketSource(
+            () => connection,
+            "wss://example.test/v2/ws",
+            rawMessageObserver: payload => captured = payload);
+
+        await using IAsyncEnumerator<EarthquakeSourceFetchResult> enumerator =
+            source.StreamAsync().GetAsyncEnumerator();
+
+        Assert.True(await enumerator.MoveNextAsync());
+        Assert.Equal(ValidObjectPayload, captured);
+    }
+
+    [Fact]
     public async Task WebSocket_ReassemblesFragments_AndPreservesMessageBoundaries()
     {
         const string secondPayload = """

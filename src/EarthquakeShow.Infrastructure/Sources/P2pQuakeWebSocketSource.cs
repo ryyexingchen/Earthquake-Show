@@ -16,26 +16,31 @@ public sealed class P2pQuakeWebSocketSource : IStreamingEarthquakeSource
     private readonly Func<IWebSocketConnection> _connectionFactory;
     private readonly Uri _endpoint;
     private readonly TimeSpan _keepAliveInterval;
+    private readonly Action<string>? _rawMessageObserver;
 
     public P2pQuakeWebSocketSource(
         string endpoint = DefaultEndpoint,
-        TimeSpan? keepAliveInterval = null)
+        TimeSpan? keepAliveInterval = null,
+        Action<string>? rawMessageObserver = null)
     {
         _connectionFactory = () => new ClientWebSocketConnection(_keepAliveInterval);
         _endpoint = ParseEndpoint(endpoint);
         _keepAliveInterval = ValidateKeepAliveInterval(
             keepAliveInterval ?? KeepAliveInterval);
+        _rawMessageObserver = rawMessageObserver;
     }
 
     public P2pQuakeWebSocketSource(
         Func<IWebSocketConnection> connectionFactory,
         string endpoint = DefaultEndpoint,
-        TimeSpan? keepAliveInterval = null)
+        TimeSpan? keepAliveInterval = null,
+        Action<string>? rawMessageObserver = null)
     {
         _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
         _endpoint = ParseEndpoint(endpoint);
         _keepAliveInterval = ValidateKeepAliveInterval(
             keepAliveInterval ?? KeepAliveInterval);
+        _rawMessageObserver = rawMessageObserver;
     }
 
     public string SourceId => SourceName;
@@ -142,6 +147,8 @@ public sealed class P2pQuakeWebSocketSource : IStreamingEarthquakeSource
                     messageReceived: true);
                 continue;
             }
+
+            _rawMessageObserver?.Invoke(payload);
 
             DateTimeOffset receivedAt = DateTimeOffset.UtcNow;
             EarthquakeSourceFetchResult result;

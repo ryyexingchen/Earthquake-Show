@@ -1,4 +1,5 @@
 using System.Net.WebSockets;
+using System.Text;
 using EarthquakeShow.Core.Models;
 using EarthquakeShow.Infrastructure.Sources;
 
@@ -25,9 +26,25 @@ catch (Exception exception) when (exception is WebSocketException or IOException
     return 1;
 }
 
+MessageCapture? capture;
+try
+{
+    capture = MessageCapture.Open(options.CaptureMessagesPath);
+}
+catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+{
+    Console.Error.WriteLine($"无法创建消息捕获文件：{exception.Message}");
+    return 2;
+}
+
+using MessageCapture? captureLifetime = capture;
+
 var source = new ReconnectingEarthquakeSource(
     new P2pQuakeWebSocketSource(
-        keepAliveInterval: TimeSpan.FromSeconds(options.KeepAliveSeconds)),
+        keepAliveInterval: TimeSpan.FromSeconds(options.KeepAliveSeconds),
+        rawMessageObserver: captureLifetime is null
+            ? null
+            : new Action<string>(captureLifetime.Write)),
     new StreamingReconnectPolicy(
         maxConnectionDuration: TimeSpan.FromMinutes(options.RotationMinutes)));
 
@@ -93,7 +110,8 @@ internal sealed class ProbeOptions
 
     public static string Usage =>
         "用法：dotnet run --project tools\\P2pQuakeNetworkProbe -- " +
-        "[--duration-minutes N] [--keep-alive-seconds N] [--rotation-minutes N]";
+        "[--duration-minutes N] [--keep-alive-seconds N] [--rotation-minutes N] " +
+        "[--capture-messages PATH]";
 
     public TimeSpan Duration { get; private init; }
 
@@ -101,29 +119,50 @@ internal sealed class ProbeOptions
 
     public int RotationMinutes { get; private init; }
 
+    public string? CaptureMessagesPath { get; private init; }
+
     public static ProbeOptions Parse(string[] args)
     {
         int durationMinutes = DefaultDurationMinutes;
         int keepAliveSeconds = DefaultKeepAliveSeconds;
         int rotationMinutes = DefaultRotationMinutes;
+        string? captureMessagesPath = null;
         for (int index = 0; index < args.Length; index++)
         {
             string name = args[index];
-            if (index + 1 >= args.Length || !int.TryParse(args[++index], out int value))
+            if (index + 1 >= args.Length)
             {
-                throw new ArgumentException($"{name} 后必须是整数。");
+                throw new ArgumentException($"{name} 后必须提供参数。");
             }
 
             switch (name)
             {
                 case "--duration-minutes":
-                    durationMinutes = value;
+                    if (!int.TryParse(args[++index], out int durationValue))
+                    {
+                        throw new ArgumentException($"{name} 后必须是整数。");
+                    }
+
+                    durationMinutes = durationValue;
                     break;
                 case "--keep-alive-seconds":
-                    keepAliveSeconds = value;
+                    if (!int.TryParse(args[++index], out int keepAliveValue))
+                    {
+                        throw new ArgumentException($"{name} 后必须是整数。");
+                    }
+
+                    keepAliveSeconds = keepAliveValue;
                     break;
                 case "--rotation-minutes":
-                    rotationMinutes = value;
+                    if (!int.TryParse(args[++index], out int rotationValue))
+                    {
+                        throw new ArgumentException($"{name} 后必须是整数。");
+                    }
+
+                    rotationMinutes = rotationValue;
+                    break;
+                case "--capture-messages":
+                    captureMessagesPath = args[++index];
                     break;
                 default:
                     throw new ArgumentException($"不支持的参数：{name}。");
@@ -141,6 +180,7 @@ internal sealed class ProbeOptions
             Duration = TimeSpan.FromMinutes(durationMinutes),
             KeepAliveSeconds = keepAliveSeconds,
             RotationMinutes = rotationMinutes,
+            CaptureMessagesPath = captureMessagesPath,
         };
     }
 
@@ -163,6 +203,44 @@ internal sealed class ProbeOptions
             }
         }
     }
+}
+
+internal sealed class MessageCapture : IDisposable
+{
+    private readonly StreamWriter _writer;
+
+    private MessageCapture(StreamWriter writer)
+    {
+        _writer = writer;
+    }
+
+    public static MessageCapture? Open(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return null;
+        }
+
+        string fullPath = Path.GetFullPath(path);
+        string? directory = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        var writer = new StreamWriter(
+            new FileStream(fullPath, FileMode.Append, FileAccess.Write, FileShare.Read),
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false))
+        {
+            AutoFlush = true,
+        };
+        Console.WriteLine($"原始 WebSocket 文本消息将追加保存到：{fullPath}");
+        return new MessageCapture(writer);
+    }
+
+    public void Write(string payload) => _writer.WriteLine(payload);
+
+    public void Dispose() => _writer.Dispose();
 }
 
 internal sealed class ProbeSummary
