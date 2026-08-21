@@ -115,15 +115,16 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         IReadOnlyList<GeoCoordinate> points = area.Rings
             .SelectMany(ring => ring)
             .ToArray();
-        if (points.Count == 0)
-        {
-            return false;
-        }
+        return TryGetBoundsCenter(points, out coordinate);
+    }
 
-        coordinate = new GeoCoordinate(
-            (points.Min(point => point.Latitude) + points.Max(point => point.Latitude)) / 2,
-            (points.Min(point => point.Longitude) + points.Max(point => point.Longitude)) / 2);
-        return true;
+    public bool TryGetSelectedEventFocusCoordinate(out GeoCoordinate coordinate)
+    {
+        IReadOnlyList<GeoCoordinate> points = Markers
+            .Select(marker => marker.Coordinate)
+            .Concat(Areas.SelectMany(area => area.Rings.SelectMany(ring => ring)))
+            .ToArray();
+        return TryGetBoundsCenter(points, out coordinate);
     }
 
     public string StatusText
@@ -307,6 +308,22 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(FocusedCoordinate));
         OnPropertyChanged(nameof(UnmappedAreaCount));
+    }
+
+    private static bool TryGetBoundsCenter(
+        IReadOnlyList<GeoCoordinate> points,
+        out GeoCoordinate coordinate)
+    {
+        coordinate = default;
+        if (points.Count == 0)
+        {
+            return false;
+        }
+
+        coordinate = new GeoCoordinate(
+            (points.Min(point => point.Latitude) + points.Max(point => point.Latitude)) / 2,
+            (points.Min(point => point.Longitude) + points.Max(point => point.Longitude)) / 2);
+        return true;
     }
 
     private void ThrowIfDisposed()

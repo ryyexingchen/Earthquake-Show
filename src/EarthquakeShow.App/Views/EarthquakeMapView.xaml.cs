@@ -111,11 +111,16 @@ public partial class EarthquakeMapView : UserControl
         }
 
         MapCanvas.Children.Clear();
+        GeoCoordinate? selectedEventFocusCoordinate =
+            ViewModel.TryGetSelectedEventFocusCoordinate(out GeoCoordinate eventFocus)
+                ? eventFocus
+                : null;
         MapProjection projection = MapProjection.Create(
             ViewModel.Outline,
             ViewModel.Markers,
             ViewModel.EffectiveFocusMode,
             ViewModel.FocusedCoordinate,
+            selectedEventFocusCoordinate,
             ViewModel.ZoomLevel,
             MapCanvas.ActualWidth,
             MapCanvas.ActualHeight);
@@ -284,6 +289,7 @@ public partial class EarthquakeMapView : UserControl
             IReadOnlyList<EarthquakeMapMarker> markers,
             EarthquakeMapFocusMode focusMode,
             GeoCoordinate? focusedCoordinate,
+            GeoCoordinate? selectedEventFocusCoordinate,
             double zoomLevel,
             double width,
             double height)
@@ -296,10 +302,11 @@ public partial class EarthquakeMapView : UserControl
                 centerLongitude = location.Longitude;
                 centerLatitude = location.Latitude;
             }
-            else if (focusMode == EarthquakeMapFocusMode.SelectedEvent && markers.Count > 0)
+            else if (focusMode == EarthquakeMapFocusMode.SelectedEvent &&
+                selectedEventFocusCoordinate is GeoCoordinate eventFocus)
             {
-                centerLongitude = markers.Average(item => item.Coordinate.Longitude);
-                centerLatitude = markers.Average(item => item.Coordinate.Latitude);
+                centerLongitude = eventFocus.Longitude;
+                centerLatitude = eventFocus.Latitude;
             }
 
             double longitudeScaleFactor = Math.Max(

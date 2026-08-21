@@ -135,6 +135,26 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public async Task SelectedEventFocus_UsesAreaWhenIntensityAlertHasNoMarkers()
+    {
+        EarthquakeReport report = CreateReport() with
+        {
+            Hypocenter = null,
+            IntensityStations = [],
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+
+        Assert.True(map.TryGetSelectedEventFocusCoordinate(out GeoCoordinate coordinate));
+        Assert.Equal(32.75, coordinate.Latitude, precision: 2);
+        Assert.Equal(130.70, coordinate.Longitude, precision: 2);
+    }
+
+    [Fact]
     public async Task MapCommands_UpdateZoomAndPageMapState()
     {
         var report = CreateReport();
