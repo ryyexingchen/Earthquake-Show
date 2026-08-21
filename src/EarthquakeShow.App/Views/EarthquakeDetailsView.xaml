@@ -572,10 +572,17 @@
                          AutomationProperties.Name="报文时间线"
                          BorderThickness="0"
                          ItemsSource="{Binding TimelineItems}"
-                         SelectedItem="{Binding SelectedTimelineItem}">
+                         SelectedItem="{Binding SelectedTimelineItem}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        </Style>
+                    </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Border Padding="8,9"
+                            <Border HorizontalAlignment="Stretch"
+                                    Padding="8,9"
                                     BorderBrush="{StaticResource BorderBrush}"
                                     BorderThickness="0,0,0,1">
                                 <StackPanel>
