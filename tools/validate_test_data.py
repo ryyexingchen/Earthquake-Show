@@ -14,6 +14,15 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_ROOT = ROOT / "tests" / "TestData"
+APP_STATION_CATALOG = (
+    ROOT
+    / "src"
+    / "EarthquakeShow.App"
+    / "Assets"
+    / "Data"
+    / "Stations"
+    / "jma-intensity-stations.json"
+)
 EXPECTED_INTENSITY_CODES = (
     "unknown",
     "1",
@@ -157,6 +166,26 @@ def validate_stations(manifest: dict[str, object], reports: dict[str, dict[str, 
         require(code not in codes, f"缺坐标测试站不应出现在坐标表：{code}")
 
 
+def validate_formal_station_catalog() -> None:
+    payload = json.loads(APP_STATION_CATALOG.read_text(encoding="utf-8"))
+    require(payload["schemaVersion"] == 1, "正式观测点目录 schemaVersion 必须为 1")
+    require(bool(payload["datasetVersion"]), "正式观测点目录必须记录数据版本")
+    require(bool(payload["sourceUrl"]), "正式观测点目录必须记录来源 URL")
+    stations = payload["stations"]
+    require(len(stations) == 4368, "正式观测点目录必须包含 4,368 条记录")
+    names = [normalize_station_name(str(station["name"])) for station in stations]
+    require(len(set(names)) == len(names), "正式观测点目录的规范化名称必须唯一")
+    require(len({str(station["prefectureCode"]) for station in stations}) == 47, "正式观测点目录必须覆盖 47 个都道府县")
+    for station in stations:
+        latitude = float(station["latitude"])
+        longitude = float(station["longitude"])
+        require(-90 <= latitude <= 90 and -180 <= longitude <= 180, f"正式观测点坐标越界：{station['name']}")
+
+
+def normalize_station_name(value: str) -> str:
+    return value.strip().rstrip("＊*").strip()
+
+
 def validate_geojson(manifest: dict[str, object], reports: dict[str, dict[str, object]]) -> None:
     payload = json.loads((DATA_ROOT / "Gis" / "jma-area-test-envelopes.geojson").read_text(encoding="utf-8"))
     require(payload["type"] == "FeatureCollection", "GeoJSON 顶层必须为 FeatureCollection")
@@ -195,6 +224,7 @@ def main() -> int:
         manifest, reports = validate_manifest()
         validate_event_chain(reports)
         validate_stations(manifest, reports)
+        validate_formal_station_catalog()
         validate_geojson(manifest, reports)
         validate_intensity_scale(manifest)
     except (KeyError, OSError, ET.ParseError, ValueError, json.JSONDecodeError) as exc:
@@ -202,7 +232,7 @@ def main() -> int:
         return 1
 
     print(
-        "固定测试数据校验通过：5 份 XML、75 个观测点、"
+        "固定测试数据校验通过：5 份 XML、75 个固定观测点、4,368 个正式观测点、"
         "7 个区域测试包络、10 个震度定义。"
     )
     return 0

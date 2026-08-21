@@ -82,6 +82,36 @@ public sealed class JmaXmlParserTests
     }
 
     [Fact]
+    public void Parse_StationCodeMissingFromIndex_UsesUniqueNormalizedName()
+    {
+        const string catalogJson = """
+            {
+              "schemaVersion": 1,
+              "stations": [
+                { "name": "坐标不明观测点", "latitude": 35.1, "longitude": 135.2 }
+              ]
+            }
+            """;
+        string path = Path.Combine(
+            TestDataRoot,
+            "JmaXml",
+            "Synthetic",
+            "vxse53-missing-fields.xml");
+        string xml = File.ReadAllText(path);
+
+        EarthquakeReport report = JmaXmlParser.Parse(
+            xml,
+            new JmaXmlParseOptions(
+                "VXSE53",
+                new SourceReference("jma-xml", "name-fallback"),
+                StationCatalog: JmaStationCoordinateCatalog.LoadJson(catalogJson)));
+
+        Assert.Equal(
+            new GeoCoordinate(35.1, 135.2),
+            Assert.Single(report.IntensityStations).Coordinate);
+    }
+
+    [Fact]
     public void LoadFixtures_OfficialSequence_MergesIntoOneEvent()
     {
         string officialRoot = Path.Combine(TestDataRoot, "JmaXml", "Official");

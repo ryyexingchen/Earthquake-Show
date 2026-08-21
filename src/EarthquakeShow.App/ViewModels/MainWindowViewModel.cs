@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Windows.Threading;
 using EarthquakeShow.App.Services;
 using EarthquakeShow.Core.Models;
+using EarthquakeShow.Core.Services;
 using EarthquakeShow.Infrastructure.Sources;
 using EarthquakeShow.Infrastructure.Persistence;
 
@@ -51,18 +52,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ApplicationSettingsLoadResult settingsLoad = _settingsStore.Load();
         _applicationSettings = settingsLoad.Settings;
         Settings = new(settingsLoad, ApplyWebSocketSettingsAsync);
-        _seedReports = FixedJmaXmlDataLoader.LoadReports();
+        JmaStationCoordinateCatalog stationCatalog = FixedJmaXmlDataLoader.LoadStationCatalog();
+        _seedReports = FixedJmaXmlDataLoader.LoadReports(stationCatalog);
         if (enableNetwork)
         {
             _httpClient = new HttpClient
             {
                 Timeout = TimeSpan.FromSeconds(15),
             };
-            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.30.0");
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.31.0");
             _realtimeSource = new JmaJsonEarthquakeSource(_httpClient);
             JmaXmlEarthquakeSource xmlSource = new(
                 _httpClient,
-                FixedJmaXmlDataLoader.LoadStationCoordinates());
+                stationCatalog: stationCatalog);
             P2pQuakeEarthquakeSource p2pQuakeSource = new(_httpClient);
             _realtimeSources = [_realtimeSource, xmlSource, p2pQuakeSource];
             _streamingSourceFactory = streamingSource is null

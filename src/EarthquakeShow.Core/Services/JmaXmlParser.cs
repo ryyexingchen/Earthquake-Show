@@ -13,7 +13,8 @@ public sealed record JmaXmlParseOptions(
     string ReportCode,
     SourceReference Source,
     DateTimeOffset? ReceivedAt = null,
-    IReadOnlyDictionary<string, GeoCoordinate>? StationCoordinates = null);
+    IReadOnlyDictionary<string, GeoCoordinate>? StationCoordinates = null,
+    JmaStationCoordinateCatalog? StationCatalog = null);
 
 public sealed record JmaXmlFixture(
     string FilePath,
@@ -44,7 +45,10 @@ public static class JmaXmlParser
         (ImmutableArray<IntensityArea> Areas,
             ImmutableArray<IntensityMunicipality> Municipalities,
             ImmutableArray<IntensityStation> Stations,
-            JmaIntensity MaxIntensity) = ParseIntensity(root, options.StationCoordinates);
+            JmaIntensity MaxIntensity) = ParseIntensity(
+                root,
+                options.StationCoordinates,
+                options.StationCatalog);
 
         string reportCode = options.ReportCode.Trim();
         SourceReference source = options.Source with
@@ -77,6 +81,22 @@ public static class JmaXmlParser
         IEnumerable<JmaXmlFixture> fixtures,
         IReadOnlyDictionary<string, GeoCoordinate>? stationCoordinates = null)
     {
+        return LoadFixtures(fixtures, stationCoordinates, null);
+    }
+
+    public static ImmutableArray<EarthquakeReport> LoadFixtures(
+        IEnumerable<JmaXmlFixture> fixtures,
+        JmaStationCoordinateCatalog stationCatalog)
+    {
+        ArgumentNullException.ThrowIfNull(stationCatalog);
+        return LoadFixtures(fixtures, null, stationCatalog);
+    }
+
+    private static ImmutableArray<EarthquakeReport> LoadFixtures(
+        IEnumerable<JmaXmlFixture> fixtures,
+        IReadOnlyDictionary<string, GeoCoordinate>? stationCoordinates,
+        JmaStationCoordinateCatalog? stationCatalog)
+    {
         ArgumentNullException.ThrowIfNull(fixtures);
         var reports = ImmutableArray.CreateBuilder<EarthquakeReport>();
         foreach (JmaXmlFixture fixture in fixtures)
@@ -88,7 +108,8 @@ public static class JmaXmlParser
                 new JmaXmlParseOptions(
                     fixture.ReportCode,
                     new SourceReference("jma-xml", fixture.SourceMessageId),
-                    StationCoordinates: stationCoordinates)));
+                    StationCoordinates: stationCoordinates,
+                    StationCatalog: stationCatalog)));
         }
 
         return reports.ToImmutable();
@@ -159,7 +180,8 @@ public static class JmaXmlParser
         ImmutableArray<IntensityStation> Stations,
         JmaIntensity MaxIntensity) ParseIntensity(
         XElement root,
-        IReadOnlyDictionary<string, GeoCoordinate>? stationCoordinates)
+        IReadOnlyDictionary<string, GeoCoordinate>? stationCoordinates,
+        JmaStationCoordinateCatalog? stationCatalog)
     {
         XElement? observation = FirstDescendant(root, "Observation");
         if (observation is null)
@@ -198,13 +220,20 @@ public static class JmaXmlParser
                     foreach (XElement station in ChildElements(city, "IntensityStation"))
                     {
                         string stationCode = FirstChildValue(station, "Code") ?? string.Empty;
+                        string stationName = FirstChildValue(station, "Name") ?? stationCode;
                         GeoCoordinate? coordinate = stationCoordinates is not null &&
                             stationCoordinates.TryGetValue(stationCode, out GeoCoordinate value)
                             ? value
                             : null;
+                        if (coordinate is null && stationCatalog is not null &&
+                            stationCatalog.TryResolve(stationCode, stationName, out value, out _))
+                        {
+                            coordinate = value;
+                        }
+
                         stations.Add(new IntensityStation(
                             stationCode,
-                            FirstChildValue(station, "Name") ?? stationCode,
+                            stationName,
                             cityCode,
                             ParseIntensityValue(FirstChildValue(station, "Int")),
                             coordinate));

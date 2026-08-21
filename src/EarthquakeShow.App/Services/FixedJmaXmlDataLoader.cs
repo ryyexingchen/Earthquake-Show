@@ -7,19 +7,46 @@ namespace EarthquakeShow.App.Services;
 
 internal static class FixedJmaXmlDataLoader
 {
-    public static IReadOnlyDictionary<string, GeoCoordinate> LoadStationCoordinates()
+    public static JmaStationCoordinateCatalog LoadStationCatalog()
     {
-        string stationPath = Path.Combine(
-            AppContext.BaseDirectory,
-            "Assets",
-            "JmaStations.csv");
-        return JmaStationCatalog.LoadFile(stationPath);
+        return LoadStationCatalog(Path.Combine(AppContext.BaseDirectory, "Assets"));
     }
 
-    public static ImmutableArray<EarthquakeReport> LoadReports()
+    internal static JmaStationCoordinateCatalog LoadStationCatalog(string assetsRoot)
     {
-        string assetsRoot = Path.Combine(AppContext.BaseDirectory, "Assets");
         string stationPath = Path.Combine(assetsRoot, "JmaStations.csv");
+        string catalogPath = Path.Combine(
+            assetsRoot,
+            "Data",
+            "Stations",
+            "jma-intensity-stations.json");
+        IReadOnlyDictionary<string, GeoCoordinate>? fixedCoordinates = null;
+        try
+        {
+            fixedCoordinates = JmaStationCatalog.LoadFile(stationPath);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or FormatException)
+        {
+            // 正式目录可以独立运行，固定 CSV 只提供代码增强和回退。
+        }
+
+        try
+        {
+            return JmaStationCoordinateCatalog.LoadFile(catalogPath, fixedCoordinates);
+        }
+        catch (Exception exception) when (
+            fixedCoordinates is not null &&
+            exception is IOException or UnauthorizedAccessException or FormatException)
+        {
+            return JmaStationCoordinateCatalog.FromCodeCoordinates(fixedCoordinates);
+        }
+    }
+
+    public static ImmutableArray<EarthquakeReport> LoadReports(
+        JmaStationCoordinateCatalog stationCatalog)
+    {
+        ArgumentNullException.ThrowIfNull(stationCatalog);
+        string assetsRoot = Path.Combine(AppContext.BaseDirectory, "Assets");
         string officialRoot = Path.Combine(assetsRoot, "JmaXml", "Official");
         string syntheticRoot = Path.Combine(assetsRoot, "JmaXml", "Synthetic");
 
@@ -33,8 +60,7 @@ internal static class FixedJmaXmlDataLoader
 
         try
         {
-            var stations = JmaStationCatalog.LoadFile(stationPath);
-            return JmaXmlParser.LoadFixtures(fixtures, stations);
+            return JmaXmlParser.LoadFixtures(fixtures, stationCatalog);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or FormatException)
         {

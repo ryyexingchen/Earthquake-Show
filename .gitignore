@@ -16,6 +16,11 @@ tests/EarthquakeShow.App.Tests/bin-codex/
 tests/EarthquakeShow.Core.Tests/bin-codex/
 tests/EarthquakeShow.Infrastructure.Tests/bin-codex/
 src/EarthquakeShow.App/bin-codex/
-src/EarthquakeShow.App/Assets
+src/EarthquakeShow.App/Assets/*
+!src/EarthquakeShow.App/Assets/Data/
+src/EarthquakeShow.App/Assets/Data/*
+!src/EarthquakeShow.App/Assets/Data/Stations/
+src/EarthquakeShow.App/Assets/Data/Stations/*
+!src/EarthquakeShow.App/Assets/Data/Stations/jma-intensity-stations.json
 src/EarthquakeShow.Core/bin-codex/
 src/EarthquakeShow.Infrastructure/bin-codex/
