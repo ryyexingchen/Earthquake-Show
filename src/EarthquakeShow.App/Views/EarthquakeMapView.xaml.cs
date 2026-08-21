@@ -139,7 +139,7 @@ public partial class EarthquakeMapView : UserControl
             {
                 Data = ToPathGeometry(GetRings(area.Rings, area.Coordinates), projection),
                 Fill = new SolidColorBrush(GetIntensityColor(area.Intensity, 180)),
-                Stroke = new SolidColorBrush(GetIntensityColor(area.Intensity, 235)),
+                Stroke = new SolidColorBrush(GetIntensityBorderColor(area.Intensity, 235)),
                 StrokeThickness = 1.2,
                 ToolTip = $"{area.Name} · 震度 {GetIntensityText(area.Intensity)}",
             };
@@ -199,7 +199,9 @@ public partial class EarthquakeMapView : UserControl
             Fill = marker.Kind == EarthquakeMapMarkerKind.Hypocenter
                 ? new SolidColorBrush(Color.FromRgb(190, 61, 52))
                 : new SolidColorBrush(GetIntensityColor(marker.Intensity, 245)),
-            Stroke = new SolidColorBrush(Colors.White),
+            Stroke = marker.Kind == EarthquakeMapMarkerKind.Hypocenter
+                ? new SolidColorBrush(Colors.White)
+                : new SolidColorBrush(GetIntensityBorderColor(marker.Intensity, 245)),
             StrokeThickness = 1.5,
             ToolTip = $"{marker.Label} · 震度 {GetIntensityText(marker.Intensity)}",
         };
@@ -212,17 +214,29 @@ public partial class EarthquakeMapView : UserControl
     {
         Color color = intensity switch
         {
-            JmaIntensity.One => Color.FromRgb(220, 239, 247),
-            JmaIntensity.Two => Color.FromRgb(191, 232, 219),
-            JmaIntensity.Three => Color.FromRgb(244, 229, 156),
-            JmaIntensity.Four => Color.FromRgb(244, 195, 125),
-            JmaIntensity.FiveLower => Color.FromRgb(235, 155, 118),
-            JmaIntensity.FiveUpper => Color.FromRgb(225, 116, 103),
-            JmaIntensity.SixLower => Color.FromRgb(201, 85, 103),
-            JmaIntensity.SixUpper => Color.FromRgb(150, 63, 104),
-            JmaIntensity.Seven => Color.FromRgb(93, 49, 93),
-            _ => Color.FromRgb(225, 229, 231),
+            JmaIntensity.One => Color.FromRgb(184, 230, 242),
+            JmaIntensity.Two => Color.FromRgb(112, 214, 193),
+            JmaIntensity.Three => Color.FromRgb(255, 228, 94),
+            JmaIntensity.Four => Color.FromRgb(255, 179, 71),
+            JmaIntensity.FiveLower => Color.FromRgb(255, 122, 69),
+            JmaIntensity.FiveUpper => Color.FromRgb(240, 68, 56),
+            JmaIntensity.SixLower => Color.FromRgb(216, 27, 96),
+            JmaIntensity.SixUpper => Color.FromRgb(142, 36, 170),
+            JmaIntensity.Seven => Color.FromRgb(74, 20, 140),
+            _ => Color.FromRgb(230, 235, 239),
         };
+        color.A = alpha;
+        return color;
+    }
+
+    private static Color GetIntensityBorderColor(JmaIntensity intensity, byte alpha)
+    {
+        Color fill = GetIntensityColor(intensity, 255);
+        double luminance =
+            (0.299 * fill.R + 0.587 * fill.G + 0.114 * fill.B) / 255;
+        Color color = luminance < 0.55
+            ? Colors.White
+            : Color.FromRgb(57, 69, 76);
         color.A = alpha;
         return color;
     }

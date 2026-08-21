@@ -9,34 +9,40 @@
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <Style x:Key="IntensityBadgeBorderStyle" TargetType="Border">
-            <Setter Property="Background" Value="#E1E5E7" />
+            <Setter Property="Background" Value="#E6EBEF" />
+            <Setter Property="BorderBrush" Value="#39454C" />
+            <Setter Property="BorderThickness" Value="1" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Kind}" Value="One">
-                    <Setter Property="Background" Value="#DCEFF7" />
+                    <Setter Property="Background" Value="#B8E6F2" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Kind}" Value="Two">
-                    <Setter Property="Background" Value="#BFE8DB" />
+                    <Setter Property="Background" Value="#70D6C1" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Kind}" Value="Three">
-                    <Setter Property="Background" Value="#F4E59C" />
+                    <Setter Property="Background" Value="#FFE45E" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Kind}" Value="Four">
-                    <Setter Property="Background" Value="#F4C37D" />
+                    <Setter Property="Background" Value="#FFB347" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Kind}" Value="FiveLower">
-                    <Setter Property="Background" Value="#EB9B76" />
+                    <Setter Property="Background" Value="#FF7A45" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Kind}" Value="FiveUpper">
-                    <Setter Property="Background" Value="#E17467" />
+                    <Setter Property="Background" Value="#F04438" />
+                    <Setter Property="BorderBrush" Value="White" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Kind}" Value="SixLower">
-                    <Setter Property="Background" Value="#C95567" />
+                    <Setter Property="Background" Value="#D81B60" />
+                    <Setter Property="BorderBrush" Value="White" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Kind}" Value="SixUpper">
-                    <Setter Property="Background" Value="#963F68" />
+                    <Setter Property="Background" Value="#8E24AA" />
+                    <Setter Property="BorderBrush" Value="White" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Kind}" Value="Seven">
-                    <Setter Property="Background" Value="#5D315D" />
+                    <Setter Property="Background" Value="#4A148C" />
+                    <Setter Property="BorderBrush" Value="White" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>

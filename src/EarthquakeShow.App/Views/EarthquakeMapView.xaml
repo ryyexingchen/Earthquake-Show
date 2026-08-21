@@ -85,43 +85,43 @@
                            Text="震度" />
                 <StackPanel Margin="0,4,0,0">
                     <StackPanel Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#E1E5E7" CornerRadius="2" />
+                        <Border Width="14" Height="10" Background="#E6EBEF" CornerRadius="2" />
                         <TextBlock Margin="5,0,0,0" FontSize="10" Text="不明" />
                     </StackPanel>
                     <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#DCEFF7" CornerRadius="2" />
+                        <Border Width="14" Height="10" Background="#B8E6F2" CornerRadius="2" />
                         <TextBlock Margin="5,0,0,0" FontSize="10" Text="1" />
                     </StackPanel>
                     <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#BFE8DB" CornerRadius="2" />
+                        <Border Width="14" Height="10" Background="#70D6C1" CornerRadius="2" />
                         <TextBlock Margin="5,0,0,0" FontSize="10" Text="2" />
                     </StackPanel>
                     <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#F4E59C" CornerRadius="2" />
+                        <Border Width="14" Height="10" Background="#FFE45E" CornerRadius="2" />
                         <TextBlock Margin="5,0,0,0" FontSize="10" Text="3" />
                     </StackPanel>
                     <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#F4C37D" CornerRadius="2" />
+                        <Border Width="14" Height="10" Background="#FFB347" CornerRadius="2" />
                         <TextBlock Margin="5,0,0,0" FontSize="10" Text="4" />
                     </StackPanel>
                     <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#EB9B76" CornerRadius="2" />
+                        <Border Width="14" Height="10" Background="#FF7A45" CornerRadius="2" />
                         <TextBlock Margin="5,0,0,0" FontSize="10" Text="5-" />
                     </StackPanel>
                     <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#E17467" CornerRadius="2" />
+                        <Border Width="14" Height="10" Background="#F04438" CornerRadius="2" />
                         <TextBlock Margin="5,0,0,0" FontSize="10" Text="5+" />
                     </StackPanel>
                     <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#C95567" CornerRadius="2" />
+                        <Border Width="14" Height="10" Background="#D81B60" CornerRadius="2" />
                         <TextBlock Margin="5,0,0,0" FontSize="10" Text="6-" />
                     </StackPanel>
                     <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#963F68" CornerRadius="2" />
+                        <Border Width="14" Height="10" Background="#8E24AA" CornerRadius="2" />
                         <TextBlock Margin="5,0,0,0" FontSize="10" Text="6+" />
                     </StackPanel>
                     <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#5D315D" CornerRadius="2" />
+                        <Border Width="14" Height="10" Background="#4A148C" CornerRadius="2" />
                         <TextBlock Margin="5,0,0,0" FontSize="10" Text="7" />
                     </StackPanel>
                 </StackPanel>

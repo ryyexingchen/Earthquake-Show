@@ -75,8 +75,11 @@ public sealed class MainWindowViewModelTests
                 Border badge = Assert.IsType<Border>(
                     detailsView.FindName("SummaryMaximumIntensityBadge"));
                 Assert.Equal(
-                    Color.FromRgb(150, 63, 104),
+                    Color.FromRgb(142, 36, 170),
                     Assert.IsType<SolidColorBrush>(badge.Background).Color);
+                Assert.Equal(
+                    Colors.White,
+                    Assert.IsType<SolidColorBrush>(badge.BorderBrush).Color);
                 TextBlock badgeText = Assert.IsType<TextBlock>(badge.Child);
                 Assert.Equal(
                     Colors.White,

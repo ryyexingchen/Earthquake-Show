@@ -207,7 +207,9 @@
                                     Height="36"
                                     HorizontalAlignment="Left"
                                     VerticalAlignment="Top"
-                                    Background="#E1E5E7"
+                                    Background="#E6EBEF"
+                                    BorderBrush="#39454C"
+                                    BorderThickness="1"
                                     CornerRadius="5">
                                 <TextBlock HorizontalAlignment="Center"
                                            VerticalAlignment="Center"
@@ -283,33 +285,38 @@
                             <Setter TargetName="Card" Property="BorderThickness" Value="2" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding MaxIntensity}" Value="One">
-                            <Setter TargetName="IntensityBadge" Property="Background" Value="#DCEFF7" />
+                            <Setter TargetName="IntensityBadge" Property="Background" Value="#B8E6F2" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding MaxIntensity}" Value="Two">
-                            <Setter TargetName="IntensityBadge" Property="Background" Value="#BFE8DB" />
+                            <Setter TargetName="IntensityBadge" Property="Background" Value="#70D6C1" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding MaxIntensity}" Value="Three">
-                            <Setter TargetName="IntensityBadge" Property="Background" Value="#F4E59C" />
+                            <Setter TargetName="IntensityBadge" Property="Background" Value="#FFE45E" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding MaxIntensity}" Value="Four">
-                            <Setter TargetName="IntensityBadge" Property="Background" Value="#F4C37D" />
+                            <Setter TargetName="IntensityBadge" Property="Background" Value="#FFB347" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding MaxIntensity}" Value="FiveLower">
-                            <Setter TargetName="IntensityBadge" Property="Background" Value="#EB9B76" />
+                            <Setter TargetName="IntensityBadge" Property="Background" Value="#FF7A45" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding MaxIntensity}" Value="FiveUpper">
-                            <Setter TargetName="IntensityBadge" Property="Background" Value="#E17467" />
+                            <Setter TargetName="IntensityBadge" Property="Background" Value="#F04438" />
+                            <Setter TargetName="IntensityBadge" Property="BorderBrush" Value="White" />
+                            <Setter TargetName="IntensityBadge" Property="TextElement.Foreground" Value="White" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding MaxIntensity}" Value="SixLower">
-                            <Setter TargetName="IntensityBadge" Property="Background" Value="#C95567" />
+                            <Setter TargetName="IntensityBadge" Property="Background" Value="#D81B60" />
+                            <Setter TargetName="IntensityBadge" Property="BorderBrush" Value="White" />
                             <Setter TargetName="IntensityBadge" Property="TextElement.Foreground" Value="White" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding MaxIntensity}" Value="SixUpper">
-                            <Setter TargetName="IntensityBadge" Property="Background" Value="#963F68" />
+                            <Setter TargetName="IntensityBadge" Property="Background" Value="#8E24AA" />
+                            <Setter TargetName="IntensityBadge" Property="BorderBrush" Value="White" />
                             <Setter TargetName="IntensityBadge" Property="TextElement.Foreground" Value="White" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding MaxIntensity}" Value="Seven">
-                            <Setter TargetName="IntensityBadge" Property="Background" Value="#5D315D" />
+                            <Setter TargetName="IntensityBadge" Property="Background" Value="#4A148C" />
+                            <Setter TargetName="IntensityBadge" Property="BorderBrush" Value="White" />
                             <Setter TargetName="IntensityBadge" Property="TextElement.Foreground" Value="White" />
                         </DataTrigger>
                     </DataTemplate.Triggers>
