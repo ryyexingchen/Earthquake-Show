@@ -604,7 +604,7 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             .ToArray();
     }
 
-    private static IReadOnlyList<EarthquakeObservationItemViewModel> BuildObservations(
+    private IReadOnlyList<EarthquakeObservationItemViewModel> BuildObservations(
         EarthquakeReport report)
     {
         var items = new List<EarthquakeObservationItemViewModel>();
@@ -615,7 +615,9 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             area.PrefectureName,
             area.MaxIntensity,
             GetIntensityText(area.MaxIntensity),
-            null)));
+            _map.TryGetAreaFocusCoordinate(area.Code, out GeoCoordinate coordinate)
+                ? coordinate
+                : null)));
         items.AddRange(report.IntensityMunicipalities.Select(item => new EarthquakeObservationItemViewModel(
             "市町村",
             item.Name,

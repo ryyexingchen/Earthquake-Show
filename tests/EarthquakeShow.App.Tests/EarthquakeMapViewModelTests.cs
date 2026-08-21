@@ -82,6 +82,59 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public async Task SelectedEvent_DrawsHigherIntensityStationsAfterLowerIntensityStations()
+    {
+        EarthquakeReport report = CreateReport() with
+        {
+            IntensityStations =
+            [
+                new IntensityStation(
+                    "KMM001",
+                    "低震度观测点",
+                    "741",
+                    JmaIntensity.Two,
+                    new GeoCoordinate(32.81, 130.71)),
+                new IntensityStation(
+                    "KMM003",
+                    "高震度观测点",
+                    "741",
+                    JmaIntensity.SixUpper,
+                    new GeoCoordinate(32.82, 130.72)),
+            ],
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+
+        EarthquakeMapMarker[] stations = map.Markers
+            .Where(marker => marker.Kind == EarthquakeMapMarkerKind.Station)
+            .ToArray();
+
+        Assert.Equal([JmaIntensity.Two, JmaIntensity.SixUpper],
+            stations.Select(marker => marker.Intensity));
+    }
+
+    [Fact]
+    public async Task SelectedEvent_ProvidesFocusCoordinateForMappedArea()
+    {
+        var report = CreateReport();
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+
+        Assert.True(map.TryGetAreaFocusCoordinate("741", out GeoCoordinate coordinate));
+        Assert.Equal(32.75, coordinate.Latitude, precision: 2);
+        Assert.Equal(130.70, coordinate.Longitude, precision: 2);
+        Assert.False(map.TryGetAreaFocusCoordinate("999", out _));
+    }
+
+    [Fact]
     public async Task MapCommands_UpdateZoomAndPageMapState()
     {
         var report = CreateReport();

@@ -71,7 +71,15 @@ public sealed class EarthquakeDetailsViewModelTests
         using var details = new EarthquakeDetailsViewModel(page, map);
 
         Assert.Contains(details.Observations, item => item.Kind == "区域");
-        Assert.Contains(details.Observations, item => item.LocationText == "位置未知");
+        EarthquakeObservationItemViewModel area = Assert.Single(
+            details.Observations,
+            item => item.Kind == "区域");
+        Assert.Equal("单击定位", area.LocationText);
+        details.SelectedObservation = area;
+        Assert.Equal(area.Coordinate, map.FocusedCoordinate);
+
+        Assert.Contains(details.Observations, item =>
+            item.Kind == "区域" && item.LocationText == "单击定位");
         EarthquakeObservationItemViewModel station = Assert.Single(
             details.Observations,
             item => item.Kind == "观测点");

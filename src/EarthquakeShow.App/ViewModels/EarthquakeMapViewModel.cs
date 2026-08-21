@@ -95,6 +95,37 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
     public bool HasDrawableLayers => Areas.Count > 0 || Markers.Count > 0;
 
+    public bool TryGetAreaFocusCoordinate(
+        string areaCode,
+        out GeoCoordinate coordinate)
+    {
+        coordinate = default;
+        if (string.IsNullOrWhiteSpace(areaCode))
+        {
+            return false;
+        }
+
+        EarthquakeMapArea? area = Areas.FirstOrDefault(item =>
+            string.Equals(item.Code, areaCode, StringComparison.Ordinal));
+        if (area is null)
+        {
+            return false;
+        }
+
+        IReadOnlyList<GeoCoordinate> points = area.Rings
+            .SelectMany(ring => ring)
+            .ToArray();
+        if (points.Count == 0)
+        {
+            return false;
+        }
+
+        coordinate = new GeoCoordinate(
+            (points.Min(point => point.Latitude) + points.Max(point => point.Latitude)) / 2,
+            (points.Min(point => point.Longitude) + points.Max(point => point.Longitude)) / 2);
+        return true;
+    }
+
     public string StatusText
     {
         get
@@ -252,6 +283,9 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
         markers.AddRange(report.IntensityStations
             .Where(station => station.Coordinate is not null)
+            .OrderBy(station => station.Intensity == JmaIntensity.Unknown
+                ? int.MaxValue
+                : (int)station.Intensity)
             .Select(station => new EarthquakeMapMarker(
                 EarthquakeMapMarkerKind.Station,
                 station.Name,
