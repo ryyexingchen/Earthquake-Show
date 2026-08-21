@@ -38,7 +38,7 @@ public sealed class EarthquakeDetailsViewModelTests
         Assert.Equal(2, details.TimelineItems.Count);
         Assert.Contains("震级 M 3.8 → M 3.9", details.TimelineItems[1].ChangeSummary);
         Assert.Equal("M 3.9 (Mj)", GetField(details, "震级"));
-        Assert.DoesNotContain(map.Markers, marker => marker.Kind == EarthquakeMapMarkerKind.Station);
+        Assert.Contains(map.Markers, marker => marker.Kind == EarthquakeMapMarkerKind.Station);
 
         details.GoPreviousReport();
 

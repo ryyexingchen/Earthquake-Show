@@ -34,6 +34,56 @@ public sealed class SqliteEarthquakeEventRepositoryTests
     }
 
     [Fact]
+    public async Task Initialize_ExistingDatabase_AddsMissingSeedReportsWithoutDuplicates()
+    {
+        using var database = new TemporaryDatabase();
+        EarthquakeReport cachedReport = CreateOnlineReport();
+        ImmutableArray<EarthquakeReport> seedReports = LoadReports();
+
+        var first = new SqliteEarthquakeEventRepository(database.Path);
+        await first.InitializeAsync([cachedReport]);
+
+        var second = new SqliteEarthquakeEventRepository(database.Path);
+        await second.InitializeAsync(seedReports);
+
+        ImmutableArray<EarthquakeEvent> events = await second.ListEventsAsync();
+        Assert.Equal(2, events.Length);
+        EarthquakeEvent sampleEvent = Assert.Single(
+            events,
+            item => item.EventId == seedReports[0].EventId);
+        Assert.Equal(4, sampleEvent.Reports.Length);
+        Assert.Contains("补充固定样本 4 条报文", second.CacheStatus);
+
+        var third = new SqliteEarthquakeEventRepository(database.Path);
+        await third.InitializeAsync(seedReports);
+        Assert.Equal(2, (await third.ListEventsAsync()).Length);
+        Assert.Contains("已读取 5 条报文", third.CacheStatus);
+    }
+
+    [Fact]
+    public async Task Initialize_ReadOnlyCache_PreservesLoadedEventsWhenStatusWriteFails()
+    {
+        using var database = new TemporaryDatabase();
+        ImmutableArray<EarthquakeReport> seedReports = LoadReports();
+        var writer = new SqliteEarthquakeEventRepository(database.Path);
+        await writer.InitializeAsync(seedReports.Append(CreateOnlineReport()));
+        File.SetAttributes(database.Path, FileAttributes.ReadOnly);
+
+        try
+        {
+            var reader = new SqliteEarthquakeEventRepository(database.Path);
+            await reader.InitializeAsync(seedReports);
+
+            Assert.Equal(2, (await reader.ListEventsAsync()).Length);
+            Assert.Contains("只读模式，已读取 5 条报文", reader.CacheStatus);
+        }
+        finally
+        {
+            File.SetAttributes(database.Path, FileAttributes.Normal);
+        }
+    }
+
+    [Fact]
     public async Task Initialize_PreservesRawPayloadSourceAndCorrectionFields()
     {
         using var database = new TemporaryDatabase();
@@ -154,7 +204,7 @@ public sealed class SqliteEarthquakeEventRepositoryTests
     }
 
     [Fact]
-    public async Task Initialize_UnsupportedSchema_FallsBackToSeed()
+    public async Task Initialize_UnsupportedSchema_PreservesSnapshotAndAddsSeed()
     {
         using var database = new TemporaryDatabase();
         var builder = new SqliteConnectionStringBuilder
@@ -174,7 +224,7 @@ public sealed class SqliteEarthquakeEventRepositoryTests
         await repository.InitializeAsync(LoadReports());
 
         Assert.Single(await repository.ListEventsAsync());
-        Assert.Contains("回退固定样本", repository.CacheStatus);
+        Assert.Contains("只读模式，已读取 4 条报文", repository.CacheStatus);
     }
 
     [Fact]

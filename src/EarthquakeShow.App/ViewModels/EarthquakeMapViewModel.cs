@@ -296,6 +296,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
+        report = GetMapReport(report);
         BoundaryLayers = BuildBoundaryLayers(report);
 
         var geometryByCode = Outline
@@ -386,6 +387,43 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 station.Intensity)));
         Markers = markers;
         RaiseLayerProperties();
+    }
+
+    private EarthquakeReport GetMapReport(EarthquakeReport report)
+    {
+        EarthquakeEvent? selectedEvent = _page.State.SelectedEvent;
+        if (selectedEvent is null)
+        {
+            return report;
+        }
+
+        int viewedIndex = selectedEvent.Reports
+            .Select((item, index) => (item, index))
+            .FirstOrDefault(item =>
+                string.Equals(item.item.Source.SourceId, report.Source.SourceId, StringComparison.Ordinal) &&
+                string.Equals(item.item.Source.SourceMessageId, report.Source.SourceMessageId, StringComparison.Ordinal))
+            .index;
+        IEnumerable<EarthquakeReport> reports = selectedEvent.Reports.Take(viewedIndex + 1);
+        EarthquakeReport? areaReport = reports.LastOrDefault(item => !item.IntensityAreas.IsDefaultOrEmpty);
+        EarthquakeReport? municipalityReport = reports.LastOrDefault(item => !item.IntensityMunicipalities.IsDefaultOrEmpty);
+        EarthquakeReport? stationReport = reports.LastOrDefault(item => !item.IntensityStations.IsDefaultOrEmpty);
+        EarthquakeReport? intensityReport = reports.LastOrDefault(item => item.MaxIntensity != JmaIntensity.Unknown);
+
+        return report with
+        {
+            MaxIntensity = report.MaxIntensity == JmaIntensity.Unknown
+                ? intensityReport?.MaxIntensity ?? JmaIntensity.Unknown
+                : report.MaxIntensity,
+            IntensityAreas = report.IntensityAreas.IsDefaultOrEmpty
+                ? areaReport?.IntensityAreas ?? []
+                : report.IntensityAreas,
+            IntensityMunicipalities = report.IntensityMunicipalities.IsDefaultOrEmpty
+                ? municipalityReport?.IntensityMunicipalities ?? []
+                : report.IntensityMunicipalities,
+            IntensityStations = report.IntensityStations.IsDefaultOrEmpty
+                ? stationReport?.IntensityStations ?? []
+                : report.IntensityStations,
+        };
     }
 
     private IReadOnlyList<EarthquakeMapBoundaryLayer> BuildBoundaryLayers(

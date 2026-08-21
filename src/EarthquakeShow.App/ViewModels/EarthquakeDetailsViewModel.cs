@@ -401,7 +401,7 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         SummaryOverview = BuildSummaryOverview(report.ReportType, displaySnapshot);
         SourceDifferences = BuildSourceDifferences(earthquakeEvent, report);
         EventAssociations = BuildEventAssociations(earthquakeEvent);
-        _allObservations = BuildObservations(report);
+        _allObservations = BuildObservations(GetObservationReport(earthquakeEvent, report));
         _allObservationTreeNodes = BuildObservationTree(_allObservations);
         RebuildVisibleObservations();
         TimelineItems = BuildTimeline(earthquakeEvent, report);
@@ -413,6 +413,39 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             $"{report.Source.SourceMessageId}";
         _selectedObservation = null;
         RaiseAllProperties();
+    }
+
+    private static EarthquakeReport GetObservationReport(
+        EarthquakeEvent earthquakeEvent,
+        EarthquakeReport report)
+    {
+        int viewedIndex = earthquakeEvent.Reports
+            .Select((item, index) => (item, index))
+            .FirstOrDefault(item =>
+                string.Equals(item.item.Source.SourceId, report.Source.SourceId, StringComparison.Ordinal) &&
+                string.Equals(item.item.Source.SourceMessageId, report.Source.SourceMessageId, StringComparison.Ordinal))
+            .index;
+        IEnumerable<EarthquakeReport> reports = earthquakeEvent.Reports.Take(viewedIndex + 1);
+        EarthquakeReport? areaReport = reports.LastOrDefault(item => !item.IntensityAreas.IsDefaultOrEmpty);
+        EarthquakeReport? municipalityReport = reports.LastOrDefault(item => !item.IntensityMunicipalities.IsDefaultOrEmpty);
+        EarthquakeReport? stationReport = reports.LastOrDefault(item => !item.IntensityStations.IsDefaultOrEmpty);
+        EarthquakeReport? intensityReport = reports.LastOrDefault(item => item.MaxIntensity != JmaIntensity.Unknown);
+
+        return report with
+        {
+            MaxIntensity = report.MaxIntensity == JmaIntensity.Unknown
+                ? intensityReport?.MaxIntensity ?? JmaIntensity.Unknown
+                : report.MaxIntensity,
+            IntensityAreas = report.IntensityAreas.IsDefaultOrEmpty
+                ? areaReport?.IntensityAreas ?? []
+                : report.IntensityAreas,
+            IntensityMunicipalities = report.IntensityMunicipalities.IsDefaultOrEmpty
+                ? municipalityReport?.IntensityMunicipalities ?? []
+                : report.IntensityMunicipalities,
+            IntensityStations = report.IntensityStations.IsDefaultOrEmpty
+                ? stationReport?.IntensityStations ?? []
+                : report.IntensityStations,
+        };
     }
 
     private static IReadOnlyList<EarthquakeDetailField> BuildSummaryFields(

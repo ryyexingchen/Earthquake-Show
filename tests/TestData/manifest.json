@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "datasetVersion": "0.3.0",
-  "retrievedDate": "2026-08-19",
+  "datasetVersion": "0.4.0",
+  "retrievedDate": "2026-08-21",
   "feedUrl": "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml",
   "fixtures": [
     {
@@ -118,6 +118,64 @@
         "stationCount": 1,
         "unresolvedStationCodes": ["9999999"]
       }
+    }
+  ],
+  "jsonFixtures": [
+    {
+      "id": "kumamoto-vxse51-1",
+      "reportCode": "VXSE51",
+      "path": "JmaJson/Official/20260728162848_20260728162718_VXSE51_0.json",
+      "origin": { "kind": "official", "url": "https://www.jma.go.jp/bosai/quake/data/20260728162848_20260728162718_VXSE51_0.json", "retrievedDate": "2026-08-21" },
+      "sha256": "28a1a7dffb69256885531bbe5e659cddd03afc7ccea87d97c51f9cfb5015210a",
+      "expected": { "eventId": "20260728162718", "reportCode": "VXSE51", "serial": null, "maxIntensity": "7", "magnitude": null, "prefectureCount": 7, "areaCount": 14, "cityCount": 0, "stationCount": 0 }
+    },
+    {
+      "id": "kumamoto-vxse51-2",
+      "reportCode": "VXSE51",
+      "path": "JmaJson/Official/20260728162903_20260728162718_VXSE51_0.json",
+      "origin": { "kind": "official", "url": "https://www.jma.go.jp/bosai/quake/data/20260728162903_20260728162718_VXSE51_0.json", "retrievedDate": "2026-08-21" },
+      "sha256": "2e9a3b34d7bbf18e527e723b96df5d19efdfddb05d0c157d3f6b2431f333c2c5",
+      "expected": { "eventId": "20260728162718", "reportCode": "VXSE51", "serial": null, "maxIntensity": "7", "magnitude": null, "prefectureCount": 10, "areaCount": 32, "cityCount": 0, "stationCount": 0 }
+    },
+    {
+      "id": "kumamoto-vxse51-3",
+      "reportCode": "VXSE51",
+      "path": "JmaJson/Official/20260728163003_20260728162718_VXSE51_0.json",
+      "origin": { "kind": "official", "url": "https://www.jma.go.jp/bosai/quake/data/20260728163003_20260728162718_VXSE51_0.json", "retrievedDate": "2026-08-21" },
+      "sha256": "7216fd494e53e23b5ae36b37615b8d1c0496a8eb6c403e289be1796a5b2a6063",
+      "expected": { "eventId": "20260728162718", "reportCode": "VXSE51", "serial": null, "maxIntensity": "7", "magnitude": null, "prefectureCount": 13, "areaCount": 37, "cityCount": 0, "stationCount": 0 }
+    },
+    {
+      "id": "kumamoto-vxse51-4",
+      "reportCode": "VXSE51",
+      "path": "JmaJson/Official/20260728163103_20260728162718_VXSE51_0.json",
+      "origin": { "kind": "official", "url": "https://www.jma.go.jp/bosai/quake/data/20260728163103_20260728162718_VXSE51_0.json", "retrievedDate": "2026-08-21" },
+      "sha256": "bf1c8ae528651fd5ea72e6f828092312027eeea8cd868034cc12495f86602382",
+      "expected": { "eventId": "20260728162718", "reportCode": "VXSE51", "serial": null, "maxIntensity": "7", "magnitude": null, "prefectureCount": 14, "areaCount": 41, "cityCount": 0, "stationCount": 0 }
+    },
+    {
+      "id": "kumamoto-vxse53-1",
+      "reportCode": "VXSE53",
+      "path": "JmaJson/Official/20260728163148_20260728162718_VXSE5k_1.json",
+      "origin": { "kind": "official", "url": "https://www.jma.go.jp/bosai/quake/data/20260728163148_20260728162718_VXSE5k_1.json", "retrievedDate": "2026-08-21" },
+      "sha256": "b9d0bedc0a5f5cc3281849bafb2c848f1fa6705a87b4431a6f80b5f47f307972",
+      "expected": { "eventId": "20260728162718", "reportCode": "VXSE53", "serial": "1", "maxIntensity": "7", "magnitude": 7.1, "prefectureCount": 19, "areaCount": 60, "cityCount": 416, "stationCount": 1058 }
+    },
+    {
+      "id": "kumamoto-vxse53-2",
+      "reportCode": "VXSE53",
+      "path": "JmaJson/Official/20260728163528_20260728162718_VXSE5k_2.json",
+      "origin": { "kind": "official", "url": "https://www.jma.go.jp/bosai/quake/data/20260728163528_20260728162718_VXSE5k_2.json", "retrievedDate": "2026-08-21" },
+      "sha256": "ffd4989761957c1413aa1912bbc39c28ebec4a73019363cfe190750bbd89f26b",
+      "expected": { "eventId": "20260728162718", "reportCode": "VXSE53", "serial": "2", "maxIntensity": "7", "magnitude": 7.1, "prefectureCount": 26, "areaCount": 72, "cityCount": 555, "stationCount": 1248 }
+    },
+    {
+      "id": "kumamoto-vxse61",
+      "reportCode": "VXSE61",
+      "path": "JmaJson/Official/20260728203023_20260728162718_VXSE61_0.json",
+      "origin": { "kind": "official", "url": "https://www.jma.go.jp/bosai/quake/data/20260728203023_20260728162718_VXSE61_0.json", "retrievedDate": "2026-08-21" },
+      "sha256": "6503703a87e50d951c2eccee082c75b92cdcebed94cfea392be4f1c506917d32",
+      "expected": { "eventId": "20260728162718", "reportCode": "VXSE61", "serial": null, "maxIntensity": null, "magnitude": 7.1, "prefectureCount": 0, "areaCount": 0, "cityCount": 0, "stationCount": 0 }
     }
   ],
   "assets": [

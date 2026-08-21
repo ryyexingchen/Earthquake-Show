@@ -25,16 +25,25 @@ public sealed record EarthquakeEvent
             }
 
             EarthquakeReport? latestEffectiveReport = LatestEffectiveReport;
+            EarthquakeReport? latestHypocenterReport = Reports
+                .Where(IsEffectiveReport)
+                .LastOrDefault(report => report.Hypocenter is not null);
+            EarthquakeReport? latestMagnitudeReport = Reports
+                .Where(IsEffectiveReport)
+                .LastOrDefault(report => report.Magnitude is not null);
+            EarthquakeReport? latestIntensityReport = Reports
+                .Where(IsEffectiveReport)
+                .LastOrDefault(report => report.MaxIntensity != JmaIntensity.Unknown);
             return new EarthquakeEventSummary(
                 EventId,
                 latestReport.Status,
                 latestReport.Context,
                 latestReport.IssuedAt,
                 latestEffectiveReport?.ReportCode,
-                latestEffectiveReport?.OriginTime,
-                latestEffectiveReport?.Hypocenter,
-                latestEffectiveReport?.Magnitude,
-                latestEffectiveReport?.MaxIntensity ?? JmaIntensity.Unknown);
+                latestHypocenterReport?.OriginTime ?? latestEffectiveReport?.OriginTime,
+                latestHypocenterReport?.Hypocenter ?? latestEffectiveReport?.Hypocenter,
+                latestMagnitudeReport?.Magnitude ?? latestEffectiveReport?.Magnitude,
+                latestIntensityReport?.MaxIntensity ?? JmaIntensity.Unknown);
         }
     }
 

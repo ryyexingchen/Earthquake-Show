@@ -85,6 +85,8 @@ public sealed class SqliteEarthquakeEventRepository :
     {
         ArgumentNullException.ThrowIfNull(seedReports);
         ImmutableArray<EarthquakeReport> fallbackReports = seedReports.ToImmutableArray();
+        ImmutableArray<EarthquakeReport> loadedReports = [];
+        bool hasLoadedReports = false;
         cancellationToken.ThrowIfCancellationRequested();
 
         try
@@ -101,7 +103,10 @@ public sealed class SqliteEarthquakeEventRepository :
 
             ImmutableArray<EarthquakeReport> cachedReports =
                 await ReadReportsAsync(connection, cancellationToken).ConfigureAwait(false);
+            loadedReports = cachedReports;
+            hasLoadedReports = true;
             bool seeded = cachedReports.IsDefaultOrEmpty;
+            int addedSeedReportCount = 0;
             if (seeded)
             {
                 await SaveReportsToConnectionAsync(
@@ -109,6 +114,25 @@ public sealed class SqliteEarthquakeEventRepository :
                     fallbackReports,
                     cancellationToken).ConfigureAwait(false);
                 cachedReports = fallbackReports;
+                loadedReports = cachedReports;
+            }
+            else
+            {
+                ImmutableArray<EarthquakeReport> missingSeedReports =
+                    GetMissingSeedReports(cachedReports, fallbackReports);
+                if (!missingSeedReports.IsDefaultOrEmpty)
+                {
+                    loadedReports = cachedReports
+                        .AddRange(missingSeedReports);
+                    await SaveReportsToConnectionAsync(
+                        connection,
+                        missingSeedReports,
+                        cancellationToken).ConfigureAwait(false);
+                    cachedReports = await ReadReportsAsync(
+                        connection,
+                        cancellationToken).ConfigureAwait(false);
+                    addedSeedReportCount = missingSeedReports.Length;
+                }
             }
 
             ImmutableArray<SourceStatus> statuses =
@@ -124,6 +148,8 @@ public sealed class SqliteEarthquakeEventRepository :
                 statuses,
                 seeded
                     ? $"缓存：已写入固定样本 {cachedReports.Length} 条报文"
+                    : addedSeedReportCount > 0
+                        ? $"缓存：已补充固定样本 {addedSeedReportCount} 条报文，已读取 {cachedReports.Length} 条报文"
                     : $"缓存：已读取 {cachedReports.Length} 条报文");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -135,11 +161,38 @@ public sealed class SqliteEarthquakeEventRepository :
             InvalidDataException or JsonException or FormatException or ArgumentException or
             InvalidOperationException)
         {
-            ImmutableArray<SourceStatus> statuses = BuildOfflineStatuses(fallbackReports, []);
+            if (!hasLoadedReports)
+            {
+                (ImmutableArray<EarthquakeReport> Reports,
+                    ImmutableArray<SourceStatus> Statuses)? readOnlySnapshot =
+                    await TryReadReadOnlySnapshotAsync(cancellationToken).ConfigureAwait(false);
+                if (readOnlySnapshot is not null)
+                {
+                    ImmutableArray<EarthquakeReport> readOnlyReports = readOnlySnapshot.Value.Reports;
+                    ImmutableArray<EarthquakeReport> missingSeedReports =
+                        GetMissingSeedReports(readOnlyReports, fallbackReports);
+                    ImmutableArray<EarthquakeReport> readOnlySnapshotReports = readOnlyReports
+                        .AddRange(missingSeedReports);
+                    ImmutableArray<SourceStatus> readOnlyStatuses = BuildOfflineStatuses(
+                        readOnlySnapshotReports,
+                        readOnlySnapshot.Value.Statuses);
+                    SetSnapshot(
+                        readOnlySnapshotReports,
+                        readOnlyStatuses,
+                        $"缓存：只读模式，已读取 {readOnlySnapshotReports.Length} 条报文（无法写回：{exception.Message}）");
+                    return;
+                }
+            }
+
+            ImmutableArray<EarthquakeReport> snapshotReports =
+                hasLoadedReports ? loadedReports : fallbackReports;
+            ImmutableArray<SourceStatus> statuses = BuildOfflineStatuses(snapshotReports, []);
             SetSnapshot(
-                fallbackReports,
+                snapshotReports,
                 statuses,
-                $"缓存：不可用，已回退固定样本（{exception.Message}）");
+                hasLoadedReports
+                    ? $"缓存：已读取 {snapshotReports.Length} 条报文，但无法写回（{exception.Message}）"
+                    : $"缓存：不可用，已回退固定样本（{exception.Message}）");
         }
     }
 
@@ -288,12 +341,61 @@ public sealed class SqliteEarthquakeEventRepository :
         }
     }
 
-    private SqliteConnection CreateConnection()
+    private async Task<(
+        ImmutableArray<EarthquakeReport> Reports,
+        ImmutableArray<SourceStatus> Statuses)?> TryReadReadOnlySnapshotAsync(
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using SqliteConnection connection = CreateConnection(readOnly: true);
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+            ImmutableArray<EarthquakeReport> reports =
+                await ReadReportsAsync(connection, cancellationToken).ConfigureAwait(false);
+            ImmutableArray<SourceStatus> statuses =
+                await ReadSourceStatusesAsync(connection, cancellationToken).ConfigureAwait(false);
+            return (reports, statuses);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or SqliteException or
+            InvalidDataException or JsonException or FormatException or ArgumentException or
+            InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    private static ImmutableArray<EarthquakeReport> GetMissingSeedReports(
+        ImmutableArray<EarthquakeReport> cachedReports,
+        ImmutableArray<EarthquakeReport> fallbackReports)
+    {
+        return fallbackReports
+            .Where(seedReport => !cachedReports.Any(cachedReport =>
+                string.Equals(
+                    cachedReport.EventId,
+                    seedReport.EventId,
+                    StringComparison.Ordinal) &&
+                string.Equals(
+                    cachedReport.Source.SourceId,
+                    seedReport.Source.SourceId,
+                    StringComparison.Ordinal) &&
+                string.Equals(
+                    cachedReport.Source.SourceMessageId,
+                    seedReport.Source.SourceMessageId,
+                    StringComparison.Ordinal)))
+            .ToImmutableArray();
+    }
+
+    private SqliteConnection CreateConnection(bool readOnly = false)
     {
         var builder = new SqliteConnectionStringBuilder
         {
             DataSource = _databasePath,
-            Mode = SqliteOpenMode.ReadWriteCreate,
+            Mode = readOnly ? SqliteOpenMode.ReadOnly : SqliteOpenMode.ReadWriteCreate,
             Cache = SqliteCacheMode.Private,
             Pooling = false,
         };

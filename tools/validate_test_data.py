@@ -105,6 +105,58 @@ def parse_report(path: Path) -> dict[str, object]:
     }
 
 
+def json_objects(parent: object, name: str) -> list[dict[str, object]]:
+    if not isinstance(parent, dict):
+        return []
+    value = parent.get(name)
+    if isinstance(value, dict):
+        return [value]
+    if isinstance(value, list):
+        return [item for item in value if isinstance(item, dict)]
+    return []
+
+
+def parse_json_report(path: Path) -> dict[str, object]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    control = payload.get("Control", {})
+    head = payload.get("Head", {})
+    body = payload.get("Body", {})
+    earthquake = body.get("Earthquake", {})
+    area = earthquake.get("Hypocenter", {}).get("Area", {})
+    observation = body.get("Intensity", {}).get("Observation", {})
+    prefectures = json_objects(observation, "Pref")
+    areas = [area for prefecture in prefectures for area in json_objects(prefecture, "Area")]
+    cities = [city for area in areas for city in json_objects(area, "City")]
+    stations = [
+        station
+        for city in cities
+        for station in json_objects(city, "IntensityStation")
+    ]
+    magnitude_value = earthquake.get("Magnitude")
+    try:
+        magnitude = float(magnitude_value) if magnitude_value is not None else None
+        if magnitude is not None and not math.isfinite(magnitude):
+            magnitude = None
+    except (TypeError, ValueError):
+        magnitude = None
+
+    return {
+        "eventId": head.get("EventID"),
+        "infoType": head.get("InfoType"),
+        "serial": head.get("Serial") or None,
+        "maxIntensity": observation.get("MaxInt") or None,
+        "magnitude": magnitude,
+        "hasHypocenterCoordinate": bool(
+            area.get("Coordinate") or area.get("Coordinate_WGS")
+        ),
+        "prefectureCount": len(prefectures),
+        "areaCount": len(areas),
+        "cityCount": len(cities),
+        "stationCount": len(stations),
+        "controlStatus": control.get("Status"),
+    }
+
+
 def validate_manifest() -> tuple[dict[str, object], dict[str, dict[str, object]]]:
     manifest_path = DATA_ROOT / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -136,6 +188,30 @@ def validate_event_chain(reports: dict[str, dict[str, object]]) -> None:
     correction = reports["synthetic-vxse53-correction"]
     require(correction["eventId"] == chain[0]["eventId"], "订正报必须属于同一事件")
     require(correction["infoType"] == "訂正", "订正报 InfoType 必须为訂正")
+
+
+def validate_json_fixtures(manifest: dict[str, object]) -> None:
+    fixtures = manifest.get("jsonFixtures", [])
+    require(len(fixtures) == 7, "令和八年熊本事件必须包含 7 份官方 JSON 报文")
+    reports = []
+    for fixture in fixtures:
+        path = DATA_ROOT / fixture["path"]
+        require(path.is_file(), f"缺少固定 JSON 报文：{fixture['path']}")
+        require(sha256(path) == fixture["sha256"], f"固定 JSON 哈希不匹配：{fixture['path']}")
+        actual = parse_json_report(path)
+        actual["reportCode"] = fixture["reportCode"]
+        for field, expected in fixture["expected"].items():
+            require(actual[field] == expected, f"{fixture['id']} 的 {field} 不匹配：{actual[field]!r}")
+        reports.append(actual)
+
+    require(
+        {report["eventId"] for report in reports} == {"20260728162718"},
+        "令和八年熊本 JSON 报文必须属于事件 20260728162718",
+    )
+    require(
+        any(report["magnitude"] == 7.1 for report in reports),
+        "令和八年熊本 JSON 报文必须包含 M7.1",
+    )
 
 
 def expected_asset_count(manifest: dict[str, object], asset_id: str) -> int:
@@ -222,6 +298,7 @@ def validate_intensity_scale(manifest: dict[str, object]) -> None:
 def main() -> int:
     try:
         manifest, reports = validate_manifest()
+        validate_json_fixtures(manifest)
         validate_event_chain(reports)
         validate_stations(manifest, reports)
         validate_formal_station_catalog()
@@ -232,7 +309,7 @@ def main() -> int:
         return 1
 
     print(
-        "固定测试数据校验通过：5 份 XML、75 个固定观测点、4,368 个正式观测点、"
+        "固定测试数据校验通过：5 份 XML、7 份 JMA JSON、75 个固定观测点、4,368 个正式观测点、"
         "7 个区域测试包络、10 个震度定义。"
     )
     return 0

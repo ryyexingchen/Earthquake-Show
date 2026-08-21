@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using EarthquakeShow.Core.Models;
+using EarthquakeShow.Infrastructure.Persistence;
 using EarthquakeShow.Infrastructure.Sources;
 using Xunit;
 
@@ -25,7 +26,9 @@ public sealed class MainWindowViewModelTests
         {
             await viewModel.InitializeAsync();
 
-            EarthquakeEvent earthquakeEvent = Assert.Single(viewModel.EarthquakePage.State.Events);
+            EarthquakeEvent earthquakeEvent = Assert.Single(
+                viewModel.EarthquakePage.State.Events,
+                item => item.EventId == "20260819071048");
             Assert.Equal(4, earthquakeEvent.Reports.Length);
             Assert.Equal(ReportStatus.Correction, earthquakeEvent.Summary?.Status);
             Assert.Equal(3.9, earthquakeEvent.Summary?.Magnitude?.Value);
@@ -33,11 +36,68 @@ public sealed class MainWindowViewModelTests
             Assert.All(
                 earthquakeEvent.LatestReport!.IntensityStations,
                 station => Assert.NotNull(station.Coordinate));
-            Assert.Single(viewModel.EventList.Items);
+            Assert.Equal(2, viewModel.EventList.Items.Count);
             Assert.Equal(76, viewModel.Map.Markers.Count);
             Assert.NotNull(viewModel.Map.BoundaryGeometry);
             Assert.Equal(1069, viewModel.Map.BoundaryGeometry.Boundaries.Length);
             Assert.Equal(8, viewModel.Map.BoundaryGeometry.GetForArea("100").Count);
+        }
+        finally
+        {
+            DeleteTemporaryCache(cachePath);
+        }
+    }
+
+    [Fact]
+    public async Task Initialize_FixedJmaJson_LoadsReiwaEightKumamotoEarthquake()
+    {
+        string cachePath = CreateTemporaryCachePath();
+        using var viewModel = new MainWindowViewModel(cachePath, enableNetwork: false);
+
+        try
+        {
+            await viewModel.InitializeAsync();
+
+            EarthquakeEvent earthquakeEvent = Assert.Single(
+                viewModel.EarthquakePage.State.Events,
+                item => item.EventId == "20260728162718");
+            Assert.Equal(7, earthquakeEvent.Reports.Length);
+            Assert.Equal(7.1, earthquakeEvent.Summary?.Magnitude?.Value);
+            Assert.Equal(JmaIntensity.Seven, earthquakeEvent.Summary?.MaxIntensity);
+            Assert.Equal(16, earthquakeEvent.LatestReport?.Hypocenter?.DepthKm);
+            Assert.Contains(
+                viewModel.EventList.Items,
+                item => item.EventId == "20260728162718");
+
+            Assert.True(viewModel.EarthquakePage.SelectEvent("20260728162718"));
+            Assert.Equal(1248, viewModel.Map.Markers.Count - 1);
+        }
+        finally
+        {
+            DeleteTemporaryCache(cachePath);
+        }
+    }
+
+    [Fact]
+    public async Task Initialize_ExistingCache_AddsBundledKumamotoEventToPage()
+    {
+        string cachePath = CreateTemporaryCachePath();
+        try
+        {
+            var existingCache = new SqliteEarthquakeEventRepository(cachePath);
+            await existingCache.InitializeAsync([CreateStreamingReport()]);
+
+            using var viewModel = new MainWindowViewModel(cachePath, enableNetwork: false);
+            await viewModel.InitializeAsync();
+
+            EarthquakeEvent kumamotoEvent = Assert.Single(
+                viewModel.EarthquakePage.State.Events,
+                item => item.Reports.Any(report =>
+                    report.Source.SourceMessageId == "20260818221432_0_VXSE53_270000.xml"));
+            Assert.Equal(4, kumamotoEvent.Reports.Length);
+            Assert.Contains(
+                viewModel.EventList.Items,
+                item => item.EventId == kumamotoEvent.EventId);
         }
         finally
         {
