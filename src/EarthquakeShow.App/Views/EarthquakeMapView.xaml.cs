@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using EarthquakeShow.App.ViewModels;
@@ -13,6 +14,9 @@ public partial class EarthquakeMapView : UserControl
     private static readonly Color OutlineFill = Color.FromRgb(243, 239, 228);
     private static readonly Color OutlineStroke = Color.FromRgb(121, 143, 153);
     private bool _renderPending;
+    private bool _isPanning;
+    private Point _lastPanPoint;
+    private Vector _panOffset;
 
     public EarthquakeMapView()
     {
@@ -36,6 +40,8 @@ public partial class EarthquakeMapView : UserControl
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        StopPanning();
+        _panOffset = default;
         if (ViewModel is not null)
         {
             ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
@@ -49,12 +55,26 @@ public partial class EarthquakeMapView : UserControl
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(EarthquakeMapViewModel.FocusedCoordinate))
+        {
+            _panOffset = default;
+        }
+
+        if (ViewModel?.FollowSelection == true &&
+            e.PropertyName is nameof(EarthquakeMapViewModel.FollowSelection)
+                or nameof(EarthquakeMapViewModel.EffectiveFocusMode)
+                or nameof(EarthquakeMapViewModel.HasSelectedEvent))
+        {
+            _panOffset = default;
+        }
+
         if (e.PropertyName is nameof(EarthquakeMapViewModel.Areas)
             or nameof(EarthquakeMapViewModel.Municipalities)
             or nameof(EarthquakeMapViewModel.BoundaryLayers)
             or nameof(EarthquakeMapViewModel.Markers)
             or nameof(EarthquakeMapViewModel.ZoomLevel)
             or nameof(EarthquakeMapViewModel.FocusedCoordinate)
+            or nameof(EarthquakeMapViewModel.FollowSelection)
             or nameof(EarthquakeMapViewModel.EffectiveFocusMode)
             or nameof(EarthquakeMapViewModel.HasSelectedEvent))
         {
@@ -89,11 +109,13 @@ public partial class EarthquakeMapView : UserControl
 
     private void OnResetViewClick(object sender, RoutedEventArgs e)
     {
+        _panOffset = default;
         ViewModel?.ResetView();
     }
 
     private void OnFocusSelectedClick(object sender, RoutedEventArgs e)
     {
+        _panOffset = default;
         ViewModel?.FocusSelectedEvent();
     }
 
@@ -101,8 +123,113 @@ public partial class EarthquakeMapView : UserControl
     {
         if (ViewModel is not null && sender is CheckBox checkBox)
         {
+            if (checkBox.IsChecked == true)
+            {
+                _panOffset = default;
+            }
+
             ViewModel.SetFollowSelection(checkBox.IsChecked == true);
         }
+    }
+
+    private void OnMapMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left || ViewModel is null)
+        {
+            return;
+        }
+
+        ViewModel.BeginManualInteraction();
+        _isPanning = true;
+        _lastPanPoint = e.GetPosition(MapCanvas);
+        MapCanvas.CaptureMouse();
+        Cursor = Cursors.SizeAll;
+        e.Handled = true;
+    }
+
+    private void OnMapMouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_isPanning || !MapCanvas.IsMouseCaptured)
+        {
+            return;
+        }
+
+        Point currentPoint = e.GetPosition(MapCanvas);
+        Vector delta = currentPoint - _lastPanPoint;
+        if (delta.LengthSquared > 0)
+        {
+            _panOffset += delta;
+            _lastPanPoint = currentPoint;
+            RequestRender();
+        }
+
+        e.Handled = true;
+    }
+
+    private void OnMapMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left || !_isPanning)
+        {
+            return;
+        }
+
+        StopPanning();
+        e.Handled = true;
+    }
+
+    private void OnMapLostMouseCapture(object sender, MouseEventArgs e)
+    {
+        StopPanning();
+    }
+
+    private void OnMapMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (ViewModel is null || MapCanvas.ActualWidth < 10 || MapCanvas.ActualHeight < 10)
+        {
+            return;
+        }
+
+        Point anchor = e.GetPosition(MapCanvas);
+        ViewModel.BeginManualInteraction();
+        MapProjection before = CreateProjection();
+        GeoCoordinate anchorCoordinate = before.Unproject(anchor);
+        double previousZoom = ViewModel.ZoomLevel;
+        if (e.Delta > 0)
+        {
+            ViewModel.ZoomIn();
+        }
+        else if (e.Delta < 0)
+        {
+            ViewModel.ZoomOut();
+        }
+
+        if (Math.Abs(previousZoom - ViewModel.ZoomLevel) >= 0.001)
+        {
+            MapProjection after = CreateProjection();
+            Point projectedAnchor = after.Project(anchorCoordinate);
+            _panOffset += new Vector(
+                anchor.X - projectedAnchor.X,
+                anchor.Y - projectedAnchor.Y);
+            RequestRender();
+        }
+
+        e.Handled = true;
+    }
+
+    private void StopPanning()
+    {
+        if (!_isPanning)
+        {
+            return;
+        }
+
+        _isPanning = false;
+        if (MapCanvas.IsMouseCaptured)
+        {
+            MapCanvas.ReleaseMouseCapture();
+        }
+
+        Cursor = null;
     }
 
     private void RenderMap()
@@ -117,16 +244,7 @@ public partial class EarthquakeMapView : UserControl
             ViewModel.TryGetSelectedEventFocusCoordinate(out GeoCoordinate eventFocus)
                 ? eventFocus
                 : null;
-        MapProjection projection = MapProjection.Create(
-            ViewModel.Outline,
-            ViewModel.Municipalities,
-            ViewModel.Markers,
-            ViewModel.EffectiveFocusMode,
-            ViewModel.FocusedCoordinate,
-            selectedEventFocusCoordinate,
-            ViewModel.ZoomLevel,
-            MapCanvas.ActualWidth,
-            MapCanvas.ActualHeight);
+        MapProjection projection = CreateProjection(selectedEventFocusCoordinate);
         bool drawBaseOutlineStroke = ViewModel.BoundaryLayers.Count == 0;
 
         foreach (MapPolygonGeometry polygon in ViewModel.Outline)
@@ -191,6 +309,29 @@ public partial class EarthquakeMapView : UserControl
         {
             DrawMarker(marker, projection);
         }
+    }
+
+    private MapProjection CreateProjection(GeoCoordinate? selectedEventFocusCoordinate = null)
+    {
+        EarthquakeMapViewModel viewModel = ViewModel!;
+        if (selectedEventFocusCoordinate is null &&
+            viewModel.TryGetSelectedEventFocusCoordinate(out GeoCoordinate eventFocus))
+        {
+            selectedEventFocusCoordinate = eventFocus;
+        }
+
+        return MapProjection.Create(
+            viewModel.Outline,
+            viewModel.Municipalities,
+            viewModel.Markers,
+            viewModel.EffectiveFocusMode,
+            viewModel.FocusedCoordinate,
+            selectedEventFocusCoordinate,
+            viewModel.ZoomLevel,
+            MapCanvas.ActualWidth,
+            MapCanvas.ActualHeight,
+            _panOffset.X,
+            _panOffset.Y);
     }
 
     private static IReadOnlyList<ImmutableArray<GeoCoordinate>> GetRings(
@@ -340,6 +481,8 @@ public partial class EarthquakeMapView : UserControl
         private readonly double _centerLatitude;
         private readonly double _width;
         private readonly double _height;
+        private readonly double _panX;
+        private readonly double _panY;
 
         private MapProjection(
             double scale,
@@ -347,7 +490,9 @@ public partial class EarthquakeMapView : UserControl
             double centerLongitude,
             double centerLatitude,
             double width,
-            double height)
+            double height,
+            double panX,
+            double panY)
         {
             _scale = scale;
             _longitudeScaleFactor = longitudeScaleFactor;
@@ -355,6 +500,8 @@ public partial class EarthquakeMapView : UserControl
             _centerLatitude = centerLatitude;
             _width = width;
             _height = height;
+            _panX = panX;
+            _panY = panY;
         }
 
         public static MapProjection Create(
@@ -366,7 +513,9 @@ public partial class EarthquakeMapView : UserControl
             GeoCoordinate? selectedEventFocusCoordinate,
             double zoomLevel,
             double width,
-            double height)
+            double height,
+            double panX,
+            double panY)
         {
             MapGeometryBounds bounds = GetBounds(outline, municipalities, markers);
             double centerLongitude = (bounds.MinLongitude + bounds.MaxLongitude) / 2;
@@ -395,7 +544,9 @@ public partial class EarthquakeMapView : UserControl
                 centerLongitude,
                 centerLatitude,
                 width,
-                height);
+                height,
+                panX,
+                panY);
         }
 
         private static MapGeometryBounds GetBounds(
@@ -428,8 +579,18 @@ public partial class EarthquakeMapView : UserControl
         public Point Project(GeoCoordinate coordinate)
         {
             return new Point(
-                _width / 2 + (coordinate.Longitude - _centerLongitude) * _scale * _longitudeScaleFactor,
-                _height / 2 - (coordinate.Latitude - _centerLatitude) * _scale);
+                _width / 2 + (coordinate.Longitude - _centerLongitude) * _scale * _longitudeScaleFactor + _panX,
+                _height / 2 - (coordinate.Latitude - _centerLatitude) * _scale + _panY);
+        }
+
+        public GeoCoordinate Unproject(Point point)
+        {
+            return new GeoCoordinate(
+                _centerLatitude -
+                    (point.Y - _height / 2 - _panY) / _scale,
+                _centerLongitude +
+                    (point.X - _width / 2 - _panX) /
+                    (_scale * _longitudeScaleFactor));
         }
     }
 }

@@ -247,10 +247,30 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     public void SetFollowSelection(bool followSelection)
     {
         ThrowIfDisposed();
+        GeoCoordinate? previousFocusedCoordinate = _focusedCoordinate;
+        if (followSelection)
+        {
+            _focusedCoordinate = null;
+        }
+        else if (FollowSelection && TryGetSelectedEventFocusCoordinate(
+            out GeoCoordinate selectedEventFocus))
+        {
+            _focusedCoordinate = selectedEventFocus;
+        }
+
         _page.SetMapViewState(_page.State.Map with
         {
             FollowSelection = followSelection,
         });
+        if (previousFocusedCoordinate != _focusedCoordinate)
+        {
+            OnPropertyChanged(nameof(FocusedCoordinate));
+        }
+    }
+
+    public void BeginManualInteraction()
+    {
+        SetFollowSelection(false);
     }
 
     public void Dispose()

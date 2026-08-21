@@ -291,6 +291,17 @@ public sealed class EarthquakeMapViewModelTests
         map.ZoomOut();
         Assert.Equal(1, map.ZoomLevel, precision: 3);
 
+        Assert.True(map.FollowSelection);
+        map.BeginManualInteraction();
+        Assert.False(map.FollowSelection);
+        Assert.True(map.FocusedCoordinate.HasValue);
+        GeoCoordinate manualFocus = map.FocusedCoordinate.Value;
+        map.BeginManualInteraction();
+        Assert.Equal(manualFocus, map.FocusedCoordinate);
+        map.SetFollowSelection(true);
+        Assert.True(map.FollowSelection);
+        Assert.Null(map.FocusedCoordinate);
+
         map.FocusSelectedEvent();
         Assert.Equal(EarthquakeMapFocusMode.SelectedEvent, page.State.Map.FocusMode);
         map.SetFollowSelection(false);

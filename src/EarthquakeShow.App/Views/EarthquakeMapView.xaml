@@ -7,7 +7,14 @@
              d:DesignWidth="700"
              mc:Ignorable="d">
     <Grid Background="#B7D4E2">
-        <Canvas x:Name="MapCanvas" ClipToBounds="True" />
+        <Canvas x:Name="MapCanvas"
+                Background="Transparent"
+                ClipToBounds="True"
+                MouseLeftButtonDown="OnMapMouseLeftButtonDown"
+                MouseLeftButtonUp="OnMapMouseLeftButtonUp"
+                MouseMove="OnMapMouseMove"
+                MouseWheel="OnMapMouseWheel"
+                LostMouseCapture="OnMapLostMouseCapture" />
 
         <Border Margin="12"
                 Padding="9,6"
