@@ -63,6 +63,61 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
+        <Style x:Key="TreeIntensityBadgeBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="#E6EBEF" />
+            <Setter Property="BorderBrush" Value="#39454C" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IntensityKind}" Value="One">
+                    <Setter Property="Background" Value="#B8E6F2" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IntensityKind}" Value="Two">
+                    <Setter Property="Background" Value="#70D6C1" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IntensityKind}" Value="Three">
+                    <Setter Property="Background" Value="#FFE45E" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IntensityKind}" Value="Four">
+                    <Setter Property="Background" Value="#FFB347" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IntensityKind}" Value="FiveLower">
+                    <Setter Property="Background" Value="#FF7A45" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IntensityKind}" Value="FiveUpper">
+                    <Setter Property="Background" Value="#F04438" />
+                    <Setter Property="BorderBrush" Value="White" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IntensityKind}" Value="SixLower">
+                    <Setter Property="Background" Value="#D81B60" />
+                    <Setter Property="BorderBrush" Value="White" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IntensityKind}" Value="SixUpper">
+                    <Setter Property="Background" Value="#8E24AA" />
+                    <Setter Property="BorderBrush" Value="White" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IntensityKind}" Value="Seven">
+                    <Setter Property="Background" Value="#4A148C" />
+                    <Setter Property="BorderBrush" Value="White" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="TreeIntensityBadgeTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IntensityKind}" Value="FiveUpper">
+                    <Setter Property="Foreground" Value="White" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IntensityKind}" Value="SixLower">
+                    <Setter Property="Foreground" Value="White" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IntensityKind}" Value="SixUpper">
+                    <Setter Property="Foreground" Value="White" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IntensityKind}" Value="Seven">
+                    <Setter Property="Foreground" Value="White" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
     <TabControl x:Name="DetailsTabs">
@@ -349,6 +404,8 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <CheckBox Grid.Column="0"
                               VerticalAlignment="Center"
@@ -359,23 +416,71 @@
                                Foreground="{StaticResource MutedTextBrush}"
                                FontSize="11"
                                Text="{Binding ObservationCountText}" />
+                    <Button Grid.Column="2"
+                            Margin="8,0,0,0"
+                            Padding="8,4"
+                            AutomationProperties.Name="展开全部观测点"
+                            Click="OnExpandObservationTreeClick"
+                            Content="展开"
+                            ToolTip="展开全部区域、市町村和观测点" />
+                    <Button Grid.Column="3"
+                            Margin="4,0,0,0"
+                            Padding="8,4"
+                            AutomationProperties.Name="折叠全部观测点"
+                            Click="OnCollapseObservationTreeClick"
+                            Content="折叠"
+                            ToolTip="折叠全部区域、市町村和观测点" />
                 </Grid>
-                <ListView Grid.Row="2"
-                          AutomationProperties.Name="区域与观测点"
-                          ItemsSource="{Binding Observations}"
-                          SelectedItem="{Binding SelectedObservation}"
+                <TreeView x:Name="ObservationTreeView"
+                          Grid.Row="2"
+                          AutomationProperties.Name="区域、市町村与观测点"
+                          ItemsSource="{Binding ObservationTreeNodes}"
+                          SelectedItemChanged="OnObservationTreeSelectedItemChanged"
                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                           VirtualizingPanel.IsVirtualizing="True"
                           VirtualizingPanel.VirtualizationMode="Recycling">
-                    <ListView.View>
-                        <GridView AllowsColumnReorder="False">
-                            <GridViewColumn Width="43" DisplayMemberBinding="{Binding IntensityText}" Header="震度" />
-                            <GridViewColumn Width="55" DisplayMemberBinding="{Binding Kind}" Header="类别" />
-                            <GridViewColumn Width="155" DisplayMemberBinding="{Binding Name}" Header="名称" />
-                            <GridViewColumn Width="72" DisplayMemberBinding="{Binding LocationText}" Header="地图" />
-                        </GridView>
-                    </ListView.View>
-                </ListView>
+                    <TreeView.ItemContainerStyle>
+                        <Style TargetType="TreeViewItem">
+                            <Setter Property="IsExpanded" Value="True" />
+                            <Setter Property="Padding" Value="2" />
+                        </Style>
+                    </TreeView.ItemContainerStyle>
+                    <TreeView.ItemTemplate>
+                        <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                            <Grid Margin="0,2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="38" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0"
+                                        HorizontalAlignment="Left"
+                                        Padding="4,1"
+                                        Style="{StaticResource TreeIntensityBadgeBorderStyle}">
+                                    <TextBlock Style="{StaticResource TreeIntensityBadgeTextStyle}"
+                                               Text="{Binding IntensityText}" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="6,0,4,0">
+                                    <TextBlock FontWeight="SemiBold"
+                                               Text="{Binding Name}"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                                               FontSize="10"
+                                               TextTrimming="CharacterEllipsis">
+                                        <Run Text="{Binding Kind}" />
+                                        <Run Text=" · " />
+                                        <Run Text="{Binding Code}" />
+                                    </TextBlock>
+                                </StackPanel>
+                                <TextBlock Grid.Column="2"
+                                           VerticalAlignment="Center"
+                                           Foreground="{StaticResource MutedTextBrush}"
+                                           FontSize="10"
+                                           Text="{Binding LocationText}" />
+                            </Grid>
+                        </HierarchicalDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
             </Grid>
         </TabItem>
 

@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using EarthquakeShow.Core.Models;
@@ -71,6 +72,62 @@ public sealed record EarthquakeObservationItemViewModel(
     public string LocationText => Coordinate is null ? "位置未知" : "单击定位";
 }
 
+public sealed record EarthquakeObservationTreeNode(
+    string Kind,
+    string Name,
+    string Code,
+    string ParentText,
+    JmaIntensity Intensity,
+    string IntensityText,
+    GeoCoordinate? Coordinate,
+    EarthquakeObservationItemViewModel? Observation,
+    ImmutableArray<EarthquakeObservationTreeNode> Children)
+{
+    public string IntensityKind => Intensity.ToString();
+
+    public string LocationText => Observation?.LocationText ?? "--";
+
+    public string ChildCountText => Children.Length > 0 ? $"{Children.Length} 项" : string.Empty;
+
+    public bool IsLeaf => Children.IsDefaultOrEmpty;
+
+    public EarthquakeObservationTreeNode WithChildren(
+        IEnumerable<EarthquakeObservationTreeNode> children)
+    {
+        return this with { Children = children.ToImmutableArray() };
+    }
+
+    public static EarthquakeObservationTreeNode FromObservation(
+        EarthquakeObservationItemViewModel observation)
+    {
+        return new(
+            observation.Kind,
+            observation.Name,
+            observation.Code,
+            observation.ParentText,
+            observation.Intensity,
+            observation.IntensityText,
+            observation.Coordinate,
+            observation,
+            []);
+    }
+
+    public static EarthquakeObservationTreeNode CreateUnmapped(
+        IEnumerable<EarthquakeObservationTreeNode> children)
+    {
+        return new(
+            "未映射",
+            "未映射",
+            string.Empty,
+            string.Empty,
+            JmaIntensity.Unknown,
+            "不明",
+            null,
+            null,
+            children.ToImmutableArray());
+    }
+}
+
 public sealed record EarthquakeTimelineItemViewModel(
     string SourceId,
     string SourceMessageId,
@@ -93,8 +150,10 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
     private string _observationSearchText = string.Empty;
     private bool _showHighestOnly;
     private EarthquakeObservationItemViewModel? _selectedObservation;
+    private EarthquakeObservationTreeNode? _selectedObservationNode;
     private EarthquakeTimelineItemViewModel? _selectedTimelineItem;
     private IReadOnlyList<EarthquakeObservationItemViewModel> _allObservations = [];
+    private IReadOnlyList<EarthquakeObservationTreeNode> _allObservationTreeNodes = [];
     private bool _isDisposed;
 
     public EarthquakeDetailsViewModel(
@@ -135,6 +194,8 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
     public bool HasEventAssociations => EventAssociations.Count > 0;
 
     public IReadOnlyList<EarthquakeObservationItemViewModel> Observations { get; private set; } = [];
+
+    public IReadOnlyList<EarthquakeObservationTreeNode> ObservationTreeNodes { get; private set; } = [];
 
     public IReadOnlyList<EarthquakeTimelineItemViewModel> TimelineItems { get; private set; } = [];
 
@@ -194,6 +255,27 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
                 _map.FocusLocation(coordinate);
             }
         }
+    }
+
+    public EarthquakeObservationTreeNode? SelectedObservationNode
+    {
+        get => _selectedObservationNode;
+        private set
+        {
+            if (_selectedObservationNode == value)
+            {
+                return;
+            }
+
+            _selectedObservationNode = value;
+            OnPropertyChanged();
+            SelectedObservation = value?.Observation;
+        }
+    }
+
+    public void SelectObservationNode(EarthquakeObservationTreeNode? node)
+    {
+        SelectedObservationNode = node;
     }
 
     public EarthquakeTimelineItemViewModel? SelectedTimelineItem
@@ -296,7 +378,9 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             SourceDifferences = [];
             EventAssociations = [];
             _allObservations = [];
+            _allObservationTreeNodes = [];
             Observations = [];
+            ObservationTreeNodes = [];
             TimelineItems = [];
             RawPayload = "无原始数据";
             RawMetadataText = "未选择报文";
@@ -318,6 +402,7 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         SourceDifferences = BuildSourceDifferences(earthquakeEvent, report);
         EventAssociations = BuildEventAssociations(earthquakeEvent);
         _allObservations = BuildObservations(report);
+        _allObservationTreeNodes = BuildObservationTree(_allObservations);
         RebuildVisibleObservations();
         TimelineItems = BuildTimeline(earthquakeEvent, report);
         _selectedTimelineItem = TimelineItems.FirstOrDefault(item => item.IsSelected);
@@ -642,6 +727,83 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             .ToArray();
     }
 
+    private static IReadOnlyList<EarthquakeObservationTreeNode> BuildObservationTree(
+        IReadOnlyList<EarthquakeObservationItemViewModel> observations)
+    {
+        var areaNodes = new Dictionary<string, EarthquakeObservationTreeNode>(StringComparer.Ordinal);
+        var areaChildren = new Dictionary<string, List<EarthquakeObservationTreeNode>>(StringComparer.Ordinal);
+        var municipalityNodes = new Dictionary<string, EarthquakeObservationTreeNode>(StringComparer.Ordinal);
+        var municipalityChildren = new Dictionary<string, List<EarthquakeObservationTreeNode>>(StringComparer.Ordinal);
+        var unmappedNodes = new List<EarthquakeObservationTreeNode>();
+        var stationCodes = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (EarthquakeObservationItemViewModel observation in observations.Where(item => item.Kind == "区域"))
+        {
+            EarthquakeObservationTreeNode node = EarthquakeObservationTreeNode.FromObservation(observation);
+            if (string.IsNullOrWhiteSpace(observation.Code) ||
+                !areaNodes.TryAdd(observation.Code, node))
+            {
+                unmappedNodes.Add(node);
+                continue;
+            }
+
+            areaChildren[observation.Code] = [];
+        }
+
+        foreach (EarthquakeObservationItemViewModel observation in observations.Where(item => item.Kind == "市町村"))
+        {
+            EarthquakeObservationTreeNode node = EarthquakeObservationTreeNode.FromObservation(observation);
+            if (string.IsNullOrWhiteSpace(observation.Code) ||
+                !areaNodes.ContainsKey(observation.ParentText) ||
+                !municipalityNodes.TryAdd(observation.Code, node))
+            {
+                unmappedNodes.Add(node);
+                continue;
+            }
+
+            municipalityChildren[observation.Code] = [];
+            areaChildren[observation.ParentText].Add(node);
+        }
+
+        foreach (EarthquakeObservationItemViewModel observation in observations.Where(item => item.Kind == "观测点"))
+        {
+            EarthquakeObservationTreeNode node = EarthquakeObservationTreeNode.FromObservation(observation);
+            if (string.IsNullOrWhiteSpace(observation.Code) ||
+                !municipalityNodes.ContainsKey(observation.ParentText) ||
+                !stationCodes.Add(observation.Code))
+            {
+                unmappedNodes.Add(node);
+                continue;
+            }
+
+            municipalityChildren[observation.ParentText].Add(node);
+        }
+
+        var roots = new List<EarthquakeObservationTreeNode>();
+        foreach (EarthquakeObservationTreeNode area in areaNodes.Values)
+        {
+            var municipalities = areaChildren[area.Code]
+                .Select(municipality => municipality.WithChildren(
+                    municipalityChildren[municipality.Code]
+                        .OrderByDescending(item => item.Intensity)
+                        .ThenBy(item => item.Name, StringComparer.Ordinal)))
+                .OrderByDescending(item => item.Intensity)
+                .ThenBy(item => item.Name, StringComparer.Ordinal);
+            roots.Add(area.WithChildren(municipalities));
+        }
+
+        if (unmappedNodes.Count > 0)
+        {
+            roots.Add(EarthquakeObservationTreeNode.CreateUnmapped(unmappedNodes));
+        }
+
+        return roots
+            .OrderByDescending(item => item.Kind == "未映射" ? JmaIntensity.Unknown : item.Intensity)
+            .ThenBy(item => item.Kind == "未映射" ? 1 : 0)
+            .ThenBy(item => item.Name, StringComparer.Ordinal)
+            .ToArray();
+    }
+
     private static IReadOnlyList<EarthquakeTimelineItemViewModel> BuildTimeline(
         EarthquakeEvent earthquakeEvent,
         EarthquakeReport selectedReport)
@@ -679,30 +841,76 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
 
     private void RebuildVisibleObservations()
     {
-        IEnumerable<EarthquakeObservationItemViewModel> query = _allObservations;
-        if (_observationSearchText.Length > 0)
-        {
-            query = query.Where(item =>
-                Contains(item.Name, _observationSearchText) ||
-                Contains(item.Code, _observationSearchText) ||
-                Contains(item.ParentText, _observationSearchText));
-        }
+        JmaIntensity? highest = null;
 
         if (_showHighestOnly && _allObservations.Count > 0)
         {
-            JmaIntensity highest = _allObservations
+            highest = _allObservations
                 .Where(item => item.Intensity != JmaIntensity.Unknown)
                 .Select(item => item.Intensity)
                 .DefaultIfEmpty(JmaIntensity.Unknown)
                 .Max();
-            query = query.Where(item => item.Intensity == highest);
         }
 
-        Observations = query.ToArray();
+        ObservationTreeNodes = _allObservationTreeNodes
+            .Select(node => FilterObservationTree(node, highest))
+            .Where(node => node is not null)
+            .Select(node => node!)
+            .ToArray();
+        Observations = ObservationTreeNodes
+            .SelectMany(FlattenObservationNodes)
+            .Where(node => node.Observation is not null)
+            .Select(node => node.Observation!)
+            .ToArray();
         _selectedObservation = null;
+        _selectedObservationNode = null;
         OnPropertyChanged(nameof(Observations));
+        OnPropertyChanged(nameof(ObservationTreeNodes));
         OnPropertyChanged(nameof(ObservationCountText));
         OnPropertyChanged(nameof(SelectedObservation));
+        OnPropertyChanged(nameof(SelectedObservationNode));
+    }
+
+    private static IEnumerable<EarthquakeObservationTreeNode> FlattenObservationNodes(
+        EarthquakeObservationTreeNode node)
+    {
+        yield return node;
+        foreach (EarthquakeObservationTreeNode child in node.Children.SelectMany(FlattenObservationNodes))
+        {
+            yield return child;
+        }
+    }
+
+    private EarthquakeObservationTreeNode? FilterObservationTree(
+        EarthquakeObservationTreeNode node,
+        JmaIntensity? highest)
+    {
+        bool matchesSearch = _observationSearchText.Length == 0 ||
+            Contains(node.Name, _observationSearchText) ||
+            Contains(node.Code, _observationSearchText) ||
+            Contains(node.ParentText, _observationSearchText) ||
+            Contains(node.Kind, _observationSearchText);
+
+        EarthquakeObservationTreeNode[] children = node.Children
+            .Select(child => FilterObservationTree(child, highest))
+            .Where(child => child is not null)
+            .Select(child => child!)
+            .ToArray();
+
+        if (node.IsLeaf)
+        {
+            bool matchesIntensity = highest is null ||
+                node.Observation is null ||
+                node.Intensity == highest.Value;
+            return matchesSearch && matchesIntensity ? node : null;
+        }
+
+        if (matchesSearch && highest is null)
+        {
+            return node;
+        }
+
+        return children.Length > 0 ? node.WithChildren(children) : null;
     }
 
     private void SelectRelativeReport(int offset)
@@ -1037,11 +1245,13 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         OnPropertyChanged(nameof(EventAssociations));
         OnPropertyChanged(nameof(HasEventAssociations));
         OnPropertyChanged(nameof(Observations));
+        OnPropertyChanged(nameof(ObservationTreeNodes));
         OnPropertyChanged(nameof(TimelineItems));
         OnPropertyChanged(nameof(RawPayload));
         OnPropertyChanged(nameof(RawMetadataText));
         OnPropertyChanged(nameof(ObservationCountText));
         OnPropertyChanged(nameof(SelectedObservation));
+        OnPropertyChanged(nameof(SelectedObservationNode));
         OnPropertyChanged(nameof(SelectedTimelineItem));
         OnPropertyChanged(nameof(CanGoPrevious));
         OnPropertyChanged(nameof(CanGoNext));

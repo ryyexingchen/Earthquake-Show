@@ -39,6 +39,51 @@ public partial class EarthquakeDetailsView : UserControl
         ViewModel?.FocusHypocenter();
     }
 
+    private void OnObservationTreeSelectedItemChanged(
+        object sender,
+        RoutedPropertyChangedEventArgs<object> e)
+    {
+        if (e.NewValue is EarthquakeObservationTreeNode node)
+        {
+            ViewModel?.SelectObservationNode(node);
+        }
+    }
+
+    private void OnExpandObservationTreeClick(object sender, RoutedEventArgs e)
+    {
+        SetObservationTreeExpanded(true);
+    }
+
+    private void OnCollapseObservationTreeClick(object sender, RoutedEventArgs e)
+    {
+        SetObservationTreeExpanded(false);
+    }
+
+    private void SetObservationTreeExpanded(bool isExpanded)
+    {
+        foreach (object item in ObservationTreeView.Items)
+        {
+            if (ObservationTreeView.ItemContainerGenerator.ContainerFromItem(item)
+                is TreeViewItem container)
+            {
+                SetTreeItemExpanded(container, isExpanded);
+            }
+        }
+    }
+
+    private static void SetTreeItemExpanded(TreeViewItem item, bool isExpanded)
+    {
+        item.IsExpanded = isExpanded;
+        item.UpdateLayout();
+        foreach (object child in item.Items)
+        {
+            if (item.ItemContainerGenerator.ContainerFromItem(child) is TreeViewItem childContainer)
+            {
+                SetTreeItemExpanded(childContainer, isExpanded);
+            }
+        }
+    }
+
     private void OnShowRawDataClick(object sender, RoutedEventArgs e)
     {
         DetailsTabs.SelectedIndex = 3;

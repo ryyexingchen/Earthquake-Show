@@ -94,6 +94,71 @@ public sealed class EarthquakeDetailsViewModelTests
     }
 
     [Fact]
+    public async Task Details_BuildsObservationTreeAndKeepsUnmappedStation()
+    {
+        EarthquakeReport report = CreateReport(
+            "tree",
+            BaseTime,
+            intensity: JmaIntensity.Four) with
+        {
+            IntensityMunicipalities =
+            [
+                new IntensityMunicipality("C1", "熊本市", "741", JmaIntensity.Four),
+            ],
+            IntensityStations =
+            [
+                new IntensityStation(
+                    "KMM001",
+                    "熊本观测点",
+                    "C1",
+                    JmaIntensity.Four,
+                    new GeoCoordinate(32.81, 130.71)),
+                new IntensityStation(
+                    "KMM002",
+                    "未映射观测点",
+                    "MISSING",
+                    JmaIntensity.Two,
+                    null),
+            ],
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+        using var details = new EarthquakeDetailsViewModel(page, map);
+
+        EarthquakeObservationTreeNode area = Assert.Single(
+            details.ObservationTreeNodes,
+            node => node.Kind == "区域");
+        EarthquakeObservationTreeNode municipality = Assert.Single(
+            area.Children,
+            node => node.Kind == "市町村");
+        EarthquakeObservationTreeNode station = Assert.Single(
+            municipality.Children,
+            node => node.Kind == "观测点");
+        Assert.Equal("C1", municipality.Code);
+        Assert.Equal("KMM001", station.Code);
+
+        EarthquakeObservationTreeNode unmapped = Assert.Single(
+            details.ObservationTreeNodes,
+            node => node.Kind == "未映射");
+        Assert.Contains(unmapped.Children, node => node.Code == "KMM002");
+
+        details.SelectObservationNode(station);
+        Assert.Equal(station.Observation?.Coordinate, map.FocusedCoordinate);
+
+        details.ObservationSearchText = "熊本市";
+        Assert.Single(details.ObservationTreeNodes);
+        Assert.Equal("熊本市", details.ObservationTreeNodes[0].Children[0].Name);
+        details.ObservationSearchText = string.Empty;
+        details.ShowHighestOnly = true;
+        Assert.Contains(details.ObservationTreeNodes, node => node.Kind == "区域");
+        Assert.DoesNotContain(details.ObservationTreeNodes, node => node.Kind == "未映射");
+    }
+
+    [Fact]
     public async Task Details_RawPayloadIsPreservedAndTimelineNavigationStopsAtBounds()
     {
         const string raw = "<Report>原始内容</Report>";
