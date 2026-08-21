@@ -110,3 +110,5 @@ JMA 页面说明地图制作使用了国土地理院数据。发布前仍需记�
 - 三个当前关键包 `AreaForecastLocalE`、`AreaInformationCity_quake`、`AreaTsunami` 已通过现有严格资源审计工具。
 - 四个派生文件已进入 `src/EarthquakeShow.App/Assets/Data/Map/`，项目的通配复制规则会将其带入构建输出；当前入口使用低内存概览层。
 - 高精度层用于后续地图放大或详情页按需加载，不用于应用启动阶段的全国概览；市町村概览层随应用启动加载，当前事件只绘制代码匹配的市町村。
+
+`0.33.1` 已使用 `tools/generate_jma_boundary_topology.py` 从未简化的 `20240520_AreaForecastLocalE_GIS.zip` 生成带无方向相邻代码 `areaCode1/areaCode2` 的 `LineString` 候选资源。工具通过 SQLite 临时索引处理约 1,032 万条原始线段，并支持连续边合并、线简化和微小环过滤；概览参数输出约 3.35 MB。当前报告仍有 1,128 个开放链端点，候选资源暂不进入 App；下一步先区分正常过滤/分叉与需要非端点交点拆分的异常。
