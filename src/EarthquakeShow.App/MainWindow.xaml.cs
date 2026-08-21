@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows;
 
 namespace EarthquakeShow.App;
@@ -9,6 +10,8 @@ public partial class MainWindow : Window
 {
     private readonly ViewModels.MainWindowViewModel _viewModel;
     private bool _isInitialized;
+    private bool _isClosing;
+    private bool _isShutdownComplete;
 
     public MainWindow()
         : this(null, enableNetwork: true)
@@ -65,7 +68,7 @@ public partial class MainWindow : Window
     protected override async void OnContentRendered(EventArgs e)
     {
         base.OnContentRendered(e);
-        if (_isInitialized)
+        if (_isInitialized || _isClosing || _isShutdownComplete)
         {
             return;
         }
@@ -77,6 +80,33 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
+        }
+    }
+
+    protected override async void OnClosing(CancelEventArgs e)
+    {
+        base.OnClosing(e);
+        if (e.Cancel || _isShutdownComplete)
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        if (_isClosing)
+        {
+            return;
+        }
+
+        _isClosing = true;
+        try
+        {
+            await _viewModel.DisposeAsync();
+        }
+        finally
+        {
+            _isShutdownComplete = true;
+            _isClosing = false;
+            _ = Dispatcher.BeginInvoke(new Action(Close));
         }
     }
 

@@ -7,6 +7,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 using EarthquakeShow.Core.Models;
 using EarthquakeShow.Infrastructure.Persistence;
 using EarthquakeShow.Infrastructure.Sources;
@@ -147,7 +148,14 @@ public sealed class MainWindowViewModelTests
                 Assert.Equal(
                     Colors.White,
                     Assert.IsType<SolidColorBrush>(badgeText.Foreground).Color);
+                var closeFrame = new DispatcherFrame();
+                window.Closed += (_, _) => closeFrame.Continue = false;
+                app.MainWindow = window;
+                window.Show();
                 window.Close();
+                Dispatcher.PushFrame(closeFrame);
+                Assert.Equal(ShutdownMode.OnMainWindowClose, app.ShutdownMode);
+                Assert.False(window.IsVisible);
                 app.Shutdown();
             }
             catch (Exception exception)
@@ -201,8 +209,8 @@ public sealed class MainWindowViewModelTests
                 "WebSocket：已连接 · 活性：等待首条消息",
                 viewModel.EarthquakePage.Display.WebSocketStatusText);
 
-            viewModel.Dispose();
-            await source.Stopped.WaitAsync(TimeSpan.FromSeconds(2));
+            await viewModel.DisposeAsync();
+            Assert.True(source.Stopped.IsCompletedSuccessfully);
         }
         finally
         {

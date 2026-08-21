@@ -13,7 +13,7 @@ using EarthquakeShow.Infrastructure.Persistence;
 
 namespace EarthquakeShow.App.ViewModels;
 
-public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
+public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, IAsyncDisposable
 {
     private static readonly TimeZoneInfo JapanTimeZone =
         TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time");
@@ -32,6 +32,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly RefreshBackoffPolicy _refreshBackoffPolicy = new();
     private Task? _refreshLoopTask;
     private Task? _streamingLoopTask;
+    private Task? _initializationTask;
+    private Task? _disposeTask;
     private CancellationTokenSource? _streamingSessionCancellation;
     private string _currentTime = string.Empty;
     private string _cacheStatus = "缓存：初始化中";
@@ -39,6 +41,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private ApplicationSettings _applicationSettings;
     private bool _isInitialized;
     private bool _isDisposed;
+    private bool _resourcesDisposed;
 
     public MainWindowViewModel(
         string? cachePath = null,
@@ -60,7 +63,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 Timeout = TimeSpan.FromSeconds(15),
             };
-            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.35.0");
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.35.1");
             _realtimeSource = new JmaJsonEarthquakeSource(_httpClient);
             JmaXmlEarthquakeSource xmlSource = new(
                 _httpClient,
@@ -186,12 +189,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public SettingsViewModel Settings { get; }
 
-    public async ValueTask InitializeAsync(
+    public ValueTask InitializeAsync(
         CancellationToken cancellationToken = default)
     {
-        CancellationToken token = cancellationToken.CanBeCanceled
-            ? cancellationToken
-            : _lifetimeCancellation.Token;
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
+        _initializationTask ??= InitializeCoreAsync(cancellationToken);
+        return new ValueTask(_initializationTask);
+    }
+
+    private async Task InitializeCoreAsync(CancellationToken cancellationToken)
+    {
+        using CancellationTokenSource? linkedCancellation = cancellationToken.CanBeCanceled
+            ? CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken,
+                _lifetimeCancellation.Token)
+            : null;
+        CancellationToken token = linkedCancellation?.Token ?? _lifetimeCancellation.Token;
         await _repository.InitializeAsync(_seedReports, token);
         CacheStatus = _repository.CacheStatus;
         EarthquakePage.SetSourceState(
@@ -214,22 +227,89 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public void Dispose()
     {
-        if (_isDisposed)
+        _ = GetOrStartDisposeTask();
+    }
+
+    public ValueTask DisposeAsync() => new(GetOrStartDisposeTask());
+
+    private Task GetOrStartDisposeTask()
+    {
+        _disposeTask ??= DisposeAsyncCore();
+        return _disposeTask;
+    }
+
+    private async Task DisposeAsyncCore()
+    {
+        if (!BeginDispose())
         {
             return;
+        }
+
+        try
+        {
+            await AwaitShutdownTaskAsync(_initializationTask).ConfigureAwait(true);
+            await AwaitShutdownTaskAsync(_refreshLoopTask).ConfigureAwait(true);
+            await AwaitShutdownTaskAsync(_streamingLoopTask).ConfigureAwait(true);
+            await _streamingRestartGate.WaitAsync().ConfigureAwait(true);
+            _streamingRestartGate.Release();
+        }
+        finally
+        {
+            DisposeResources();
+        }
+    }
+
+    private bool BeginDispose()
+    {
+        if (_isDisposed)
+        {
+            return false;
         }
 
         _isDisposed = true;
         _streamingSessionCancellation?.Cancel();
         _lifetimeCancellation.Cancel();
-        _httpClient?.Dispose();
         _clockTimer.Stop();
         _clockTimer.Tick -= OnClockTick;
+        return true;
+    }
+
+    private void DisposeResources()
+    {
+        if (_resourcesDisposed)
+        {
+            return;
+        }
+
+        _resourcesDisposed = true;
         Details.Dispose();
         Map.Dispose();
         EventList.Dispose();
         EarthquakePage.Dispose();
+        _httpClient?.Dispose();
+        _streamingSessionCancellation?.Dispose();
+        _streamingSessionCancellation = null;
+        _streamingRestartGate.Dispose();
         _lifetimeCancellation.Dispose();
+    }
+
+    private static async Task AwaitShutdownTaskAsync(Task? task)
+    {
+        if (task is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await task.ConfigureAwait(true);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (ObjectDisposedException)
+        {
+        }
     }
 
     public void OpenSettings() => Settings.IsVisible = true;
