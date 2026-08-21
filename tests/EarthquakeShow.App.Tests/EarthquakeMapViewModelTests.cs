@@ -118,6 +118,61 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public async Task SelectedEvent_BuildsBoundaryLayersFromAdjacentAreaIntensity()
+    {
+        EarthquakeReport report = CreateReport() with
+        {
+            IntensityAreas =
+            [
+                new IntensityArea("A", "区域 A", "01", "都道府県 A", JmaIntensity.Four),
+                new IntensityArea("A", "区域 A（未知）", "01", "都道府県 A", JmaIntensity.Unknown),
+                new IntensityArea("B", "区域 B", "02", "都道府県 B", JmaIntensity.SixUpper),
+            ],
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson),
+            boundaryGeometry: OfflineMapBoundaryGeometry.LoadFromJson(BoundaryGeometryJson));
+
+        Assert.Equal(
+            [JmaIntensity.Unknown, JmaIntensity.Four, JmaIntensity.SixUpper],
+            map.BoundaryLayers.Select(layer => layer.Intensity));
+        Assert.Single(map.BoundaryLayers[0].Boundaries);
+        Assert.Equal("D", map.BoundaryLayers[0].Boundaries[0].AreaCode1);
+        Assert.Single(map.BoundaryLayers[1].Boundaries);
+        Assert.Equal("A", map.BoundaryLayers[1].Boundaries[0].AreaCode1);
+        Assert.Equal("", map.BoundaryLayers[1].Boundaries[0].AreaCode2);
+        Assert.Equal(2, map.BoundaryLayers[2].Boundaries.Length);
+        Assert.Contains(map.BoundaryLayers[2].Boundaries, boundary =>
+            boundary.AreaCode1 == "A" && boundary.AreaCode2 == "B");
+        Assert.Contains(map.BoundaryLayers[2].Boundaries, boundary =>
+            boundary.AreaCode1 == "C" && boundary.AreaCode2 == "B");
+    }
+
+    [Fact]
+    public async Task SelectedEvent_UsesUnknownBoundaryLayerWhenNoAreaHasValidIntensity()
+    {
+        EarthquakeReport report = CreateReport() with
+        {
+            IntensityAreas = [],
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson),
+            boundaryGeometry: OfflineMapBoundaryGeometry.LoadFromJson(BoundaryGeometryJson));
+
+        EarthquakeMapBoundaryLayer layer = Assert.Single(map.BoundaryLayers);
+        Assert.Equal(JmaIntensity.Unknown, layer.Intensity);
+        Assert.Equal(4, layer.Boundaries.Length);
+    }
+
+    [Fact]
     public async Task SelectedEvent_ProvidesFocusCoordinateForMappedArea()
     {
         var report = CreateReport();
@@ -344,6 +399,35 @@ public sealed class EarthquakeMapViewModelTests
                 "type": "Polygon",
                 "coordinates": [[[130.5,32.5],[130.9,32.5],[130.9,32.9],[130.5,32.9],[130.5,32.5]]]
               }
+            }
+          ]
+        }
+        """;
+
+    private const string BoundaryGeometryJson = """
+        {
+          "type": "FeatureCollection",
+          "metadata": { "source": "测试区域边界", "officialBoundary": true },
+          "features": [
+            {
+              "type": "Feature",
+              "properties": { "areaCode1": "A", "areaCode2": "B" },
+              "geometry": { "type": "LineString", "coordinates": [[130,32],[131,32]] }
+            },
+            {
+              "type": "Feature",
+              "properties": { "areaCode1": "A", "areaCode2": "" },
+              "geometry": { "type": "LineString", "coordinates": [[130,33],[131,33]] }
+            },
+            {
+              "type": "Feature",
+              "properties": { "areaCode1": "C", "areaCode2": "B" },
+              "geometry": { "type": "LineString", "coordinates": [[130,34],[131,34]] }
+            },
+            {
+              "type": "Feature",
+              "properties": { "areaCode1": "D", "areaCode2": "E" },
+              "geometry": { "type": "LineString", "coordinates": [[130,35],[131,35]] }
             }
           ]
         }

@@ -37,6 +37,10 @@ public sealed record EarthquakeMapMarker(
     GeoCoordinate Coordinate,
     JmaIntensity Intensity);
 
+public sealed record EarthquakeMapBoundaryLayer(
+    JmaIntensity Intensity,
+    ImmutableArray<EarthquakeMapBoundary> Boundaries);
+
 public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly EarthquakePageViewModel _page;
@@ -84,6 +88,8 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     public IReadOnlyList<EarthquakeMapArea> Areas { get; private set; } = [];
 
     public IReadOnlyList<EarthquakeMapMunicipality> Municipalities { get; private set; } = [];
+
+    public IReadOnlyList<EarthquakeMapBoundaryLayer> BoundaryLayers { get; private set; } = [];
 
     public IReadOnlyList<EarthquakeMapMarker> Markers { get; private set; } = [];
 
@@ -283,11 +289,14 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             Areas = [];
             Municipalities = [];
             Markers = [];
+            BoundaryLayers = [];
             UnmappedAreaCount = 0;
             UnmappedMunicipalityCount = 0;
             RaiseLayerProperties();
             return;
         }
+
+        BoundaryLayers = BuildBoundaryLayers(report);
 
         var geometryByCode = Outline
             .Where(item => item.Code.Length > 0)
@@ -379,11 +388,74 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         RaiseLayerProperties();
     }
 
+    private IReadOnlyList<EarthquakeMapBoundaryLayer> BuildBoundaryLayers(
+        EarthquakeReport report)
+    {
+        if (_boundaryGeometry is null || _boundaryGeometry.Boundaries.IsDefaultOrEmpty)
+        {
+            return [];
+        }
+
+        var intensityByArea = new Dictionary<string, JmaIntensity>(StringComparer.Ordinal);
+        foreach (IntensityArea area in report.IntensityAreas)
+        {
+            string code = area.Code.Trim();
+            if (code.Length == 0 || !IsKnownIntensity(area.MaxIntensity))
+            {
+                continue;
+            }
+
+            if (!intensityByArea.TryGetValue(code, out JmaIntensity current) ||
+                area.MaxIntensity > current)
+            {
+                intensityByArea[code] = area.MaxIntensity;
+            }
+        }
+
+        return _boundaryGeometry.Boundaries
+            .GroupBy(boundary => ResolveBoundaryIntensity(boundary, intensityByArea))
+            .OrderBy(group => (int)group.Key)
+            .Select(group => new EarthquakeMapBoundaryLayer(
+                group.Key,
+                group.ToImmutableArray()))
+            .ToArray();
+    }
+
+    private static JmaIntensity ResolveBoundaryIntensity(
+        EarthquakeMapBoundary boundary,
+        IReadOnlyDictionary<string, JmaIntensity> intensityByArea)
+    {
+        bool hasFirst = intensityByArea.TryGetValue(
+            boundary.AreaCode1,
+            out JmaIntensity first);
+        JmaIntensity second = JmaIntensity.Unknown;
+        bool hasSecond = boundary.AreaCode2.Length > 0 &&
+            intensityByArea.TryGetValue(boundary.AreaCode2, out second);
+
+        if (hasFirst && hasSecond)
+        {
+            return first >= second ? first : second;
+        }
+
+        if (hasFirst)
+        {
+            return first;
+        }
+
+        return hasSecond ? second : JmaIntensity.Unknown;
+    }
+
+    private static bool IsKnownIntensity(JmaIntensity intensity)
+    {
+        return intensity is >= JmaIntensity.One and <= JmaIntensity.Seven;
+    }
+
     private void RaiseLayerProperties()
     {
         OnPropertyChanged(nameof(Areas));
         OnPropertyChanged(nameof(Municipalities));
         OnPropertyChanged(nameof(Markers));
+        OnPropertyChanged(nameof(BoundaryLayers));
         OnPropertyChanged(nameof(FocusMode));
         OnPropertyChanged(nameof(FollowSelection));
         OnPropertyChanged(nameof(EffectiveFocusMode));
