@@ -15,7 +15,11 @@ public sealed record EarthquakeMapArea(
     string Code,
     string Name,
     JmaIntensity Intensity,
-    ImmutableArray<GeoCoordinate> Coordinates);
+    ImmutableArray<GeoCoordinate> Coordinates)
+{
+    public ImmutableArray<ImmutableArray<GeoCoordinate>> Rings { get; init; } =
+        ImmutableArray.Create(Coordinates);
+}
 
 public sealed record EarthquakeMapMarker(
     EarthquakeMapMarkerKind Kind,
@@ -50,6 +54,12 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     public string GeometrySource => _geometry.Source;
 
     public bool IsOfficialBoundary => _geometry.IsOfficialBoundary;
+
+    public MapGeometryBounds GeometryBounds => _geometry.Bounds;
+
+    public int InvalidGeometryCount => _geometry.InvalidGeometryCount;
+
+    public int UnmappedAreaCount { get; private set; }
 
     public IReadOnlyList<EarthquakeMapArea> Areas { get; private set; } = [];
 
@@ -193,6 +203,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         {
             Areas = [];
             Markers = [];
+            UnmappedAreaCount = 0;
             RaiseLayerProperties();
             return;
         }
@@ -200,15 +211,31 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         var geometryByCode = Outline
             .Where(item => item.Code.Length > 0)
             .GroupBy(item => item.Code, StringComparer.Ordinal)
-            .ToDictionary(item => item.Key, item => item.First(), StringComparer.Ordinal);
+            .ToDictionary(item => item.Key, item => item.ToArray(), StringComparer.Ordinal);
+        UnmappedAreaCount = 0;
         Areas = report.IntensityAreas
-            .Select(area => geometryByCode.TryGetValue(area.Code, out MapPolygonGeometry? polygon)
-                ? new EarthquakeMapArea(
+            .Select(area =>
+            {
+                if (!geometryByCode.TryGetValue(area.Code, out MapPolygonGeometry[]? polygons))
+                {
+                    UnmappedAreaCount++;
+                    return null;
+                }
+
+                ImmutableArray<ImmutableArray<GeoCoordinate>> rings = polygons
+                    .SelectMany(item => item.Rings.IsDefaultOrEmpty
+                        ? [item.Coordinates]
+                        : item.Rings)
+                    .ToImmutableArray();
+                return new EarthquakeMapArea(
                     area.Code,
                     area.Name,
                     area.MaxIntensity,
-                    polygon.Coordinates)
-                : null)
+                    rings[0])
+                {
+                    Rings = rings,
+                };
+            })
             .Where(area => area is not null)
             .Select(area => area!)
             .ToArray();
@@ -245,6 +272,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(HasDrawableLayers));
         OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(FocusedCoordinate));
+        OnPropertyChanged(nameof(UnmappedAreaCount));
     }
 
     private void ThrowIfDisposed()

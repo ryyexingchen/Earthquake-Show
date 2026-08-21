@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -97,9 +98,9 @@ public partial class EarthquakeMapView : UserControl
 
         foreach (MapPolygonGeometry polygon in ViewModel.Outline)
         {
-            var shape = new Polygon
+            var shape = new Path
             {
-                Points = ToPointCollection(polygon.Coordinates, projection),
+                Data = ToPathGeometry(GetRings(polygon.Rings, polygon.Coordinates), projection),
                 Fill = new SolidColorBrush(OutlineFill),
                 Stroke = new SolidColorBrush(OutlineStroke),
                 StrokeThickness = 1,
@@ -110,9 +111,9 @@ public partial class EarthquakeMapView : UserControl
 
         foreach (EarthquakeMapArea area in ViewModel.Areas)
         {
-            var shape = new Polygon
+            var shape = new Path
             {
-                Points = ToPointCollection(area.Coordinates, projection),
+                Data = ToPathGeometry(GetRings(area.Rings, area.Coordinates), projection),
                 Fill = new SolidColorBrush(GetIntensityColor(area.Intensity, 180)),
                 Stroke = new SolidColorBrush(GetIntensityColor(area.Intensity, 235)),
                 StrokeThickness = 1.2,
@@ -127,17 +128,40 @@ public partial class EarthquakeMapView : UserControl
         }
     }
 
-    private static PointCollection ToPointCollection(
-        IReadOnlyList<GeoCoordinate> coordinates,
+    private static IReadOnlyList<ImmutableArray<GeoCoordinate>> GetRings(
+        IReadOnlyList<ImmutableArray<GeoCoordinate>> rings,
+        ImmutableArray<GeoCoordinate> coordinates)
+    {
+        return rings.Count > 0 ? rings : [coordinates];
+    }
+
+    private static StreamGeometry ToPathGeometry(
+        IReadOnlyList<ImmutableArray<GeoCoordinate>> rings,
         MapProjection projection)
     {
-        var points = new PointCollection();
-        foreach (GeoCoordinate coordinate in coordinates)
+        var geometry = new StreamGeometry
         {
-            points.Add(projection.Project(coordinate));
+            FillRule = FillRule.EvenOdd,
+        };
+        using (StreamGeometryContext context = geometry.Open())
+        {
+            foreach (IReadOnlyList<GeoCoordinate> ring in rings)
+            {
+                if (ring.Count < 3)
+                {
+                    continue;
+                }
+
+                context.BeginFigure(projection.Project(ring[0]), true, true);
+                for (int index = 1; index < ring.Count; index++)
+                {
+                    context.LineTo(projection.Project(ring[index]), true, false);
+                }
+            }
         }
 
-        return points;
+        geometry.Freeze();
+        return geometry;
     }
 
     private void DrawMarker(EarthquakeMapMarker marker, MapProjection projection)
@@ -194,11 +218,8 @@ public partial class EarthquakeMapView : UserControl
 
     private sealed class MapProjection
     {
-        private const double MinLongitude = 126;
-        private const double MaxLongitude = 147;
-        private const double MinLatitude = 24;
-        private const double MaxLatitude = 47;
         private readonly double _scale;
+        private readonly double _longitudeScaleFactor;
         private readonly double _centerLongitude;
         private readonly double _centerLatitude;
         private readonly double _width;
@@ -206,12 +227,14 @@ public partial class EarthquakeMapView : UserControl
 
         private MapProjection(
             double scale,
+            double longitudeScaleFactor,
             double centerLongitude,
             double centerLatitude,
             double width,
             double height)
         {
             _scale = scale;
+            _longitudeScaleFactor = longitudeScaleFactor;
             _centerLongitude = centerLongitude;
             _centerLatitude = centerLatitude;
             _width = width;
@@ -227,8 +250,9 @@ public partial class EarthquakeMapView : UserControl
             double width,
             double height)
         {
-            double centerLongitude = (MinLongitude + MaxLongitude) / 2;
-            double centerLatitude = (MinLatitude + MaxLatitude) / 2;
+            MapGeometryBounds bounds = GetBounds(outline, markers);
+            double centerLongitude = (bounds.MinLongitude + bounds.MaxLongitude) / 2;
+            double centerLatitude = (bounds.MinLatitude + bounds.MaxLatitude) / 2;
             if (focusedCoordinate is GeoCoordinate location)
             {
                 centerLongitude = location.Longitude;
@@ -240,21 +264,48 @@ public partial class EarthquakeMapView : UserControl
                 centerLatitude = markers.Average(item => item.Coordinate.Latitude);
             }
 
+            double longitudeScaleFactor = Math.Max(
+                0.2,
+                Math.Cos(centerLatitude * Math.PI / 180));
             double scale = Math.Min(
-                (width - 48) / (MaxLongitude - MinLongitude),
-                (height - 48) / (MaxLatitude - MinLatitude));
+                (width - 48) / (bounds.LongitudeSpan * longitudeScaleFactor),
+                (height - 48) / bounds.LatitudeSpan);
             return new MapProjection(
                 scale * Math.Max(1, zoomLevel),
+                longitudeScaleFactor,
                 centerLongitude,
                 centerLatitude,
                 width,
                 height);
         }
 
+        private static MapGeometryBounds GetBounds(
+            IReadOnlyList<MapPolygonGeometry> outline,
+            IReadOnlyList<EarthquakeMapMarker> markers)
+        {
+            IEnumerable<GeoCoordinate> coordinates = outline
+                .SelectMany(item => item.Rings.IsDefaultOrEmpty
+                    ? [item.Coordinates]
+                    : item.Rings)
+                .SelectMany(item => item)
+                .Concat(markers.Select(item => item.Coordinate));
+            if (!coordinates.Any())
+            {
+                return new MapGeometryBounds(126, 147, 24, 47);
+            }
+
+            coordinates = coordinates.ToArray();
+            return new MapGeometryBounds(
+                coordinates.Min(item => item.Longitude),
+                coordinates.Max(item => item.Longitude),
+                coordinates.Min(item => item.Latitude),
+                coordinates.Max(item => item.Latitude));
+        }
+
         public Point Project(GeoCoordinate coordinate)
         {
             return new Point(
-                _width / 2 + (coordinate.Longitude - _centerLongitude) * _scale,
+                _width / 2 + (coordinate.Longitude - _centerLongitude) * _scale * _longitudeScaleFactor,
                 _height / 2 - (coordinate.Latitude - _centerLatitude) * _scale);
         }
     }

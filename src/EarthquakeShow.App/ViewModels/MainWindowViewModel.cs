@@ -58,7 +58,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 Timeout = TimeSpan.FromSeconds(15),
             };
-            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.29.7");
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.31.0");
             _realtimeSource = new JmaJsonEarthquakeSource(_httpClient);
             JmaXmlEarthquakeSource xmlSource = new(
                 _httpClient,
@@ -88,7 +88,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         Map = new EarthquakeMapViewModel(
             EarthquakePage,
             OfflineMapGeometry.LoadFromFile(
-                Path.Combine(AppContext.BaseDirectory, "Assets", "japan-overview.geojson")));
+                Path.Combine(
+                    AppContext.BaseDirectory,
+                    "Assets",
+                    "Data",
+                    "Map",
+                    "jma-earthquake-areas.geojson")));
         Details = new EarthquakeDetailsViewModel(EarthquakePage, Map);
         Layout = new WindowLayoutViewModel();
         UpdateClock();

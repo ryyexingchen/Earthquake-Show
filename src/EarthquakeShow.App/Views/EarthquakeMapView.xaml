@@ -20,7 +20,7 @@
             <StackPanel>
                 <TextBlock FontSize="12"
                            FontWeight="SemiBold"
-                           Text="离线日本地图" />
+                           Text="JMA 地震区域地图" />
                 <TextBlock Margin="0,3,0,0"
                            Foreground="#667179"
                            FontSize="10"

@@ -35,6 +35,29 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public void LoadFromJson_PreservesInteriorRingsAndMultiPolygonParts()
+    {
+        OfflineMapGeometry geometry = OfflineMapGeometry.LoadFromJson(MultiRingGeometryJson);
+
+        Assert.Equal(2, geometry.Polygons.Length);
+        Assert.Equal(2, geometry.Polygons[0].Rings.Length);
+        Assert.Equal(2, geometry.Polygons[1].Rings.Length);
+        Assert.Equal(5, geometry.Polygons[1].Coordinates.Length);
+        Assert.Equal(0, geometry.InvalidGeometryCount);
+        Assert.Equal(129, geometry.Bounds.MinLongitude, precision: 3);
+        Assert.Equal(132, geometry.Bounds.MaxLongitude, precision: 3);
+    }
+
+    [Fact]
+    public void LoadFromJson_ReportsInvalidPolygonWithoutDiscardingValidFeature()
+    {
+        OfflineMapGeometry geometry = OfflineMapGeometry.LoadFromJson(InvalidGeometryJson);
+
+        Assert.Single(geometry.Polygons);
+        Assert.Equal(1, geometry.InvalidGeometryCount);
+    }
+
+    [Fact]
     public async Task SelectedEvent_BuildsAreaHypocenterAndCoordinateStationLayers()
     {
         var report = CreateReport();
@@ -155,6 +178,55 @@ public sealed class EarthquakeMapViewModelTests
                 "type": "Polygon",
                 "coordinates": [[[130.4,32.4],[131.0,32.4],[131.0,33.1],[130.4,33.1],[130.4,32.4]]]
               }
+            }
+          ]
+        }
+        """;
+
+    private const string MultiRingGeometryJson = """
+        {
+          "type": "FeatureCollection",
+          "metadata": { "source": "测试多环轮廓", "officialBoundary": true },
+          "features": [
+            {
+              "type": "Feature",
+              "properties": { "areaCode": "100", "name": "主岛" },
+              "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                  [[130,32],[131,32],[131,33],[130,33],[130,32]],
+                  [[130.2,32.2],[130.4,32.2],[130.4,32.4],[130.2,32.4],[130.2,32.2]]
+                ]
+              }
+            },
+            {
+              "type": "Feature",
+              "properties": { "areaCode": "100", "name": "离岛" },
+              "geometry": {
+                "type": "MultiPolygon",
+                "coordinates": [
+                  [[[129,31],[129.5,31],[129.5,31.5],[129,31.5],[129,31]]],
+                  [[[131.5,34],[132,34],[132,34.5],[131.5,34.5],[131.5,34]]]
+                ]
+              }
+            }
+          ]
+        }
+        """;
+
+    private const string InvalidGeometryJson = """
+        {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "properties": { "areaCode": "bad" },
+              "geometry": { "type": "Polygon", "coordinates": [[]] }
+            },
+            {
+              "type": "Feature",
+              "properties": { "areaCode": "good" },
+              "geometry": { "type": "Polygon", "coordinates": [[[130,32],[131,32],[131,33]]] }
             }
           ]
         }

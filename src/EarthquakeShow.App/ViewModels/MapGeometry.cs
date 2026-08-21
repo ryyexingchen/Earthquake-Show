@@ -9,18 +9,38 @@ public sealed record MapPolygonGeometry(
     string Code,
     string Name,
     ImmutableArray<GeoCoordinate> Coordinates,
-    bool IsOfficialBoundary);
+    bool IsOfficialBoundary)
+{
+    /// <summary>当前多边形的外环和内环；Coordinates 保留为外环兼容属性。</summary>
+    public ImmutableArray<ImmutableArray<GeoCoordinate>> Rings { get; init; } =
+        ImmutableArray.Create(Coordinates);
+}
+
+public readonly record struct MapGeometryBounds(
+    double MinLongitude,
+    double MaxLongitude,
+    double MinLatitude,
+    double MaxLatitude)
+{
+    public double LongitudeSpan => Math.Max(0.000001, MaxLongitude - MinLongitude);
+
+    public double LatitudeSpan => Math.Max(0.000001, MaxLatitude - MinLatitude);
+}
 
 public sealed class OfflineMapGeometry
 {
     private OfflineMapGeometry(
         ImmutableArray<MapPolygonGeometry> polygons,
         string source,
-        bool isOfficialBoundary)
+        bool isOfficialBoundary,
+        int invalidGeometryCount,
+        MapGeometryBounds bounds)
     {
         Polygons = polygons;
         Source = source;
         IsOfficialBoundary = isOfficialBoundary;
+        InvalidGeometryCount = invalidGeometryCount;
+        Bounds = bounds;
     }
 
     public ImmutableArray<MapPolygonGeometry> Polygons { get; }
@@ -28,6 +48,10 @@ public sealed class OfflineMapGeometry
     public string Source { get; }
 
     public bool IsOfficialBoundary { get; }
+
+    public int InvalidGeometryCount { get; }
+
+    public MapGeometryBounds Bounds { get; }
 
     public static OfflineMapGeometry LoadFromJson(string json)
     {
@@ -42,6 +66,7 @@ public sealed class OfflineMapGeometry
         }
 
         var polygons = ImmutableArray.CreateBuilder<MapPolygonGeometry>();
+        int invalidGeometryCount = 0;
         foreach (JsonElement feature in features.EnumerateArray())
         {
             JsonElement properties = feature.GetProperty("properties");
@@ -59,12 +84,15 @@ public sealed class OfflineMapGeometry
             switch (geometryType)
             {
                 case "Polygon":
-                    AddPolygon(polygons, code, name, coordinates, officialBoundary);
+                    if (!AddPolygon(polygons, code, name, coordinates, officialBoundary))
+                    {
+                        invalidGeometryCount++;
+                    }
                     break;
                 case "MultiPolygon":
-                    foreach (JsonElement polygon in coordinates.EnumerateArray())
+                    if (!AddMultiPolygon(polygons, code, name, coordinates, officialBoundary))
                     {
-                        AddPolygon(polygons, code, name, polygon, officialBoundary);
+                        invalidGeometryCount++;
                     }
                     break;
                 default:
@@ -82,7 +110,13 @@ public sealed class OfflineMapGeometry
             ? sourceElement.GetString() ?? "未注明来源"
             : "未注明来源";
         bool allOfficial = polygons.All(item => item.IsOfficialBoundary);
-        return new OfflineMapGeometry(polygons.ToImmutable(), source, allOfficial);
+        MapGeometryBounds bounds = CalculateBounds(polygons);
+        return new OfflineMapGeometry(
+            polygons.ToImmutable(),
+            source,
+            allOfficial,
+            invalidGeometryCount,
+            bounds);
     }
 
     public static OfflineMapGeometry LoadFromFile(string path)
@@ -91,40 +125,120 @@ public sealed class OfflineMapGeometry
         return LoadFromJson(File.ReadAllText(path));
     }
 
-    private static void AddPolygon(
+    private static bool AddPolygon(
         ImmutableArray<MapPolygonGeometry>.Builder polygons,
         string code,
         string name,
         JsonElement polygonCoordinates,
         bool officialBoundary)
     {
-        JsonElement ring = polygonCoordinates.EnumerateArray().FirstOrDefault();
-        if (ring.ValueKind != JsonValueKind.Array)
+        if (polygonCoordinates.ValueKind != JsonValueKind.Array)
         {
-            return;
+            return false;
         }
 
-        var points = ImmutableArray.CreateBuilder<GeoCoordinate>();
-        foreach (JsonElement coordinate in ring.EnumerateArray())
+        var rings = ImmutableArray.CreateBuilder<ImmutableArray<GeoCoordinate>>();
+        ReadRings(polygonCoordinates, rings);
+        return AddRings(polygons, code, name, rings, officialBoundary);
+    }
+
+    private static bool AddMultiPolygon(
+        ImmutableArray<MapPolygonGeometry>.Builder polygons,
+        string code,
+        string name,
+        JsonElement multiPolygonCoordinates,
+        bool officialBoundary)
+    {
+        if (multiPolygonCoordinates.ValueKind != JsonValueKind.Array)
         {
-            if (coordinate.ValueKind != JsonValueKind.Array || coordinate.GetArrayLength() < 2)
+            return false;
+        }
+
+        var rings = ImmutableArray.CreateBuilder<ImmutableArray<GeoCoordinate>>();
+        foreach (JsonElement polygon in multiPolygonCoordinates.EnumerateArray())
+        {
+            if (polygon.ValueKind == JsonValueKind.Array)
+            {
+                ReadRings(polygon, rings);
+            }
+        }
+
+        return AddRings(polygons, code, name, rings, officialBoundary);
+    }
+
+    private static void ReadRings(
+        JsonElement polygonCoordinates,
+        ImmutableArray<ImmutableArray<GeoCoordinate>>.Builder rings)
+    {
+        foreach (JsonElement ring in polygonCoordinates.EnumerateArray())
+        {
+            if (ring.ValueKind != JsonValueKind.Array)
             {
                 continue;
             }
 
-            double longitude = coordinate[0].GetDouble();
-            double latitude = coordinate[1].GetDouble();
-            points.Add(new GeoCoordinate(latitude, longitude));
+            var points = ImmutableArray.CreateBuilder<GeoCoordinate>();
+            foreach (JsonElement coordinate in ring.EnumerateArray())
+            {
+                if (coordinate.ValueKind != JsonValueKind.Array || coordinate.GetArrayLength() < 2)
+                {
+                    continue;
+                }
+
+                double longitude = coordinate[0].GetDouble();
+                double latitude = coordinate[1].GetDouble();
+                if (!double.IsFinite(longitude) || !double.IsFinite(latitude))
+                {
+                    continue;
+                }
+
+                points.Add(new GeoCoordinate(latitude, longitude));
+            }
+
+            if (points.Count >= 3)
+            {
+                rings.Add(points.ToImmutable());
+            }
+        }
+    }
+
+    private static bool AddRings(
+        ImmutableArray<MapPolygonGeometry>.Builder polygons,
+        string code,
+        string name,
+        ImmutableArray<ImmutableArray<GeoCoordinate>>.Builder rings,
+        bool officialBoundary)
+    {
+        if (rings.Count == 0)
+        {
+            return false;
         }
 
-        if (points.Count >= 3)
-        {
-            polygons.Add(new MapPolygonGeometry(
+        ImmutableArray<GeoCoordinate> outerRing = rings[0];
+        polygons.Add(new MapPolygonGeometry(
                 code,
                 name,
-                points.ToImmutable(),
-                officialBoundary));
-        }
+                outerRing,
+                officialBoundary)
+        {
+                Rings = rings.ToImmutable(),
+        });
+        return true;
+    }
+
+    private static MapGeometryBounds CalculateBounds(
+        ImmutableArray<MapPolygonGeometry>.Builder polygons)
+    {
+        IEnumerable<GeoCoordinate> coordinates = polygons
+            .SelectMany(item => item.Rings.IsDefaultOrEmpty
+                ? [item.Coordinates]
+                : item.Rings)
+            .SelectMany(item => item);
+        return new MapGeometryBounds(
+            coordinates.Min(item => item.Longitude),
+            coordinates.Max(item => item.Longitude),
+            coordinates.Min(item => item.Latitude),
+            coordinates.Max(item => item.Latitude));
     }
 
     private static string? GetString(JsonElement element, string propertyName)

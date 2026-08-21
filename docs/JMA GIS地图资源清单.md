@@ -8,7 +8,7 @@
 - 本次审计日期：2026-08-20
 - 当前暂存目录：`resources/map/`
 - 当前文件数量：10 个 ZIP，共约 1.366 GiB
-- 当前状态：只完成只读结构审计，尚未转换、接入运行时或进入发布包
+- 当前状态：已完成地震细分区域、市町村和都道府县三个 Polygon 图层的离线转换；尚未切换运行时地图入口
 
 ## 2. 包内通用结构
 
@@ -90,9 +90,21 @@ JMA 页面说明地图制作使用了国土地理院数据。发布前仍需记�
 4. 完成地震页面真实地图和三层观测树后，再转换 EEW 两级图层。
 5. 实现海啸页面时单独增加 PolyLine 资源和渲染测试。
 
-## 7. 当前审计结论
+## 7. 派生资源
+
+`0.30.0` 已使用 `tools/convert_jma_gis.py`、显示容差 `0.0005` 度生成以下文件：
+
+| 派生文件 | 特征数 | 用途 | 当前状态 |
+| --- | ---: | --- | --- |
+| `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-areas.geojson` | 194 | 地震信息细分区域 | 已生成，等待完整几何解析 |
+| `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-municipalities.geojson` | 1910 | 地震/海啸市町村 | 已生成，等待完整几何解析 |
+| `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-prefectures.geojson` | 47 | 都道府县概览辅助层 | 已生成，等待完整几何解析 |
+
+每个文件的 `metadata.simplificationToleranceDegrees` 记录几何简化容差。转换器保留 Polygon/MultiPolygon 的全部环，当前 WPF 地图仍不加载这些文件，因为现有解析器只支持每个 Polygon 的第一个环。
+
+## 8. 当前审计结论
 
 - 10 个 ZIP 均可打开并读取 `.shp/.shx/.dbf` 结构。
 - 三个当前关键包 `AreaForecastLocalE`、`AreaInformationCity_quake`、`AreaTsunami` 已通过现有严格资源审计工具。
-- 当前文件没有进入 `src/EarthquakeShow.App/Assets`，应用仍使用示意轮廓。
-- 下一步不是直接让 WPF 加载这些大 ZIP，而是实现可重复的离线转换、代码覆盖率检查和派生资源版本清单。
+- 三个派生文件已进入 `src/EarthquakeShow.App/Assets/Data/Map/`，项目的通配复制规则会将其带入构建输出；当前入口仍使用示意轮廓。
+- 下一步不是直接让旧解析器加载这些文件，而是实现可重复的 MultiPolygon/内环解析、动态范围投影和代码覆盖率检查。
