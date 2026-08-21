@@ -53,7 +53,8 @@
 - `0.32.0` 已完成观测点详情 TreeView：区域、市町村和观测点按代码挂接，未映射项保留独立节点，搜索和最高震度筛选递归工作。
 - `0.33.1` 已完成区域边界拓扑生成工具：使用磁盘索引处理 JMA 原始 Polygon ZIP，并输出带无方向相邻区域代码的连续边和审计报告；尚未接入运行时地图。
 - `0.33.2` 已完成候选边界开放端点审计：1,128 个端点全部是 376 个三叉交汇节点，孤立端点和端点落在线段内部均为 0；尚未接入运行时地图。
-- 下一实现步骤：将审计通过的候选边界资源复制为 App 数据资源，增加独立边界解析模型和相邻区域代码索引。其他一级页面暂停制作。
+- `0.33.3` 已将审计通过的边界资源复制到 App，并完成独立解析模型、元数据读取和按区域代码索引；当前仍不参与地图绘制。
+- 下一实现步骤：为每条边界根据 `areaCode1/areaCode2` 映射当前报文震度，生成边界显示震度分组。其他一级页面暂停制作。
 
 ## 文档同步规则
 
@@ -549,7 +550,8 @@ EventStatusBadgeControl
 - [x] `0.33.1` 新增 `tools/generate_jma_boundary_topology.py`，使用 SQLite 临时索引流式写入约千万条原始线段，输出 `areaCode1/areaCode2` 相邻代码并按相邻关系合并连续边。
 - [x] 真实区域 ZIP 在 `precision=7`、`tolerance=0.015`、`min-ring-area=0.0002` 下生成 1,069 条 `LineString`、130,039 个坐标点，临时资源约 3.35 MB；6 个无代码 Feature 只进入报告。
 - [x] `0.33.2` 使用 `tools/audit_boundary_open_endpoints.py` 完成开放端点审计：1,128 个端点全部属于 376 个三叉节点，孤立端点为 0，端点近邻匹配和端点-线段内部匹配均为 0。
-- [ ] 将审计通过的候选边界资源加入 App，定义 `EarthquakeMapBoundary` 解析模型和按相邻区域代码的运行时索引。
+- [x] `0.33.3` 将 `jma-earthquake-area-boundaries-overview.geojson` 加入 `Assets/Data/Map`，新增 `OfflineMapBoundaryGeometry`、`EarthquakeMapBoundary` 和按区域代码索引；启动回归确认 1,069 条边界资源可读。
+- [ ] 按当前报文区域震度计算边界显示震度，并加入地图 ViewModel 的分组投影；本步骤完成前不改变现有渲染。
 
 ### 10. 实现缓存和离线启动
 

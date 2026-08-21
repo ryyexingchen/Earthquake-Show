@@ -42,6 +42,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     private readonly EarthquakePageViewModel _page;
     private readonly OfflineMapGeometry _geometry;
     private readonly OfflineMapGeometry? _municipalityGeometry;
+    private readonly OfflineMapBoundaryGeometry? _boundaryGeometry;
     private double _zoomLevel = 1;
     private GeoCoordinate? _focusedCoordinate;
     private string? _reportSourceId;
@@ -51,11 +52,13 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     public EarthquakeMapViewModel(
         EarthquakePageViewModel page,
         OfflineMapGeometry geometry,
-        OfflineMapGeometry? municipalityGeometry = null)
+        OfflineMapGeometry? municipalityGeometry = null,
+        OfflineMapBoundaryGeometry? boundaryGeometry = null)
     {
         _page = page ?? throw new ArgumentNullException(nameof(page));
         _geometry = geometry ?? throw new ArgumentNullException(nameof(geometry));
         _municipalityGeometry = municipalityGeometry;
+        _boundaryGeometry = boundaryGeometry;
         _page.PropertyChanged += OnPagePropertyChanged;
         RebuildLayers();
     }
@@ -69,6 +72,8 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     public bool IsOfficialBoundary => _geometry.IsOfficialBoundary;
 
     public MapGeometryBounds GeometryBounds => _geometry.Bounds;
+
+    public OfflineMapBoundaryGeometry? BoundaryGeometry => _boundaryGeometry;
 
     public int InvalidGeometryCount => _geometry.InvalidGeometryCount;
 

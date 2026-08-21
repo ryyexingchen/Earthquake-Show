@@ -35,6 +35,9 @@ public sealed class MainWindowViewModelTests
                 station => Assert.NotNull(station.Coordinate));
             Assert.Single(viewModel.EventList.Items);
             Assert.Equal(76, viewModel.Map.Markers.Count);
+            Assert.NotNull(viewModel.Map.BoundaryGeometry);
+            Assert.Equal(1069, viewModel.Map.BoundaryGeometry.Boundaries.Length);
+            Assert.Equal(8, viewModel.Map.BoundaryGeometry.GetForArea("100").Count);
         }
         finally
         {

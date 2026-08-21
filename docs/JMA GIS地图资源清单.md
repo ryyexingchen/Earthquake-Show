@@ -8,7 +8,7 @@
 - 本次审计日期：2026-08-20
 - 当前暂存目录：`resources/map/`
 - 当前文件数量：10 个 ZIP，共约 1.366 GiB
-- 当前状态：已完成地震细分区域、市町村和都道府县三个 Polygon 图层的离线转换；`0.30.0` 接入地震细分区域概览层，`0.33.0` 接入市町村概览层
+- 当前状态：已完成地震细分区域、市町村和都道府县三个 Polygon 图层的离线转换；`0.30.0` 接入地震细分区域概览层，`0.33.0` 接入市町村概览层，`0.33.3` 加载区域边界 LineString 资源但暂不绘制
 
 ## 2. 包内通用结构
 
@@ -100,6 +100,7 @@ JMA 页面说明地图制作使用了国土地理院数据。发布前仍需记�
 | `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-areas-overview.geojson` | 194 | 地震信息细分区域低内存概览层 | 当前运行时入口；0.015 度简化、0.0002 平方度碎片过滤 |
 | `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-municipalities.geojson` | 1910 | 地震/海啸市町村高精度层 | 已生成，后续按需加载 |
 | `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-municipalities-overview.geojson` | 1910 | 地震/海啸市町村低内存层 | `0.33.0` 当前运行时入口；0.015 度简化、0.0002 平方度碎片过滤 |
+| `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-area-boundaries-overview.geojson` | 1069 | 带相邻区域代码的区域边界 LineString 候选层 | `0.33.3` App 启动加载并建立索引，尚未绘制；0.015 度简化、0.0002 平方度环过滤 |
 | `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-prefectures.geojson` | 47 | 都道府县概览辅助层 | 已生成，等待完整几何解析 |
 
 每个文件的 `metadata.simplificationToleranceDegrees` 记录几何简化容差，概览层另外记录 `minPolygonAreaDegreesSquared`。转换器保留 Polygon/MultiPolygon 的全部环；运行时默认加载概览层，精确层不在启动阶段解析。
@@ -108,9 +109,11 @@ JMA 页面说明地图制作使用了国土地理院数据。发布前仍需记�
 
 - 10 个 ZIP 均可打开并读取 `.shp/.shx/.dbf` 结构。
 - 三个当前关键包 `AreaForecastLocalE`、`AreaInformationCity_quake`、`AreaTsunami` 已通过现有严格资源审计工具。
-- 四个派生文件已进入 `src/EarthquakeShow.App/Assets/Data/Map/`，项目的通配复制规则会将其带入构建输出；当前入口使用低内存概览层。
+- 五个派生文件已进入 `src/EarthquakeShow.App/Assets/Data/Map/`，项目的通配复制规则会将其带入构建输出；当前入口使用低内存概览层，区域边界资源只完成解析和索引。
 - 高精度层用于后续地图放大或详情页按需加载，不用于应用启动阶段的全国概览；市町村概览层随应用启动加载，当前事件只绘制代码匹配的市町村。
 
 `0.33.1` 已使用 `tools/generate_jma_boundary_topology.py` 从未简化的 `20240520_AreaForecastLocalE_GIS.zip` 生成带无方向相邻代码 `areaCode1/areaCode2` 的 `LineString` 候选资源。工具通过 SQLite 临时索引处理约 1,032 万条原始线段，并支持连续边合并、线简化和微小环过滤；概览参数输出约 3.35 MB。当前报告仍有 1,128 个开放链端点，候选资源暂不进入 App；下一步先区分正常过滤/分叉与需要非端点交点拆分的异常。
 
 `0.33.2` 已完成开放端点审计：1,128 个端点全部归属于 376 个三叉交汇节点，每个节点有 3 组相邻区域；没有孤立端点，也没有端点落在其他相邻关系线段内部。该结果支持继续使用当前候选资源进入 App 解析阶段，但不表示其他版本的 JMA ZIP 可以跳过审计。
+
+`0.33.3` 已将候选资源正式复制为 `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-area-boundaries-overview.geojson`，共 1,069 条边界 Feature，构建输出由 `Assets\Data\**\*` 规则自动复制。App 只建立 `areaCode1/areaCode2` 双向索引，下一步才根据报文震度分组显示。
