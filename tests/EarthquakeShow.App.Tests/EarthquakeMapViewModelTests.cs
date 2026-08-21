@@ -82,6 +82,35 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public async Task SelectedEvent_IncludesCatalogStationsAndOverlaysObservedStationOnce()
+    {
+        const string catalogJson = """
+            {
+              "schemaVersion": 1,
+              "stations": [
+                { "name": "熊本観測点", "latitude": 32.81, "longitude": 130.71 },
+                { "name": "和歌山市男野芝丁", "latitude": 34.23, "longitude": 135.16 },
+                { "name": "茨城町小堤", "latitude": 36.29, "longitude": 140.42 }
+              ]
+            }
+            """;
+        var report = CreateReport();
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson),
+            JmaStationCoordinateCatalog.LoadJson(catalogJson));
+
+        Assert.Contains(map.Markers, marker => marker.Label == "和歌山市男野芝丁");
+        Assert.Contains(map.Markers, marker => marker.Label == "茨城町小堤");
+        Assert.Single(map.Markers, marker => marker.Label == "熊本観測点");
+        Assert.True(map.Markers.Single(marker => marker.Label == "熊本観測点").IsObserved);
+        Assert.False(map.Markers.Single(marker => marker.Label == "和歌山市男野芝丁").IsObserved);
+    }
+
+    [Fact]
     public async Task MapCommands_UpdateZoomAndPageMapState()
     {
         var report = CreateReport();

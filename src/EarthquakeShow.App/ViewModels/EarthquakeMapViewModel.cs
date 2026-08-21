@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using EarthquakeShow.Core.Models;
+using EarthquakeShow.Core.Services;
 
 namespace EarthquakeShow.App.ViewModels;
 
@@ -25,12 +26,14 @@ public sealed record EarthquakeMapMarker(
     EarthquakeMapMarkerKind Kind,
     string Label,
     GeoCoordinate Coordinate,
-    JmaIntensity Intensity);
+    JmaIntensity Intensity,
+    bool IsObserved = false);
 
 public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly EarthquakePageViewModel _page;
     private readonly OfflineMapGeometry _geometry;
+    private readonly JmaStationCoordinateCatalog? _stationCatalog;
     private double _zoomLevel = 1;
     private GeoCoordinate? _focusedCoordinate;
     private string? _reportSourceId;
@@ -39,10 +42,12 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
     public EarthquakeMapViewModel(
         EarthquakePageViewModel page,
-        OfflineMapGeometry geometry)
+        OfflineMapGeometry geometry,
+        JmaStationCoordinateCatalog? stationCatalog = null)
     {
         _page = page ?? throw new ArgumentNullException(nameof(page));
         _geometry = geometry ?? throw new ArgumentNullException(nameof(geometry));
+        _stationCatalog = stationCatalog;
         _page.PropertyChanged += OnPagePropertyChanged;
         RebuildLayers();
     }
@@ -202,7 +207,14 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         if (report is null)
         {
             Areas = [];
-            Markers = [];
+            Markers = _stationCatalog?.Entries
+                .Where(station => station.Coordinate is not null)
+                .Select(station => new EarthquakeMapMarker(
+                    EarthquakeMapMarkerKind.Station,
+                    station.Name,
+                    station.Coordinate!.Value,
+                    JmaIntensity.Unknown))
+                .ToArray() ?? [];
             UnmappedAreaCount = 0;
             RaiseLayerProperties();
             return;
@@ -241,6 +253,24 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             .ToArray();
 
         var markers = new List<EarthquakeMapMarker>();
+        HashSet<string> observedStationNames = report.IntensityStations
+            .Select(station => JmaStationCoordinateCatalog.NormalizeName(station.Name))
+            .Where(name => name.Length > 0)
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (_stationCatalog is not null)
+        {
+            markers.AddRange(_stationCatalog.Entries
+                .Where(station => station.Coordinate is not null)
+                .Where(station => !observedStationNames.Contains(
+                    JmaStationCoordinateCatalog.NormalizeName(station.Name)))
+                .Select(station => new EarthquakeMapMarker(
+                    EarthquakeMapMarkerKind.Station,
+                    station.Name,
+                    station.Coordinate!.Value,
+                    JmaIntensity.Unknown)));
+        }
+
         if (report.Hypocenter?.Coordinate is GeoCoordinate hypocenter)
         {
             markers.Add(new EarthquakeMapMarker(
@@ -256,7 +286,8 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 EarthquakeMapMarkerKind.Station,
                 station.Name,
                 station.Coordinate!.Value,
-                station.Intensity)));
+                station.Intensity,
+                IsObserved: true)));
         Markers = markers;
         RaiseLayerProperties();
     }

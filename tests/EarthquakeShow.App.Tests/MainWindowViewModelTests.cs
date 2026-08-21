@@ -34,7 +34,9 @@ public sealed class MainWindowViewModelTests
                 earthquakeEvent.LatestReport!.IntensityStations,
                 station => Assert.NotNull(station.Coordinate));
             Assert.Single(viewModel.EventList.Items);
-            Assert.Equal(76, viewModel.Map.Markers.Count);
+            Assert.Equal(4369, viewModel.Map.Markers.Count);
+            Assert.Contains(viewModel.Map.Markers, marker => marker.Label == "和歌山市男野芝丁");
+            Assert.Contains(viewModel.Map.Markers, marker => marker.Label == "茨城町小堤");
         }
         finally
         {

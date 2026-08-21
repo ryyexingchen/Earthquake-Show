@@ -146,7 +146,13 @@ public partial class EarthquakeMapView : UserControl
             MapCanvas.Children.Add(shape);
         }
 
-        foreach (EarthquakeMapMarker marker in ViewModel.Markers)
+        DrawCatalogStations(
+            ViewModel.Markers.Where(marker =>
+                marker.Kind == EarthquakeMapMarkerKind.Station && !marker.IsObserved),
+            projection);
+
+        foreach (EarthquakeMapMarker marker in ViewModel.Markers.Where(marker =>
+                     marker.Kind == EarthquakeMapMarkerKind.Hypocenter || marker.IsObserved))
         {
             DrawMarker(marker, projection);
         }
@@ -191,21 +197,59 @@ public partial class EarthquakeMapView : UserControl
     private void DrawMarker(EarthquakeMapMarker marker, MapProjection projection)
     {
         Point point = projection.Project(marker.Coordinate);
-        double size = marker.Kind == EarthquakeMapMarkerKind.Hypocenter ? 15 : 8;
+        double size = marker.Kind == EarthquakeMapMarkerKind.Hypocenter
+            ? 15
+            : marker.IsObserved
+                ? 8
+                : 4;
         var shape = new Ellipse
         {
             Width = size,
             Height = size,
             Fill = marker.Kind == EarthquakeMapMarkerKind.Hypocenter
                 ? new SolidColorBrush(Color.FromRgb(190, 61, 52))
-                : new SolidColorBrush(GetIntensityColor(marker.Intensity, 245)),
+                : !marker.IsObserved
+                    ? new SolidColorBrush(Color.FromRgb(121, 143, 153))
+                    : new SolidColorBrush(GetIntensityColor(marker.Intensity, 245)),
             Stroke = new SolidColorBrush(Colors.White),
             StrokeThickness = 1.5,
-            ToolTip = $"{marker.Label} · 震度 {GetIntensityText(marker.Intensity)}",
+            ToolTip = marker.IsObserved
+                ? $"{marker.Label} · 震度 {GetIntensityText(marker.Intensity)}"
+                : $"{marker.Label} · JMA 观测点目录",
         };
         Canvas.SetLeft(shape, point.X - size / 2);
         Canvas.SetTop(shape, point.Y - size / 2);
         MapCanvas.Children.Add(shape);
+    }
+
+    private void DrawCatalogStations(
+        IEnumerable<EarthquakeMapMarker> markers,
+        MapProjection projection)
+    {
+        var geometry = new StreamGeometry();
+        using (StreamGeometryContext context = geometry.Open())
+        {
+            foreach (EarthquakeMapMarker marker in markers)
+            {
+                Point point = projection.Project(marker.Coordinate);
+                const double radius = 1.5;
+                context.BeginFigure(
+                    new Point(point.X - radius, point.Y - radius),
+                    true,
+                    true);
+                context.LineTo(new Point(point.X + radius, point.Y - radius), true, false);
+                context.LineTo(new Point(point.X + radius, point.Y + radius), true, false);
+                context.LineTo(new Point(point.X - radius, point.Y + radius), true, false);
+            }
+        }
+
+        geometry.Freeze();
+        MapCanvas.Children.Add(new Path
+        {
+            Data = geometry,
+            Fill = new SolidColorBrush(Color.FromRgb(121, 143, 153)),
+            IsHitTestVisible = false,
+        });
     }
 
     private static Color GetIntensityColor(JmaIntensity intensity, byte alpha)
@@ -282,10 +326,16 @@ public partial class EarthquakeMapView : UserControl
                 centerLongitude = location.Longitude;
                 centerLatitude = location.Latitude;
             }
-            else if (focusMode == EarthquakeMapFocusMode.SelectedEvent && markers.Count > 0)
+            else if (focusMode == EarthquakeMapFocusMode.SelectedEvent)
             {
-                centerLongitude = markers.Average(item => item.Coordinate.Longitude);
-                centerLatitude = markers.Average(item => item.Coordinate.Latitude);
+                EarthquakeMapMarker[] eventMarkers = markers
+                    .Where(item => item.Kind == EarthquakeMapMarkerKind.Hypocenter || item.IsObserved)
+                    .ToArray();
+                if (eventMarkers.Length > 0)
+                {
+                    centerLongitude = eventMarkers.Average(item => item.Coordinate.Longitude);
+                    centerLatitude = eventMarkers.Average(item => item.Coordinate.Latitude);
+                }
             }
 
             double longitudeScaleFactor = Math.Max(

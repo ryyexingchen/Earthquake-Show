@@ -29,6 +29,8 @@ public sealed class JmaStationCoordinateCatalogTests
         Assert.Equal(4368, catalog.Diagnostics.MissingCodeCount);
         Assert.Equal(0, catalog.Diagnostics.MissingCoordinateCount);
         Assert.Equal(0, catalog.Diagnostics.DuplicateNameCount);
+        Assert.Equal(104, catalog.Entries.Count(entry => entry.PrefectureCode == "8"));
+        Assert.Equal(58, catalog.Entries.Count(entry => entry.PrefectureCode == "30"));
         Assert.Equal("jma-intensity-stations-2026-08-19", catalog.DatasetVersion);
         Assert.Equal("2026-08-19", catalog.RetrievedDate);
         Assert.Equal("WGS84 longitude/latitude", catalog.CoordinateReferenceSystem);
