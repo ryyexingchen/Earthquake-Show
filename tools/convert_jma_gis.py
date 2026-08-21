@@ -205,6 +205,7 @@ def convert_archive(
     source_version: str,
     acquired_at: str,
     tolerance: float,
+    min_polygon_area: float = 0.0,
 ) -> dict[str, int | str | float]:
     with zipfile.ZipFile(input_path) as archive:
         shp_names = [name for name in archive.namelist() if name.lower().endswith(".shp")]
@@ -231,6 +232,7 @@ def convert_archive(
                         "officialBoundary": True,
                         "sourceLayer": layer,
                         "simplificationToleranceDegrees": tolerance,
+                        "minPolygonAreaDegreesSquared": min_polygon_area,
                         "sourceArchive": input_path.name,
                     },
                     handle,
@@ -244,13 +246,14 @@ def convert_archive(
                     if rings is missing or record is missing:
                         raise GisConversionError("SHP 与 DBF 的有效记录数不一致")
                     record_count += 1
-                    polygons = [
+                    all_polygons = [
                         [
                             [[round(longitude, 7), round(latitude, 7)] for longitude, latitude in simplify_ring(ring, tolerance)]
                             for ring in polygon
                         ]
                         for polygon in group_rings(rings)
                     ]
+                    polygons = filter_polygons_by_area(all_polygons, min_polygon_area)
                     geometry: dict[str, object]
                     if len(polygons) == 1:
                         geometry = {"type": "Polygon", "coordinates": polygons[0]}
@@ -275,7 +278,23 @@ def convert_archive(
         "output": str(output_path),
         "features": feature_count,
         "tolerance": tolerance,
+        "minPolygonAreaDegreesSquared": min_polygon_area,
     }
+
+
+def filter_polygons_by_area(
+    polygons: list[list[list[list[float]]]],
+    minimum_area: float,
+) -> list[list[list[list[float]]]]:
+    """过滤概览层的小碎片，同时保留每个要素的最大外形。"""
+    if minimum_area <= 0 or len(polygons) <= 1:
+        return polygons
+
+    areas = [abs(ring_area([(point[0], point[1]) for point in polygon[0]])) for polygon in polygons]
+    kept = [polygon for polygon, area in zip(polygons, areas) if area >= minimum_area]
+    if kept:
+        return kept
+    return [polygons[max(range(len(polygons)), key=areas.__getitem__)]]
 
 
 class ConverterSelfTests(unittest.TestCase):
@@ -287,6 +306,14 @@ class ConverterSelfTests(unittest.TestCase):
         self.assertEqual(2, len(polygons[0]))
         self.assertEqual(5, len(simplify_ring(outer, 0.01)))
 
+    def test_filter_polygons_keeps_largest_when_all_are_small(self) -> None:
+        polygons = [
+            [[[0.0, 0.0], [0.01, 0.0], [0.01, 0.01], [0.0, 0.0]]],
+            [[[0.0, 0.0], [0.02, 0.0], [0.02, 0.02], [0.0, 0.0]]],
+        ]
+        self.assertEqual(1, len(filter_polygons_by_area(polygons, 1.0)))
+        self.assertEqual(0.02, filter_polygons_by_area(polygons, 1.0)[0][0][1][0])
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="转换 JMA GIS Polygon Shapefile ZIP 为 GeoJSON")
@@ -296,6 +323,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--source-version", required=False, default="unknown")
     parser.add_argument("--acquired-at", required=False, default="unknown")
     parser.add_argument("--tolerance", type=float, default=0.0001)
+    parser.add_argument("--min-polygon-area", type=float, default=0.0)
     parser.add_argument("--self-test", action="store_true")
     return parser
 
@@ -311,6 +339,8 @@ def main() -> int:
         raise SystemExit("转换时必须同时提供 --input、--output 和 --layer；或使用 --self-test")
     if args.tolerance < 0 or not math.isfinite(args.tolerance):
         raise SystemExit("--tolerance 必须是非负有限数")
+    if args.min_polygon_area < 0 or not math.isfinite(args.min_polygon_area):
+        raise SystemExit("--min-polygon-area 必须是非负有限数")
     report = convert_archive(
         args.input,
         args.output,
@@ -318,6 +348,7 @@ def main() -> int:
         args.source_version,
         args.acquired_at,
         args.tolerance,
+        args.min_polygon_area,
     )
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0

@@ -12,3 +12,10 @@ publish/
 *.suo
 *.log
 resources/
+tests/EarthquakeShow.App.Tests/bin-codex/
+tests/EarthquakeShow.Core.Tests/bin-codex/
+tests/EarthquakeShow.Infrastructure.Tests/bin-codex/
+src/EarthquakeShow.App/bin-codex/
+src/EarthquakeShow.App/Assets
+src/EarthquakeShow.Core/bin-codex/
+src/EarthquakeShow.Infrastructure/bin-codex/

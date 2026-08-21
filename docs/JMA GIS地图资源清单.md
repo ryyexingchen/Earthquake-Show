@@ -92,19 +92,20 @@ JMA 页面说明地图制作使用了国土地理院数据。发布前仍需记�
 
 ## 7. 派生资源
 
-`0.30.0` 已使用 `tools/convert_jma_gis.py`、显示容差 `0.0005` 度生成以下文件：
+`0.30.0` 已使用 `tools/convert_jma_gis.py` 生成以下高精度和概览资源：
 
 | 派生文件 | 特征数 | 用途 | 当前状态 |
 | --- | ---: | --- | --- |
-| `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-areas.geojson` | 194 | 地震信息细分区域 | 已生成，等待完整几何解析 |
+| `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-areas.geojson` | 194 | 地震信息细分区域高精度层 | 已生成，后续按需加载 |
+| `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-areas-overview.geojson` | 194 | 地震信息细分区域低内存概览层 | 当前运行时入口；0.015 度简化、0.0002 平方度碎片过滤 |
 | `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-municipalities.geojson` | 1910 | 地震/海啸市町村 | 已生成，等待完整几何解析 |
 | `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-prefectures.geojson` | 47 | 都道府县概览辅助层 | 已生成，等待完整几何解析 |
 
-每个文件的 `metadata.simplificationToleranceDegrees` 记录几何简化容差。转换器保留 Polygon/MultiPolygon 的全部环，当前 WPF 地图仍不加载这些文件，因为现有解析器只支持每个 Polygon 的第一个环。
+每个文件的 `metadata.simplificationToleranceDegrees` 记录几何简化容差，概览层另外记录 `minPolygonAreaDegreesSquared`。转换器保留 Polygon/MultiPolygon 的全部环；运行时默认加载概览层，精确层不在启动阶段解析。
 
 ## 8. 当前审计结论
 
 - 10 个 ZIP 均可打开并读取 `.shp/.shx/.dbf` 结构。
 - 三个当前关键包 `AreaForecastLocalE`、`AreaInformationCity_quake`、`AreaTsunami` 已通过现有严格资源审计工具。
-- 三个派生文件已进入 `src/EarthquakeShow.App/Assets/Data/Map/`，项目的通配复制规则会将其带入构建输出；当前入口仍使用示意轮廓。
-- 下一步不是直接让旧解析器加载这些文件，而是实现可重复的 MultiPolygon/内环解析、动态范围投影和代码覆盖率检查。
+- 四个派生文件已进入 `src/EarthquakeShow.App/Assets/Data/Map/`，项目的通配复制规则会将其带入构建输出；当前入口使用低内存概览层。
+- 高精度层用于后续地图放大或详情页按需加载，不用于应用启动阶段的全国概览。

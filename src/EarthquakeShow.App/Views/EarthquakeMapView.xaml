@@ -6,7 +6,7 @@
              d:DesignHeight="720"
              d:DesignWidth="700"
              mc:Ignorable="d">
-    <Grid Background="#E8EEF0">
+    <Grid Background="#B7D4E2">
         <Canvas x:Name="MapCanvas" ClipToBounds="True" />
 
         <Border Margin="12"
@@ -20,7 +20,7 @@
             <StackPanel>
                 <TextBlock FontSize="12"
                            FontWeight="SemiBold"
-                           Text="JMA 地震区域地图" />
+                           Text="JMA 地震区域概览" />
                 <TextBlock Margin="0,3,0,0"
                            Foreground="#667179"
                            FontSize="10"

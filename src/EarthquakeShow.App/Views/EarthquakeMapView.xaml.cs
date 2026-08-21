@@ -10,8 +10,9 @@ namespace EarthquakeShow.App.Views;
 
 public partial class EarthquakeMapView : UserControl
 {
-    private static readonly Color OutlineFill = Color.FromRgb(223, 232, 234);
-    private static readonly Color OutlineStroke = Color.FromRgb(145, 162, 168);
+    private static readonly Color OutlineFill = Color.FromRgb(243, 239, 228);
+    private static readonly Color OutlineStroke = Color.FromRgb(121, 143, 153);
+    private bool _renderPending;
 
     public EarthquakeMapView()
     {
@@ -43,12 +44,35 @@ public partial class EarthquakeMapView : UserControl
 
     private void OnSizeChanged(object sender, SizeChangedEventArgs e)
     {
-        RenderMap();
+        RequestRender();
     }
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        Dispatcher.BeginInvoke(RenderMap);
+        if (e.PropertyName is nameof(EarthquakeMapViewModel.Areas)
+            or nameof(EarthquakeMapViewModel.Markers)
+            or nameof(EarthquakeMapViewModel.ZoomLevel)
+            or nameof(EarthquakeMapViewModel.FocusedCoordinate)
+            or nameof(EarthquakeMapViewModel.EffectiveFocusMode)
+            or nameof(EarthquakeMapViewModel.HasSelectedEvent))
+        {
+            RequestRender();
+        }
+    }
+
+    private void RequestRender()
+    {
+        if (_renderPending)
+        {
+            return;
+        }
+
+        _renderPending = true;
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _renderPending = false;
+            RenderMap();
+        }));
     }
 
     private void OnZoomInClick(object sender, RoutedEventArgs e)
