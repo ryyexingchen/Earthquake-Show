@@ -122,7 +122,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     public bool HasSelectedEvent => _page.State.SelectedEvent is not null;
 
     public bool HasDrawableLayers =>
-        Areas.Count > 0 || Municipalities.Count > 0 || Markers.Count > 0;
+        Municipalities.Count > 0 || BoundaryLayers.Count > 0 || Markers.Count > 0;
 
     public bool TryGetAreaFocusCoordinate(
         string areaCode,

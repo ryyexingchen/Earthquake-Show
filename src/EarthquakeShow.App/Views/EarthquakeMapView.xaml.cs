@@ -141,30 +141,25 @@ public partial class EarthquakeMapView : UserControl
             MapCanvas.Children.Add(shape);
         }
 
-        foreach (EarthquakeMapArea area in ViewModel.Areas)
-        {
-            var shape = new Path
-            {
-                Data = ToPathGeometry(GetRings(area.Rings, area.Coordinates), projection),
-                Fill = new SolidColorBrush(GetIntensityColor(area.Intensity, 180)),
-                Stroke = new SolidColorBrush(GetIntensityBorderColor(area.Intensity, 235)),
-                StrokeThickness = 1.2,
-                ToolTip = $"{area.Name} · 震度 {GetIntensityText(area.Intensity)}",
-            };
-            MapCanvas.Children.Add(shape);
-        }
-
         foreach (EarthquakeMapMunicipality municipality in ViewModel.Municipalities)
         {
+            bool hasIntensity = IsKnownIntensity(municipality.Intensity);
+
             var shape = new Path
             {
                 Data = ToPathGeometry(
                     GetRings(municipality.Rings, municipality.Coordinates),
                     projection),
-                Fill = new SolidColorBrush(GetIntensityColor(municipality.Intensity, 95)),
-                Stroke = new SolidColorBrush(GetIntensityBorderColor(municipality.Intensity, 190)),
+                Fill = hasIntensity
+                    ? new SolidColorBrush(GetIntensityColor(municipality.Intensity, 150))
+                    : null,
+                Stroke = hasIntensity
+                    ? new SolidColorBrush(Color.FromArgb(225, 42, 50, 55))
+                    : new SolidColorBrush(OutlineStroke),
                 StrokeThickness = 0.8,
-                ToolTip = $"{municipality.Name} · 震度 {GetIntensityText(municipality.Intensity)}",
+                ToolTip = hasIntensity
+                    ? $"{municipality.Name} · 震度 {GetIntensityText(municipality.Intensity)}"
+                    : null,
             };
             MapCanvas.Children.Add(shape);
         }
@@ -302,6 +297,11 @@ public partial class EarthquakeMapView : UserControl
         };
         color.A = alpha;
         return color;
+    }
+
+    private static bool IsKnownIntensity(JmaIntensity intensity)
+    {
+        return intensity is >= JmaIntensity.One and <= JmaIntensity.Seven;
     }
 
     private static Color GetIntensityBorderColor(JmaIntensity intensity, byte alpha)

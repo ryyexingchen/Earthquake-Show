@@ -173,6 +173,31 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public async Task BoundaryLayerCountsAsDrawableWhenNoAreaMunicipalityOrMarkerExists()
+    {
+        EarthquakeReport report = CreateReport() with
+        {
+            Hypocenter = null,
+            IntensityAreas = [],
+            IntensityMunicipalities = [],
+            IntensityStations = [],
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson),
+            boundaryGeometry: OfflineMapBoundaryGeometry.LoadFromJson(BoundaryGeometryJson));
+
+        Assert.Empty(map.Areas);
+        Assert.Empty(map.Municipalities);
+        Assert.Empty(map.Markers);
+        Assert.NotEmpty(map.BoundaryLayers);
+        Assert.True(map.HasDrawableLayers);
+    }
+
+    [Fact]
     public async Task SelectedEvent_ProvidesFocusCoordinateForMappedArea()
     {
         var report = CreateReport();
