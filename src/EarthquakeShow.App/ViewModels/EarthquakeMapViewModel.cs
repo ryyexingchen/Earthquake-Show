@@ -43,6 +43,8 @@ public sealed record EarthquakeMapBoundaryLayer(
 
 public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 {
+    public const double MaximumZoomLevel = 12;
+
     private readonly EarthquakePageViewModel _page;
     private readonly OfflineMapGeometry _geometry;
     private readonly OfflineMapGeometry? _municipalityGeometry;
@@ -198,7 +200,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     public void ZoomIn()
     {
         ThrowIfDisposed();
-        ZoomLevel = Math.Min(4, ZoomLevel * 1.25);
+        ZoomLevel = Math.Min(MaximumZoomLevel, ZoomLevel * 1.25);
     }
 
     public void ZoomOut()

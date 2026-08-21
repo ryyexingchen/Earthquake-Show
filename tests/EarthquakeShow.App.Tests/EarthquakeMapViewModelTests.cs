@@ -302,6 +302,35 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public async Task MapCommands_AllowExpandedZoomAndClampAtMaximum()
+    {
+        var report = CreateReport();
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+        GeoCoordinate focus = new(32.75, 130.70);
+        map.FocusLocation(focus);
+
+        for (int index = 0; index < 20; index++)
+        {
+            map.ZoomIn();
+        }
+
+        Assert.Equal(EarthquakeMapViewModel.MaximumZoomLevel, map.ZoomLevel);
+        Assert.Equal(focus, map.FocusedCoordinate);
+
+        for (int index = 0; index < 20; index++)
+        {
+            map.ZoomOut();
+        }
+
+        Assert.Equal(1, map.ZoomLevel);
+    }
+
+    [Fact]
     public async Task EmptyPage_StillExposesOfflineOutlineAndNoEventLayers()
     {
         using var page = new EarthquakePageViewModel(
