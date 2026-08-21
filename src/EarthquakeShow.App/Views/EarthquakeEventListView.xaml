@@ -285,13 +285,13 @@
                             <Setter TargetName="Card" Property="BorderThickness" Value="2" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding MaxIntensity}" Value="One">
-                            <Setter TargetName="IntensityBadge" Property="Background" Value="#B8E6F2" />
+                            <Setter TargetName="IntensityBadge" Property="Background" Value="#78C7D8" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding MaxIntensity}" Value="Two">
                             <Setter TargetName="IntensityBadge" Property="Background" Value="#70D6C1" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding MaxIntensity}" Value="Three">
-                            <Setter TargetName="IntensityBadge" Property="Background" Value="#FFE45E" />
+                            <Setter TargetName="IntensityBadge" Property="Background" Value="#F0C943" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding MaxIntensity}" Value="Four">
                             <Setter TargetName="IntensityBadge" Property="Background" Value="#FFB347" />

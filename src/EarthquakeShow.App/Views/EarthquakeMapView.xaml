@@ -89,7 +89,7 @@
                         <TextBlock Margin="5,0,0,0" FontSize="10" Text="不明" />
                     </StackPanel>
                     <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#B8E6F2" CornerRadius="2" />
+                        <Border Width="14" Height="10" Background="#78C7D8" CornerRadius="2" />
                         <TextBlock Margin="5,0,0,0" FontSize="10" Text="1" />
                     </StackPanel>
                     <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
@@ -97,7 +97,7 @@
                         <TextBlock Margin="5,0,0,0" FontSize="10" Text="2" />
                     </StackPanel>
                     <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#FFE45E" CornerRadius="2" />
+                        <Border Width="14" Height="10" Background="#F0C943" CornerRadius="2" />
                         <TextBlock Margin="5,0,0,0" FontSize="10" Text="3" />
                     </StackPanel>
                     <StackPanel Margin="0,2,0,0" Orientation="Horizontal">

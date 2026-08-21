@@ -14,13 +14,13 @@
             <Setter Property="BorderThickness" Value="1" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Kind}" Value="One">
-                    <Setter Property="Background" Value="#B8E6F2" />
+                    <Setter Property="Background" Value="#78C7D8" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Kind}" Value="Two">
                     <Setter Property="Background" Value="#70D6C1" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Kind}" Value="Three">
-                    <Setter Property="Background" Value="#FFE45E" />
+                    <Setter Property="Background" Value="#F0C943" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Kind}" Value="Four">
                     <Setter Property="Background" Value="#FFB347" />
@@ -69,13 +69,13 @@
             <Setter Property="BorderThickness" Value="1" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IntensityKind}" Value="One">
-                    <Setter Property="Background" Value="#B8E6F2" />
+                    <Setter Property="Background" Value="#78C7D8" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IntensityKind}" Value="Two">
                     <Setter Property="Background" Value="#70D6C1" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IntensityKind}" Value="Three">
-                    <Setter Property="Background" Value="#FFE45E" />
+                    <Setter Property="Background" Value="#F0C943" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IntensityKind}" Value="Four">
                     <Setter Property="Background" Value="#FFB347" />

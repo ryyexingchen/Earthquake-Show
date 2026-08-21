@@ -127,6 +127,7 @@ public partial class EarthquakeMapView : UserControl
             ViewModel.ZoomLevel,
             MapCanvas.ActualWidth,
             MapCanvas.ActualHeight);
+        bool drawBaseOutlineStroke = ViewModel.BoundaryLayers.Count == 0;
 
         foreach (MapPolygonGeometry polygon in ViewModel.Outline)
         {
@@ -134,7 +135,9 @@ public partial class EarthquakeMapView : UserControl
             {
                 Data = ToPathGeometry(GetRings(polygon.Rings, polygon.Coordinates), projection),
                 Fill = new SolidColorBrush(OutlineFill),
-                Stroke = new SolidColorBrush(OutlineStroke),
+                Stroke = drawBaseOutlineStroke
+                    ? new SolidColorBrush(OutlineStroke)
+                    : null,
                 StrokeThickness = 1,
                 ToolTip = polygon.Name,
             };
@@ -175,7 +178,7 @@ public partial class EarthquakeMapView : UserControl
             {
                 Data = ToBoundaryPathGeometry(layer.Boundaries, projection),
                 Stroke = new SolidColorBrush(GetIntensityColor(layer.Intensity, 245)),
-                StrokeThickness = 1.4,
+                StrokeThickness = 1.8,
                 StrokeLineJoin = PenLineJoin.Round,
                 StrokeStartLineCap = PenLineCap.Round,
                 StrokeEndLineCap = PenLineCap.Round,
@@ -284,9 +287,9 @@ public partial class EarthquakeMapView : UserControl
     {
         Color color = intensity switch
         {
-            JmaIntensity.One => Color.FromRgb(184, 230, 242),
+            JmaIntensity.One => Color.FromRgb(120, 199, 216),
             JmaIntensity.Two => Color.FromRgb(112, 214, 193),
-            JmaIntensity.Three => Color.FromRgb(255, 228, 94),
+            JmaIntensity.Three => Color.FromRgb(240, 201, 67),
             JmaIntensity.Four => Color.FromRgb(255, 179, 71),
             JmaIntensity.FiveLower => Color.FromRgb(255, 122, 69),
             JmaIntensity.FiveUpper => Color.FromRgb(240, 68, 56),
