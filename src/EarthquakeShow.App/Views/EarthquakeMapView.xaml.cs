@@ -50,6 +50,8 @@ public partial class EarthquakeMapView : UserControl
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(EarthquakeMapViewModel.Areas)
+            or nameof(EarthquakeMapViewModel.Municipalities)
+            or nameof(EarthquakeMapViewModel.BoundaryLayers)
             or nameof(EarthquakeMapViewModel.Markers)
             or nameof(EarthquakeMapViewModel.ZoomLevel)
             or nameof(EarthquakeMapViewModel.FocusedCoordinate)
@@ -167,6 +169,26 @@ public partial class EarthquakeMapView : UserControl
             MapCanvas.Children.Add(shape);
         }
 
+        foreach (EarthquakeMapBoundaryLayer layer in ViewModel.BoundaryLayers)
+        {
+            if (layer.Boundaries.Length == 0)
+            {
+                continue;
+            }
+
+            var shape = new Path
+            {
+                Data = ToBoundaryPathGeometry(layer.Boundaries, projection),
+                Stroke = new SolidColorBrush(GetIntensityColor(layer.Intensity, 245)),
+                StrokeThickness = 1.4,
+                StrokeLineJoin = PenLineJoin.Round,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                IsHitTestVisible = false,
+            };
+            MapCanvas.Children.Add(shape);
+        }
+
         foreach (EarthquakeMapMarker marker in ViewModel.Markers)
         {
             DrawMarker(marker, projection);
@@ -201,6 +223,38 @@ public partial class EarthquakeMapView : UserControl
                 for (int index = 1; index < ring.Count; index++)
                 {
                     context.LineTo(projection.Project(ring[index]), true, false);
+                }
+            }
+        }
+
+        geometry.Freeze();
+        return geometry;
+    }
+
+    private static StreamGeometry ToBoundaryPathGeometry(
+        IReadOnlyList<EarthquakeMapBoundary> boundaries,
+        MapProjection projection)
+    {
+        var geometry = new StreamGeometry();
+        using (StreamGeometryContext context = geometry.Open())
+        {
+            foreach (EarthquakeMapBoundary boundary in boundaries)
+            {
+                if (boundary.Coordinates.Length < 2)
+                {
+                    continue;
+                }
+
+                context.BeginFigure(
+                    projection.Project(boundary.Coordinates[0]),
+                    isFilled: false,
+                    isClosed: false);
+                for (int index = 1; index < boundary.Coordinates.Length; index++)
+                {
+                    context.LineTo(
+                        projection.Project(boundary.Coordinates[index]),
+                        isStroked: true,
+                        isSmoothJoin: false);
                 }
             }
         }

@@ -55,7 +55,8 @@
 - `0.33.2` 已完成候选边界开放端点审计：1,128 个端点全部是 376 个三叉交汇节点，孤立端点和端点落在线段内部均为 0；尚未接入运行时地图。
 - `0.33.3` 已将审计通过的边界资源复制到 App，并完成独立解析模型、元数据读取和按区域代码索引；当前仍不参与地图绘制。
 - `0.33.4` 已完成按相邻区域最大有效震度计算边界显示震度，并按震度升序生成 `BoundaryLayers`；当前仍不参与地图绘制。
-- 下一实现步骤：把 `BoundaryLayers` 接入 WPF 绘制，按低到高合并为少量 `StreamGeometry`，并同步调整区域面、市町村面和观测点的图层顺序。其他一级页面暂停制作。
+- `0.33.5` 已把 `BoundaryLayers` 接入 WPF，按震度组生成冻结的 `StreamGeometry`，绘制顺序为市町村之后、震源和观测点之前。
+- 下一实现步骤：移除区域最大震度面填充，改为市町村有效震度填充和区域边界显示，并补充无震度市町村的中性边界样式。其他一级页面暂停制作。
 
 ## 文档同步规则
 
@@ -553,6 +554,7 @@ EventStatusBadgeControl
 - [x] `0.33.2` 使用 `tools/audit_boundary_open_endpoints.py` 完成开放端点审计：1,128 个端点全部属于 376 个三叉节点，孤立端点为 0，端点近邻匹配和端点-线段内部匹配均为 0。
 - [x] `0.33.3` 将 `jma-earthquake-area-boundaries-overview.geojson` 加入 `Assets/Data/Map`，新增 `OfflineMapBoundaryGeometry`、`EarthquakeMapBoundary` 和按区域代码索引；启动回归确认 1,069 条边界资源可读。
 - [x] `0.33.4` 按当前报文区域震度计算边界显示震度，并加入地图 ViewModel 的分组投影；本步骤未改变现有渲染。
+- [x] `0.33.5` 将 `BoundaryLayers` 按震度组接入 WPF `StreamGeometry` 绘制；本步骤保留现有区域面填充。
 
 ### 10. 实现缓存和离线启动
 
