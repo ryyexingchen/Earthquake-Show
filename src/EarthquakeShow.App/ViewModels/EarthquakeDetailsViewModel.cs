@@ -710,7 +710,9 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             item.AreaCode,
             item.MaxIntensity,
             GetIntensityText(item.MaxIntensity),
-            null)));
+            _map.TryGetMunicipalityFocusCoordinate(item.Code, out GeoCoordinate coordinate)
+                ? coordinate
+                : null)));
         items.AddRange(report.IntensityStations.Select(station => new EarthquakeObservationItemViewModel(
             "观测点",
             station.Name,

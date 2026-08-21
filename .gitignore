@@ -22,5 +22,8 @@ src/EarthquakeShow.App/Assets/Data/*
 !src/EarthquakeShow.App/Assets/Data/Stations/
 src/EarthquakeShow.App/Assets/Data/Stations/*
 !src/EarthquakeShow.App/Assets/Data/Stations/jma-intensity-stations.json
+!src/EarthquakeShow.App/Assets/Data/Map/
+src/EarthquakeShow.App/Assets/Data/Map/*
+!src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-municipalities-overview.geojson
 src/EarthquakeShow.Core/bin-codex/
 src/EarthquakeShow.Infrastructure/bin-codex/

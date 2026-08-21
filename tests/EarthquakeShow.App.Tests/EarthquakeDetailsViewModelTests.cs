@@ -159,6 +159,34 @@ public sealed class EarthquakeDetailsViewModelTests
     }
 
     [Fact]
+    public async Task Details_MunicipalityNode_FocusesMatchedGeometry()
+    {
+        EarthquakeReport report = CreateReport(
+            "municipality-focus",
+            BaseTime,
+            intensity: JmaIntensity.Four) with
+        {
+            IntensityMunicipalities =
+            [new IntensityMunicipality("C1", "熊本市", "741", JmaIntensity.Four)],
+            IntensityStations = [],
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson),
+            OfflineMapGeometry.LoadFromJson(MunicipalityGeometryJson));
+        using var details = new EarthquakeDetailsViewModel(page, map);
+
+        EarthquakeObservationTreeNode municipality = Assert.Single(
+            Assert.Single(details.ObservationTreeNodes).Children);
+        Assert.Equal("单击定位", municipality.LocationText);
+        details.SelectObservationNode(municipality);
+        Assert.Equal(municipality.Coordinate, map.FocusedCoordinate);
+    }
+
+    [Fact]
     public async Task Details_RawPayloadIsPreservedAndTimelineNavigationStopsAtBounds()
     {
         const string raw = "<Report>原始内容</Report>";
@@ -370,6 +398,23 @@ public sealed class EarthquakeDetailsViewModelTests
               "geometry": {
                 "type": "Polygon",
                 "coordinates": [[[130.4,32.4],[131.0,32.4],[131.0,33.1],[130.4,33.1],[130.4,32.4]]]
+              }
+            }
+          ]
+        }
+        """;
+
+    private const string MunicipalityGeometryJson = """
+        {
+          "type": "FeatureCollection",
+          "metadata": { "source": "测试市町村轮廓", "officialBoundary": true },
+          "features": [
+            {
+              "type": "Feature",
+              "properties": { "municipalityCode": "C1", "name": "熊本市" },
+              "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[130.5,32.5],[130.9,32.5],[130.9,32.9],[130.5,32.9],[130.5,32.5]]]
               }
             }
           ]

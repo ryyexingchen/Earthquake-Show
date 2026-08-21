@@ -21,6 +21,16 @@ public sealed record EarthquakeMapArea(
         ImmutableArray.Create(Coordinates);
 }
 
+public sealed record EarthquakeMapMunicipality(
+    string Code,
+    string Name,
+    JmaIntensity Intensity,
+    ImmutableArray<GeoCoordinate> Coordinates)
+{
+    public ImmutableArray<ImmutableArray<GeoCoordinate>> Rings { get; init; } =
+        ImmutableArray.Create(Coordinates);
+}
+
 public sealed record EarthquakeMapMarker(
     EarthquakeMapMarkerKind Kind,
     string Label,
@@ -31,6 +41,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly EarthquakePageViewModel _page;
     private readonly OfflineMapGeometry _geometry;
+    private readonly OfflineMapGeometry? _municipalityGeometry;
     private double _zoomLevel = 1;
     private GeoCoordinate? _focusedCoordinate;
     private string? _reportSourceId;
@@ -39,10 +50,12 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
     public EarthquakeMapViewModel(
         EarthquakePageViewModel page,
-        OfflineMapGeometry geometry)
+        OfflineMapGeometry geometry,
+        OfflineMapGeometry? municipalityGeometry = null)
     {
         _page = page ?? throw new ArgumentNullException(nameof(page));
         _geometry = geometry ?? throw new ArgumentNullException(nameof(geometry));
+        _municipalityGeometry = municipalityGeometry;
         _page.PropertyChanged += OnPagePropertyChanged;
         RebuildLayers();
     }
@@ -61,7 +74,11 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
     public int UnmappedAreaCount { get; private set; }
 
+    public int UnmappedMunicipalityCount { get; private set; }
+
     public IReadOnlyList<EarthquakeMapArea> Areas { get; private set; } = [];
+
+    public IReadOnlyList<EarthquakeMapMunicipality> Municipalities { get; private set; } = [];
 
     public IReadOnlyList<EarthquakeMapMarker> Markers { get; private set; } = [];
 
@@ -93,7 +110,8 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
     public bool HasSelectedEvent => _page.State.SelectedEvent is not null;
 
-    public bool HasDrawableLayers => Areas.Count > 0 || Markers.Count > 0;
+    public bool HasDrawableLayers =>
+        Areas.Count > 0 || Municipalities.Count > 0 || Markers.Count > 0;
 
     public bool TryGetAreaFocusCoordinate(
         string areaCode,
@@ -118,11 +136,35 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         return TryGetBoundsCenter(points, out coordinate);
     }
 
+    public bool TryGetMunicipalityFocusCoordinate(
+        string municipalityCode,
+        out GeoCoordinate coordinate)
+    {
+        coordinate = default;
+        if (string.IsNullOrWhiteSpace(municipalityCode))
+        {
+            return false;
+        }
+
+        EarthquakeMapMunicipality? municipality = Municipalities.FirstOrDefault(item =>
+            string.Equals(item.Code, municipalityCode, StringComparison.Ordinal));
+        if (municipality is null)
+        {
+            return false;
+        }
+
+        IReadOnlyList<GeoCoordinate> points = municipality.Rings
+            .SelectMany(ring => ring)
+            .ToArray();
+        return TryGetBoundsCenter(points, out coordinate);
+    }
+
     public bool TryGetSelectedEventFocusCoordinate(out GeoCoordinate coordinate)
     {
         IReadOnlyList<GeoCoordinate> points = Markers
             .Select(marker => marker.Coordinate)
             .Concat(Areas.SelectMany(area => area.Rings.SelectMany(ring => ring)))
+            .Concat(Municipalities.SelectMany(item => item.Rings.SelectMany(ring => ring)))
             .ToArray();
         return TryGetBoundsCenter(points, out coordinate);
     }
@@ -234,8 +276,10 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         if (report is null)
         {
             Areas = [];
+            Municipalities = [];
             Markers = [];
             UnmappedAreaCount = 0;
+            UnmappedMunicipalityCount = 0;
             RaiseLayerProperties();
             return;
         }
@@ -272,6 +316,40 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             .Select(area => area!)
             .ToArray();
 
+        var municipalityGeometryByCode = (_municipalityGeometry?.Polygons ?? [])
+            .Where(item => item.Code.Length > 0)
+            .GroupBy(item => item.Code, StringComparer.Ordinal)
+            .ToDictionary(item => item.Key, item => item.ToArray(), StringComparer.Ordinal);
+        UnmappedMunicipalityCount = 0;
+        Municipalities = report.IntensityMunicipalities
+            .Select(municipality =>
+            {
+                if (!municipalityGeometryByCode.TryGetValue(
+                        municipality.Code,
+                        out MapPolygonGeometry[]? polygons))
+                {
+                    UnmappedMunicipalityCount++;
+                    return null;
+                }
+
+                ImmutableArray<ImmutableArray<GeoCoordinate>> rings = polygons
+                    .SelectMany(item => item.Rings.IsDefaultOrEmpty
+                        ? [item.Coordinates]
+                        : item.Rings)
+                    .ToImmutableArray();
+                return new EarthquakeMapMunicipality(
+                    municipality.Code,
+                    municipality.Name,
+                    municipality.MaxIntensity,
+                    rings[0])
+                {
+                    Rings = rings,
+                };
+            })
+            .Where(item => item is not null)
+            .Select(item => item!)
+            .ToArray();
+
         var markers = new List<EarthquakeMapMarker>();
         if (report.Hypocenter?.Coordinate is GeoCoordinate hypocenter)
         {
@@ -299,6 +377,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     private void RaiseLayerProperties()
     {
         OnPropertyChanged(nameof(Areas));
+        OnPropertyChanged(nameof(Municipalities));
         OnPropertyChanged(nameof(Markers));
         OnPropertyChanged(nameof(FocusMode));
         OnPropertyChanged(nameof(FollowSelection));
@@ -308,6 +387,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(FocusedCoordinate));
         OnPropertyChanged(nameof(UnmappedAreaCount));
+        OnPropertyChanged(nameof(UnmappedMunicipalityCount));
     }
 
     private static bool TryGetBoundsCenter(

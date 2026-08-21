@@ -117,6 +117,7 @@ public partial class EarthquakeMapView : UserControl
                 : null;
         MapProjection projection = MapProjection.Create(
             ViewModel.Outline,
+            ViewModel.Municipalities,
             ViewModel.Markers,
             ViewModel.EffectiveFocusMode,
             ViewModel.FocusedCoordinate,
@@ -147,6 +148,21 @@ public partial class EarthquakeMapView : UserControl
                 Stroke = new SolidColorBrush(GetIntensityBorderColor(area.Intensity, 235)),
                 StrokeThickness = 1.2,
                 ToolTip = $"{area.Name} · 震度 {GetIntensityText(area.Intensity)}",
+            };
+            MapCanvas.Children.Add(shape);
+        }
+
+        foreach (EarthquakeMapMunicipality municipality in ViewModel.Municipalities)
+        {
+            var shape = new Path
+            {
+                Data = ToPathGeometry(
+                    GetRings(municipality.Rings, municipality.Coordinates),
+                    projection),
+                Fill = new SolidColorBrush(GetIntensityColor(municipality.Intensity, 95)),
+                Stroke = new SolidColorBrush(GetIntensityBorderColor(municipality.Intensity, 190)),
+                StrokeThickness = 0.8,
+                ToolTip = $"{municipality.Name} · 震度 {GetIntensityText(municipality.Intensity)}",
             };
             MapCanvas.Children.Add(shape);
         }
@@ -286,6 +302,7 @@ public partial class EarthquakeMapView : UserControl
 
         public static MapProjection Create(
             IReadOnlyList<MapPolygonGeometry> outline,
+            IReadOnlyList<EarthquakeMapMunicipality> municipalities,
             IReadOnlyList<EarthquakeMapMarker> markers,
             EarthquakeMapFocusMode focusMode,
             GeoCoordinate? focusedCoordinate,
@@ -294,7 +311,7 @@ public partial class EarthquakeMapView : UserControl
             double width,
             double height)
         {
-            MapGeometryBounds bounds = GetBounds(outline, markers);
+            MapGeometryBounds bounds = GetBounds(outline, municipalities, markers);
             double centerLongitude = (bounds.MinLongitude + bounds.MaxLongitude) / 2;
             double centerLatitude = (bounds.MinLatitude + bounds.MaxLatitude) / 2;
             if (focusedCoordinate is GeoCoordinate location)
@@ -326,6 +343,7 @@ public partial class EarthquakeMapView : UserControl
 
         private static MapGeometryBounds GetBounds(
             IReadOnlyList<MapPolygonGeometry> outline,
+            IReadOnlyList<EarthquakeMapMunicipality> municipalities,
             IReadOnlyList<EarthquakeMapMarker> markers)
         {
             IEnumerable<GeoCoordinate> coordinates = outline
@@ -333,6 +351,9 @@ public partial class EarthquakeMapView : UserControl
                     ? [item.Coordinates]
                     : item.Rings)
                 .SelectMany(item => item)
+                .Concat(municipalities
+                    .SelectMany(item => item.Rings)
+                    .SelectMany(item => item))
                 .Concat(markers.Select(item => item.Coordinate));
             if (!coordinates.Any())
             {

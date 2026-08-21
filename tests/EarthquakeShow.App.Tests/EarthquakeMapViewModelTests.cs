@@ -135,6 +135,47 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public async Task SelectedEvent_BuildsMunicipalityLayerAndFocusesMunicipality()
+    {
+        EarthquakeReport report = CreateReport() with
+        {
+            IntensityMunicipalities =
+            [
+                new IntensityMunicipality(
+                    "C741",
+                    "熊本市",
+                    "741",
+                    JmaIntensity.Four),
+                new IntensityMunicipality(
+                    "C999",
+                    "不存在市町村",
+                    "741",
+                    JmaIntensity.Two),
+            ],
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson),
+            OfflineMapGeometry.LoadFromJson(MunicipalityGeometryJson));
+
+        MapPolygonGeometry polygon = Assert.Single(
+            OfflineMapGeometry.LoadFromJson(MunicipalityGeometryJson).Polygons);
+        Assert.Equal("C741", polygon.Code);
+        EarthquakeMapMunicipality municipality = Assert.Single(map.Municipalities);
+        Assert.Equal("C741", municipality.Code);
+        Assert.Equal(JmaIntensity.Four, municipality.Intensity);
+        Assert.Equal(1, map.UnmappedMunicipalityCount);
+        Assert.True(map.TryGetMunicipalityFocusCoordinate(
+            "C741",
+            out GeoCoordinate coordinate));
+        Assert.Equal(32.70, coordinate.Latitude, precision: 2);
+        Assert.Equal(130.70, coordinate.Longitude, precision: 2);
+    }
+
+    [Fact]
     public async Task SelectedEventFocus_UsesAreaWhenIntensityAlertHasNoMarkers()
     {
         EarthquakeReport report = CreateReport() with
@@ -220,6 +261,10 @@ public sealed class EarthquakeMapViewModelTests
                 new IntensityArea("741", "熊本県熊本", "43", "熊本県", JmaIntensity.Four),
                 new IntensityArea("999", "不存在区域", "99", "不存在", JmaIntensity.Seven),
             ],
+            IntensityMunicipalities =
+            [
+                new IntensityMunicipality("C741", "熊本市", "741", JmaIntensity.Four),
+            ],
             IntensityStations =
             [
                 new IntensityStation(
@@ -281,6 +326,23 @@ public sealed class EarthquakeMapViewModelTests
                   [[[129,31],[129.5,31],[129.5,31.5],[129,31.5],[129,31]]],
                   [[[131.5,34],[132,34],[132,34.5],[131.5,34.5],[131.5,34]]]
                 ]
+              }
+            }
+          ]
+        }
+        """;
+
+    private const string MunicipalityGeometryJson = """
+        {
+          "type": "FeatureCollection",
+          "metadata": { "source": "测试市町村轮廓", "officialBoundary": true },
+          "features": [
+            {
+              "type": "Feature",
+              "properties": { "municipalityCode": "C741", "name": "熊本市" },
+              "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[130.5,32.5],[130.9,32.5],[130.9,32.9],[130.5,32.9],[130.5,32.5]]]
               }
             }
           ]

@@ -72,7 +72,8 @@ public sealed class OfflineMapGeometry
             JsonElement properties = feature.GetProperty("properties");
             JsonElement geometry = feature.GetProperty("geometry");
             string code = GetString(properties, "code") ??
-                GetString(properties, "areaCode") ?? string.Empty;
+                GetString(properties, "areaCode") ??
+                GetString(properties, "municipalityCode") ?? string.Empty;
             string name = GetString(properties, "name") ?? code;
             bool officialBoundary = properties.TryGetProperty(
                     "officialBoundary",
