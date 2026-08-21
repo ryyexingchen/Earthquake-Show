@@ -24,6 +24,7 @@ public sealed class SqliteEarthquakeEventRepository :
     private readonly SemaphoreSlim _writeGate = new(1, 1);
     private readonly string _databasePath;
     private readonly ImmutableArray<IRealtimeEarthquakeSource> _realtimeSources;
+    private readonly JmaStationCoordinateCatalog? _stationCatalog;
     private ImmutableArray<EarthquakeReport> _reports = [];
     private ImmutableArray<EarthquakeEvent> _events = [];
     private ImmutableArray<SourceStatus> _sourceStatuses = [];
@@ -31,16 +32,19 @@ public sealed class SqliteEarthquakeEventRepository :
 
     public SqliteEarthquakeEventRepository(
         string databasePath,
-        IRealtimeEarthquakeSource? realtimeSource = null)
+        IRealtimeEarthquakeSource? realtimeSource = null,
+        JmaStationCoordinateCatalog? stationCatalog = null)
         : this(
             databasePath,
-            realtimeSource is null ? [] : [realtimeSource])
+            realtimeSource is null ? [] : [realtimeSource],
+            stationCatalog)
     {
     }
 
     public SqliteEarthquakeEventRepository(
         string databasePath,
-        IEnumerable<IRealtimeEarthquakeSource> realtimeSources)
+        IEnumerable<IRealtimeEarthquakeSource> realtimeSources,
+        JmaStationCoordinateCatalog? stationCatalog = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
         ArgumentNullException.ThrowIfNull(realtimeSources);
@@ -48,6 +52,7 @@ public sealed class SqliteEarthquakeEventRepository :
         _realtimeSources = realtimeSources
             .Where(source => source is not null)
             .ToImmutableArray();
+        _stationCatalog = stationCatalog;
     }
 
     public event EventHandler<EarthquakeEventsChangedEventArgs>? EventsChanged;
@@ -400,7 +405,7 @@ public sealed class SqliteEarthquakeEventRepository :
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    private static async Task<ImmutableArray<EarthquakeReport>> ReadReportsAsync(
+    private async Task<ImmutableArray<EarthquakeReport>> ReadReportsAsync(
         SqliteConnection connection,
         CancellationToken cancellationToken)
     {
@@ -422,10 +427,36 @@ public sealed class SqliteEarthquakeEventRepository :
                 throw new InvalidDataException("SQLite 报文负载为空。");
             }
 
-            reports.Add(payload.ToDomain());
+            reports.Add(FillMissingJmaStationCoordinates(payload.ToDomain()));
         }
 
         return reports.ToImmutable();
+    }
+
+    private EarthquakeReport FillMissingJmaStationCoordinates(EarthquakeReport report)
+    {
+        if (_stationCatalog is null ||
+            !string.Equals(report.Source.SourceId, DefaultSourceId, StringComparison.Ordinal) ||
+            report.IntensityStations.All(station => station.Coordinate is not null))
+        {
+            return report;
+        }
+
+        bool changed = false;
+        ImmutableArray<IntensityStation> stations = report.IntensityStations
+            .Select(station =>
+            {
+                if (station.Coordinate is not null ||
+                    !_stationCatalog.TryResolve(station.Code, station.Name, out GeoCoordinate coordinate, out _))
+                {
+                    return station;
+                }
+
+                changed = true;
+                return station with { Coordinate = coordinate };
+            })
+            .ToImmutableArray();
+        return changed ? report with { IntensityStations = stations } : report;
     }
 
     private static async Task<ImmutableArray<SourceStatus>> ReadSourceStatusesAsync(

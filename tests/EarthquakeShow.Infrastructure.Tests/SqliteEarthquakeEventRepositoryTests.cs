@@ -54,6 +54,75 @@ public sealed class SqliteEarthquakeEventRepositoryTests
     }
 
     [Fact]
+    public async Task Initialize_OldCachedJmaXml_FillsOnlyMissingJmaCoordinates()
+    {
+        using var database = new TemporaryDatabase();
+        EarthquakeReport jmaReport = CreateOnlineReport() with
+        {
+            Source = new SourceReference("jma-xml", "cached-jma-xml"),
+            IntensityStations =
+            [
+                new IntensityStation(
+                    string.Empty,
+                    "水戸市栗崎町＊",
+                    string.Empty,
+                    JmaIntensity.Two,
+                    null),
+                new IntensityStation(
+                    "known-station",
+                    "既知観測点",
+                    string.Empty,
+                    JmaIntensity.Three,
+                    new GeoCoordinate(35.1, 139.2)),
+            ],
+        };
+        EarthquakeReport p2pReport = CreateOnlineReport() with
+        {
+            Source = new SourceReference("p2pquake", "cached-p2pquake"),
+            IntensityStations =
+            [
+                new IntensityStation(
+                    string.Empty,
+                    "水戸市栗崎町＊",
+                    string.Empty,
+                    JmaIntensity.Two,
+                    null),
+            ],
+        };
+        var writer = new SqliteEarthquakeEventRepository(database.Path);
+        await writer.InitializeAsync([jmaReport, p2pReport]);
+        const string catalogJson = """
+            {
+              "schemaVersion": 1,
+              "stations": [
+                { "name": "水戸市栗崎町", "latitude": 36.31, "longitude": 140.49 }
+              ]
+            }
+            """;
+        JmaStationCoordinateCatalog catalog = JmaStationCoordinateCatalog.LoadJson(catalogJson);
+
+        var reader = new SqliteEarthquakeEventRepository(
+            database.Path,
+            stationCatalog: catalog);
+        await reader.InitializeAsync([]);
+
+        EarthquakeEvent cachedEvent = Assert.Single(await reader.ListEventsAsync());
+        EarthquakeReport cachedJma = Assert.Single(
+            cachedEvent.Reports,
+            report => report.Source.SourceId == "jma-xml");
+        Assert.Equal(
+            new GeoCoordinate(36.31, 140.49),
+            cachedJma.IntensityStations[0].Coordinate);
+        Assert.Equal(
+            new GeoCoordinate(35.1, 139.2),
+            cachedJma.IntensityStations[1].Coordinate);
+        EarthquakeReport cachedP2p = Assert.Single(
+            cachedEvent.Reports,
+            report => report.Source.SourceId == "p2pquake");
+        Assert.Null(Assert.Single(cachedP2p.IntensityStations).Coordinate);
+    }
+
+    [Fact]
     public async Task Initialize_PersistsOfflineSourceStatus()
     {
         using var database = new TemporaryDatabase();

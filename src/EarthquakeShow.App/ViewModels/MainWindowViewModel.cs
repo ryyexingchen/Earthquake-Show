@@ -60,7 +60,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 Timeout = TimeSpan.FromSeconds(15),
             };
-            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.31.1");
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.31.2");
             _realtimeSource = new JmaJsonEarthquakeSource(_httpClient);
             JmaXmlEarthquakeSource xmlSource = new(
                 _httpClient,
@@ -83,7 +83,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         _repository = new SqliteEarthquakeEventRepository(
             cachePath ?? GetDefaultCachePath(),
-            _realtimeSources);
+            _realtimeSources,
+            stationCatalog);
         EarthquakePage = new EarthquakePageViewModel(
             _repository);
         EventList = new EarthquakeEventListViewModel(EarthquakePage);
@@ -95,8 +96,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     "Assets",
                     "Data",
                     "Map",
-                    "jma-earthquake-areas-overview.geojson")),
-            stationCatalog);
+                    "jma-earthquake-areas-overview.geojson")));
         Details = new EarthquakeDetailsViewModel(EarthquakePage, Map);
         Layout = new WindowLayoutViewModel();
         UpdateClock();
