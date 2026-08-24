@@ -147,6 +147,9 @@ public sealed class MainWindowViewModelTests
                 viewModel.EarthquakePage.State.Events,
                 earthquakeEvent => earthquakeEvent.EventId == "20260824120000");
             Assert.Equal("海啸：在线", viewModel.TsunamiSourceStatusText);
+            Assert.Contains(
+                viewModel.TsunamiPage.State.Reports,
+                report => report.EventId == "20260824120000");
 
             await viewModel.DisposeAsync();
 

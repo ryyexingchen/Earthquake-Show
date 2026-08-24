@@ -99,6 +99,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         _tsunamiRepository = new SqliteTsunamiReportRepository(
             cachePath ?? GetDefaultCachePath(),
             _tsunamiSource);
+        TsunamiPage = new TsunamiPageViewModel(_tsunamiRepository);
         EarthquakePage = new EarthquakePageViewModel(
             _repository);
         EventList = new EarthquakeEventListViewModel(EarthquakePage);
@@ -202,6 +203,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
 
     public SettingsViewModel Settings { get; }
 
+    public TsunamiPageViewModel TsunamiPage { get; }
+
     public ImmutableArray<SourceStatus> TsunamiSourceStatuses => _tsunamiSourceStatuses;
 
     public ValueTask InitializeAsync(
@@ -224,6 +227,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         CacheStatus = _repository.CacheStatus;
         await _tsunamiRepository.InitializeAsync(token);
         UpdateTsunamiSourceStatuses();
+        await TsunamiPage.LoadAsync(token);
         EarthquakePage.SetSourceState(
             _repository.SourceStatuses,
             isOffline: true);
@@ -303,6 +307,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         Map.Dispose();
         EventList.Dispose();
         EarthquakePage.Dispose();
+        TsunamiPage.Dispose();
         _tsunamiRepository.Dispose();
         _httpClient?.Dispose();
         _streamingSessionCancellation?.Dispose();
@@ -344,6 +349,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
                 try
                 {
                     await _tsunamiRepository.RefreshAsync(cancellationToken);
+                    await TsunamiPage.LoadAsync(cancellationToken);
                     UpdateTsunamiSourceStatuses();
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
