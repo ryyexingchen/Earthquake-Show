@@ -107,6 +107,59 @@ public sealed class JmaJsonEarthquakeSourceTests
     }
 
     [Fact]
+    public async Task Fetch_DegreeMinuteCoordinate_DoesNotDiscardOtherReports()
+    {
+        const string json = """
+            [
+              {
+                "ctt": "20260824125723",
+                "eid": "20260824125441",
+                "rdt": "2026-08-24T12:57:00+09:00",
+                "ttl": "震源・震度情報",
+                "ift": "発表",
+                "ser": "1",
+                "at": "2026-08-24T12:54:00+09:00",
+                "anm": "釧路地方中南部",
+                "acd": "161",
+                "cod": "+43.2+145.0-80000/",
+                "mag": "3.3",
+                "maxi": "1"
+              },
+              {
+                "ctt": "20260823020050",
+                "eid": "20260823015901",
+                "rdt": "2026-08-23T02:00:00+09:00",
+                "ttl": "震源・震度情報",
+                "ift": "発表",
+                "ser": "1",
+                "at": "2026-08-23T01:59:00+09:00",
+                "anm": "茨城県南部",
+                "acd": "300",
+                "cod": "+3559.9+14005.7-68000/",
+                "mag": "3.0",
+                "maxi": "1"
+              }
+            ]
+            """;
+        using var httpClient = new HttpClient(new StaticResponseHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json),
+            }));
+        var source = new JmaJsonEarthquakeSource(httpClient);
+
+        EarthquakeSourceFetchResult result = await source.FetchAsync();
+
+        Assert.Equal(2, result.Reports.Length);
+        EarthquakeReport compact = Assert.Single(result.Reports, report =>
+            report.EventId == "20260823015901");
+        GeoCoordinate? coordinate = compact.Hypocenter?.Coordinate;
+        Assert.NotNull(coordinate);
+        Assert.InRange(coordinate.Value.Latitude, 35.9983333333 - 1e-10, 35.9983333333 + 1e-10);
+        Assert.InRange(coordinate.Value.Longitude, 140.095 - 1e-10, 140.095 + 1e-10);
+    }
+
+    [Fact]
     public async Task Fetch_RateLimited_ReturnsStatusWithoutReports()
     {
         using var httpClient = new HttpClient(new StaticResponseHandler(

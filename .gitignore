@@ -22,6 +22,7 @@ src/EarthquakeShow.App/Assets/Data/*
 !src/EarthquakeShow.App/Assets/Data/Stations/
 src/EarthquakeShow.App/Assets/Data/Stations/*
 !src/EarthquakeShow.App/Assets/Data/Stations/jma-intensity-stations.json
+!src/EarthquakeShow.App/Assets/Data/Stations/jma-tsunami-tidal-points.json
 !src/EarthquakeShow.App/Assets/Data/Map/
 src/EarthquakeShow.App/Assets/Data/Map/*
 !src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-municipalities-overview.geojson

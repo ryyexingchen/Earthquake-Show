@@ -270,8 +270,14 @@ public sealed class JmaJsonEarthquakeSource : IRealtimeEarthquakeSource
             throw new FormatException($"JMA JSON cod 坐标无效：{value}。");
         }
 
-        double latitude = double.Parse(match.Groups["latitude"].Value, CultureInfo.InvariantCulture);
-        double longitude = double.Parse(match.Groups["longitude"].Value, CultureInfo.InvariantCulture);
+        double latitude = NormalizeCoordinate(
+            double.Parse(match.Groups["latitude"].Value, CultureInfo.InvariantCulture),
+            90,
+            "纬度");
+        double longitude = NormalizeCoordinate(
+            double.Parse(match.Groups["longitude"].Value, CultureInfo.InvariantCulture),
+            180,
+            "经度");
         int? depthKm = null;
         if (match.Groups["depth"].Success &&
             int.TryParse(
@@ -286,6 +292,26 @@ public sealed class JmaJsonEarthquakeSource : IRealtimeEarthquakeSource
         }
 
         return (new GeoCoordinate(latitude, longitude), depthKm);
+    }
+
+    private static double NormalizeCoordinate(double value, double maximum, string axis)
+    {
+        if (Math.Abs(value) <= maximum)
+        {
+            return value;
+        }
+
+        // JMA 列表偶尔使用 DDMM.m / DDDMM.m 的度分格式。
+        double sign = Math.Sign(value);
+        double absolute = Math.Abs(value);
+        double degrees = Math.Floor(absolute / 100);
+        double minutes = absolute - degrees * 100;
+        if (degrees > maximum || minutes >= 60)
+        {
+            throw new FormatException($"JMA JSON cod {axis}超出有效范围：{value}。");
+        }
+
+        return sign * (degrees + minutes / 60);
     }
 
     private static double? ParseMagnitude(string? value)
