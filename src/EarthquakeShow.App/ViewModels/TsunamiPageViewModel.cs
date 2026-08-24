@@ -29,11 +29,18 @@ public sealed record TsunamiEstimationAreaDisplay(
     string ArrivalText,
     string HeightText);
 
+public sealed record TsunamiInformationItemDisplay(
+    string KindText,
+    string CodeText,
+    string LastKindText,
+    string AreasText);
+
 public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly ITsunamiReportRepository _repository;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private TsunamiPageState _state = new();
+    private string _rawXmlCopyStatus = string.Empty;
     private bool _isDisposed;
 
     public TsunamiPageViewModel(ITsunamiReportRepository repository)
@@ -81,6 +88,13 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(HasForecastAreas));
             OnPropertyChanged(nameof(HasObservationStations));
             OnPropertyChanged(nameof(HasEstimationAreas));
+            OnPropertyChanged(nameof(InformationItems));
+            OnPropertyChanged(nameof(HasInformationItems));
+            OnPropertyChanged(nameof(RawXmlText));
+            OnPropertyChanged(nameof(HasRawXml));
+            OnPropertyChanged(nameof(CanCopyRawXml));
+            _rawXmlCopyStatus = string.Empty;
+            OnPropertyChanged(nameof(RawXmlCopyStatus));
         }
     }
 
@@ -207,9 +221,38 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
     public bool HasEstimationAreas => !EstimationAreas.IsDefaultOrEmpty;
 
+    public ImmutableArray<TsunamiInformationItemDisplay> InformationItems =>
+        State.SelectedReport is null
+            ? []
+            : State.SelectedReport.Items
+                .Select(CreateInformationItemDisplay)
+                .ToImmutableArray();
+
+    public bool HasInformationItems => !InformationItems.IsDefaultOrEmpty;
+
+    public string RawXmlText => State.SelectedReport?.Source.SourcePayload ?? string.Empty;
+
+    public bool HasRawXml => !string.IsNullOrWhiteSpace(RawXmlText);
+
+    public bool CanCopyRawXml => HasRawXml;
+
+    public string RawXmlCopyStatus => _rawXmlCopyStatus;
+
     public string EmptyMessage => ShowError
         ? State.ErrorMessage ?? "海啸报文读取失败"
-        : "本地缓存中没有海啸报文";
+            : "本地缓存中没有海啸报文";
+
+    public void MarkRawXmlCopied()
+    {
+        ThrowIfDisposed();
+        if (!CanCopyRawXml)
+        {
+            return;
+        }
+
+        _rawXmlCopyStatus = "已复制原始 XML";
+        OnPropertyChanged(nameof(RawXmlCopyStatus));
+    }
 
     private static string FormatTimestamp(DateTimeOffset? timestamp) =>
         timestamp is null
@@ -244,6 +287,17 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             area.Code,
             FormatArrival(area.FirstArrivalTime, area.FirstArrivalCondition),
             FormatHeight(area.MaximumHeight));
+
+    private static TsunamiInformationItemDisplay CreateInformationItemDisplay(
+        JmaTsunamiInformationItem item) => new(
+            string.IsNullOrWhiteSpace(item.KindName) ? "等级未提供" : item.KindName!,
+            string.IsNullOrWhiteSpace(item.KindCode) ? "代码未提供" : item.KindCode!,
+            string.IsNullOrWhiteSpace(item.LastKindName) ? "无上一状态" : item.LastKindName!,
+            item.Areas.IsDefaultOrEmpty
+                ? "无区域"
+                : string.Join(
+                    "、",
+                    item.Areas.Select(area => $"{area.Name}（{area.Code}）")));
 
     private static TsunamiLevel GetReportLevel(JmaTsunamiReport? report)
     {

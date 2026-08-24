@@ -17,4 +17,16 @@ public partial class TsunamiPageView : UserControl
             await viewModel.RefreshAsync();
         }
     }
+
+    private void OnCopyRawXmlClick(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not ViewModels.TsunamiPageViewModel viewModel ||
+            !viewModel.CanCopyRawXml)
+        {
+            return;
+        }
+
+        Clipboard.SetText(viewModel.RawXmlText);
+        viewModel.MarkRawXmlCopied();
+    }
 }

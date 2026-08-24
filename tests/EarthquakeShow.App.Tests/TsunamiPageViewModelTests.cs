@@ -122,6 +122,10 @@ public sealed class TsunamiPageViewModelTests
                     null,
                     new JmaTsunamiHeight(null, "巨大", null, null, null)),
             ],
+            Source = new SourceReference(
+                "jma-xml-tsunami",
+                "details",
+                SourcePayload: "<Report><Headline>sample</Headline></Report>"),
         };
         var repository = new StubTsunamiReportRepository([report]);
         using var viewModel = new TsunamiPageViewModel(repository);
@@ -137,6 +141,12 @@ public sealed class TsunamiPageViewModelTests
         Assert.Equal("微弱", viewModel.ObservationStations[0].InitialText);
         Assert.Single(viewModel.EstimationAreas);
         Assert.Equal("巨大", viewModel.EstimationAreas[0].HeightText);
+        Assert.Single(viewModel.InformationItems);
+        Assert.Equal("茨城県（JP08）", viewModel.InformationItems[0].AreasText);
+        Assert.True(viewModel.CanCopyRawXml);
+        Assert.Contains("<Report>", viewModel.RawXmlText);
+        viewModel.MarkRawXmlCopied();
+        Assert.Equal("已复制原始 XML", viewModel.RawXmlCopyStatus);
     }
 
     private static JmaTsunamiReport CreateReport(

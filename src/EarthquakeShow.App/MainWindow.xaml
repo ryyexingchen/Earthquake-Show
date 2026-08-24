@@ -224,7 +224,8 @@
                                        Text="地震" />
                         </StackPanel>
                     </RadioButton>
-                    <RadioButton IsChecked="{Binding IsTsunamiPageVisible, Mode=OneWay}"
+                    <RadioButton x:Name="TsunamiNavigationButton"
+                                 IsChecked="{Binding IsTsunamiPageVisible, Mode=OneWay}"
                                  GroupName="PrimaryNavigation"
                                  Click="OnTsunamiNavigationClick"
                                  Style="{StaticResource NavigationButtonStyle}">
@@ -298,13 +299,14 @@
             </Border>
             </Grid>
 
-            <views:TsunamiPageView Grid.ColumnSpan="4"
+            <views:TsunamiPageView x:Name="TsunamiPageView"
+                                   Grid.ColumnSpan="4"
                                    DataContext="{Binding TsunamiPage}">
                 <views:TsunamiPageView.Style>
                     <Style TargetType="views:TsunamiPageView">
                         <Setter Property="Visibility" Value="Collapsed" />
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsTsunamiPageVisible, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                            <DataTrigger Binding="{Binding DataContext.IsTsunamiPageVisible, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
                                 <Setter Property="Visibility" Value="Visible" />
                             </DataTrigger>
                         </Style.Triggers>

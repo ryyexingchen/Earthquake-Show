@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Threading;
 using EarthquakeShow.Core.Models;
@@ -244,6 +245,17 @@ public sealed class MainWindowViewModelTests
                 window.Closed += (_, _) => closeFrame.Continue = false;
                 app.MainWindow = window;
                 window.Show();
+                window.UpdateLayout();
+                RadioButton tsunamiButton = Assert.IsType<RadioButton>(
+                    window.FindName("TsunamiNavigationButton"));
+                tsunamiButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+                window.UpdateLayout();
+                MainWindowViewModel windowViewModel =
+                    Assert.IsType<MainWindowViewModel>(window.DataContext);
+                Assert.True(windowViewModel.IsTsunamiPageVisible);
+                Assert.Equal(
+                    Visibility.Visible,
+                    Assert.IsType<TsunamiPageView>(window.FindName("TsunamiPageView")).Visibility);
                 window.Close();
                 Dispatcher.PushFrame(closeFrame);
                 Assert.Equal(ShutdownMode.OnMainWindowClose, app.ShutdownMode);
