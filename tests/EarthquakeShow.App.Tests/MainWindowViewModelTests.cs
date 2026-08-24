@@ -172,6 +172,33 @@ public sealed class MainWindowViewModelTests
     }
 
     [Fact]
+    public void Navigation_TogglesBetweenEarthquakeAndTsunamiPages()
+    {
+        string cachePath = CreateTemporaryCachePath();
+        try
+        {
+            using var viewModel = new MainWindowViewModel(cachePath, enableNetwork: false);
+
+            Assert.True(viewModel.IsEarthquakePageVisible);
+            Assert.False(viewModel.IsTsunamiPageVisible);
+
+            viewModel.ShowTsunamiPage();
+
+            Assert.False(viewModel.IsEarthquakePageVisible);
+            Assert.True(viewModel.IsTsunamiPageVisible);
+
+            viewModel.ShowEarthquakePage();
+
+            Assert.True(viewModel.IsEarthquakePageVisible);
+            Assert.False(viewModel.IsTsunamiPageVisible);
+        }
+        finally
+        {
+            DeleteTemporaryCache(cachePath);
+        }
+    }
+
+    [Fact]
     public void MainWindow_XamlResources_LoadOnStaThread()
     {
         Exception? capturedException = null;

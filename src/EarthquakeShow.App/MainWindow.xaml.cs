@@ -54,6 +54,16 @@ public partial class MainWindow : Window
         _viewModel.OpenSettings();
     }
 
+    private void OnEarthquakeNavigationClick(object sender, RoutedEventArgs e)
+    {
+        _viewModel.ShowEarthquakePage();
+    }
+
+    private void OnTsunamiNavigationClick(object sender, RoutedEventArgs e)
+    {
+        _viewModel.ShowTsunamiPage();
+    }
+
     private void OnSettingsRequestClose(object? sender, EventArgs e)
     {
         _viewModel.CloseSettings();

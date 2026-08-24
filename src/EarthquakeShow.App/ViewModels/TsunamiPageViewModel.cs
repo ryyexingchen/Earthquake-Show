@@ -32,8 +32,127 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
             _state = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(Reports));
+            OnPropertyChanged(nameof(HasReports));
+            OnPropertyChanged(nameof(HasSelectedReport));
+            OnPropertyChanged(nameof(SelectedReport));
+            OnPropertyChanged(nameof(ResultCountText));
+            OnPropertyChanged(nameof(IsLoading));
+            OnPropertyChanged(nameof(ShowEmpty));
+            OnPropertyChanged(nameof(ShowError));
+            OnPropertyChanged(nameof(CanRefresh));
+            OnPropertyChanged(nameof(SelectedReportStatusText));
+            OnPropertyChanged(nameof(SelectedReportContextText));
+            OnPropertyChanged(nameof(SelectedReportStatusContextText));
+            OnPropertyChanged(nameof(SelectedReportInfoKindText));
+            OnPropertyChanged(nameof(SelectedReportIssuedAtText));
+            OnPropertyChanged(nameof(SelectedReportReceivedAtText));
+            OnPropertyChanged(nameof(SelectedReportHeadlineText));
+            OnPropertyChanged(nameof(SelectedReportIdentityText));
+            OnPropertyChanged(nameof(SelectedReportStructureText));
         }
     }
+
+    public ImmutableArray<JmaTsunamiReport> Reports => State.Reports;
+
+    public bool HasReports => !State.Reports.IsDefaultOrEmpty;
+
+    public bool HasSelectedReport => State.SelectedReport is not null;
+
+    public JmaTsunamiReport? SelectedReport
+    {
+        get => State.SelectedReport;
+        set
+        {
+            if (value is null)
+            {
+                ClearSelection();
+                return;
+            }
+
+            SelectReport(
+                value.EventId,
+                value.Source.SourceId,
+                value.Source.SourceMessageId);
+        }
+    }
+
+    public string ResultCountText => $"{State.Reports.Length} 条";
+
+    public bool IsLoading =>
+        State.LoadState == TsunamiPageLoadState.Loading && State.Reports.IsDefaultOrEmpty;
+
+    public bool ShowEmpty =>
+        State.LoadState == TsunamiPageLoadState.Ready && State.Reports.IsDefaultOrEmpty;
+
+    public bool ShowError =>
+        State.LoadState == TsunamiPageLoadState.Error && State.Reports.IsDefaultOrEmpty;
+
+    public bool CanRefresh => !State.IsRefreshing;
+
+    public string SelectedReportStatusText => State.SelectedReport?.Status switch
+    {
+        ReportStatus.Issued => "发布",
+        ReportStatus.Correction => "订正",
+        ReportStatus.Cancelled => "取消",
+        _ => "状态不明",
+    };
+
+    public string SelectedReportContextText => State.SelectedReport?.Context switch
+    {
+        ReportContext.Normal => "正式",
+        ReportContext.Training => "训练",
+        ReportContext.Test => "测试",
+        _ => "不明",
+    };
+
+    public string SelectedReportStatusContextText =>
+        $"{SelectedReportStatusText} · {SelectedReportContextText}";
+
+    public string SelectedReportInfoKindText =>
+        string.IsNullOrWhiteSpace(State.SelectedReport?.InfoKind)
+            ? "海啸报文"
+            : State.SelectedReport.InfoKind!;
+
+    public string SelectedReportIssuedAtText => FormatTimestamp(State.SelectedReport?.IssuedAt);
+
+    public string SelectedReportReceivedAtText => FormatTimestamp(State.SelectedReport?.ReceivedAt);
+
+    public string SelectedReportHeadlineText =>
+        string.IsNullOrWhiteSpace(State.SelectedReport?.HeadlineText)
+            ? "无标题"
+            : State.SelectedReport.HeadlineText!;
+
+    public string SelectedReportIdentityText
+    {
+        get
+        {
+            JmaTsunamiReport? report = State.SelectedReport;
+            return report is null
+                ? ""
+                : $"{report.EventId} · {report.Source.SourceId} · {report.Source.SourceMessageId}";
+        }
+    }
+
+    public string SelectedReportStructureText
+    {
+        get
+        {
+            JmaTsunamiReport? report = State.SelectedReport;
+            return report is null
+                ? ""
+                : $"预报区 {report.ForecastAreas.Length} · 沿岸观测 {report.ObservationStations.Length} · 推定区域 {report.EstimationAreas.Length}";
+        }
+    }
+
+    public string EmptyMessage => ShowError
+        ? State.ErrorMessage ?? "海啸报文读取失败"
+        : "本地缓存中没有海啸报文";
+
+    private static string FormatTimestamp(DateTimeOffset? timestamp) =>
+        timestamp is null
+            ? "未提供"
+            : timestamp.Value.ToString("yyyy-MM-dd HH:mm:ss zzz", System.Globalization.CultureInfo.InvariantCulture);
 
     public async ValueTask LoadAsync(CancellationToken cancellationToken = default)
     {

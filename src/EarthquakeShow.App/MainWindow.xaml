@@ -195,20 +195,23 @@
                     </Style.Triggers>
                 </Style>
             </Grid.Style>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="68" />
-                <ColumnDefinition Width="280" />
-                <ColumnDefinition Width="*" MinWidth="360" />
-                <ColumnDefinition x:Name="DetailsColumn" Width="380" />
-            </Grid.ColumnDefinitions>
+            <Grid x:Name="EarthquakeWorkspace"
+                  Grid.ColumnSpan="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="68" />
+                    <ColumnDefinition Width="280" />
+                    <ColumnDefinition Width="*" MinWidth="360" />
+                    <ColumnDefinition x:Name="DetailsColumn" Width="380" />
+                </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0"
                     Background="{StaticResource NavigationBrush}"
                     BorderBrush="{StaticResource BorderStrongBrush}"
                     BorderThickness="0,0,1,0">
                 <StackPanel>
-                    <RadioButton IsChecked="True"
+                    <RadioButton IsChecked="{Binding IsEarthquakePageVisible, Mode=OneWay}"
                                  GroupName="PrimaryNavigation"
+                                 Click="OnEarthquakeNavigationClick"
                                  Style="{StaticResource NavigationButtonStyle}">
                         <StackPanel>
                             <TextBlock HorizontalAlignment="Center"
@@ -219,6 +222,21 @@
                                        HorizontalAlignment="Center"
                                        FontSize="11"
                                        Text="地震" />
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton IsChecked="{Binding IsTsunamiPageVisible, Mode=OneWay}"
+                                 GroupName="PrimaryNavigation"
+                                 Click="OnTsunamiNavigationClick"
+                                 Style="{StaticResource NavigationButtonStyle}">
+                        <StackPanel>
+                            <TextBlock HorizontalAlignment="Center"
+                                       FontFamily="Segoe Fluent Icons"
+                                       FontSize="20"
+                                       Text="&#xE7ED;" />
+                            <TextBlock Margin="0,3,0,0"
+                                       HorizontalAlignment="Center"
+                                       FontSize="11"
+                                       Text="海啸" />
                         </StackPanel>
                     </RadioButton>
                 </StackPanel>
@@ -278,6 +296,21 @@
                     </Button>
                 </Grid>
             </Border>
+            </Grid>
+
+            <views:TsunamiPageView Grid.ColumnSpan="4"
+                                   DataContext="{Binding TsunamiPage}">
+                <views:TsunamiPageView.Style>
+                    <Style TargetType="views:TsunamiPageView">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsTsunamiPageVisible, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </views:TsunamiPageView.Style>
+            </views:TsunamiPageView>
         </Grid>
 
         <views:SettingsView Grid.Row="1"

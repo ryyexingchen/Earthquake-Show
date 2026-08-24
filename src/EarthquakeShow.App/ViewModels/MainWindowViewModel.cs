@@ -44,6 +44,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
     private string _autoRefreshStatus = "自动刷新：未启动";
     private ImmutableArray<SourceStatus> _tsunamiSourceStatuses = [];
     private ApplicationSettings _applicationSettings;
+    private bool _isTsunamiPageVisible;
     private bool _isInitialized;
     private bool _isDisposed;
     private bool _resourcesDisposed;
@@ -205,6 +206,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
 
     public TsunamiPageViewModel TsunamiPage { get; }
 
+    public bool IsTsunamiPageVisible => _isTsunamiPageVisible;
+
+    public bool IsEarthquakePageVisible => !_isTsunamiPageVisible;
+
     public ImmutableArray<SourceStatus> TsunamiSourceStatuses => _tsunamiSourceStatuses;
 
     public ValueTask InitializeAsync(
@@ -338,6 +343,30 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
     public void OpenSettings() => Settings.IsVisible = true;
 
     public void CloseSettings() => Settings.IsVisible = false;
+
+    public void ShowEarthquakePage()
+    {
+        if (!_isTsunamiPageVisible)
+        {
+            return;
+        }
+
+        _isTsunamiPageVisible = false;
+        OnPropertyChanged(nameof(IsTsunamiPageVisible));
+        OnPropertyChanged(nameof(IsEarthquakePageVisible));
+    }
+
+    public void ShowTsunamiPage()
+    {
+        if (_isTsunamiPageVisible)
+        {
+            return;
+        }
+
+        _isTsunamiPageVisible = true;
+        OnPropertyChanged(nameof(IsTsunamiPageVisible));
+        OnPropertyChanged(nameof(IsEarthquakePageVisible));
+    }
 
     private async Task RefreshFromNetworkAsync(CancellationToken cancellationToken)
     {
