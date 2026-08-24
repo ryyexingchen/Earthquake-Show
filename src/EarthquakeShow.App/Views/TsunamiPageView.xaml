@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:views="clr-namespace:EarthquakeShow.App.Views"
              d:DesignHeight="720"
              d:DesignWidth="1440"
              mc:Ignorable="d">
@@ -222,9 +223,13 @@
                           Padding="24,20"
                           HorizontalScrollBarVisibility="Disabled"
                           VerticalScrollBarVisibility="Auto">
-                <StackPanel MaxWidth="760"
-                            HorizontalAlignment="Left"
-                            Visibility="{Binding HasSelectedReport, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel>
+                    <views:TsunamiMapView Margin="0,0,0,18"
+                                          DataContext="{Binding}"
+                                          Visibility="{Binding HasMapGeometry, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <StackPanel MaxWidth="760"
+                                HorizontalAlignment="Left"
+                                Visibility="{Binding HasSelectedReport, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <TextBlock Style="{StaticResource EyebrowTextStyle}"
                                Text="当前报文" />
                     <TextBlock Margin="0,4,0,0"
@@ -604,6 +609,7 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                    </StackPanel>
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>

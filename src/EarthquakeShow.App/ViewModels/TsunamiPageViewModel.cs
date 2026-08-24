@@ -1,6 +1,8 @@
 using System.Collections.Immutable;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using EarthquakeShow.Core.Abstractions;
 using EarthquakeShow.Core.Models;
 using EarthquakeShow.Core.Services;
@@ -54,6 +56,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly ITsunamiReportRepository _repository;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
+    private readonly TsunamiMapGeometry _mapGeometry;
     private TsunamiPageState _state = new();
     private string _rawXmlCopyStatus = string.Empty;
     private bool _isDisposed;
@@ -61,6 +64,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
     public TsunamiPageViewModel(ITsunamiReportRepository repository)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _mapGeometry = LoadMapGeometry();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -103,6 +107,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(HasForecastAreas));
             OnPropertyChanged(nameof(HasObservationStations));
             OnPropertyChanged(nameof(HasEstimationAreas));
+            OnPropertyChanged(nameof(ForecastAreaLevels));
             OnPropertyChanged(nameof(InformationItems));
             OnPropertyChanged(nameof(HasInformationItems));
             OnPropertyChanged(nameof(TimelineReports));
@@ -119,6 +124,12 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
     }
 
     public ImmutableArray<JmaTsunamiReport> Reports => State.Reports;
+
+    public ImmutableArray<TsunamiMapLine> MapLines => _mapGeometry.Lines;
+
+    public MapGeometryBounds MapBounds => _mapGeometry.Bounds;
+
+    public bool HasMapGeometry => !MapLines.IsDefaultOrEmpty;
 
     public bool HasReports => !State.Reports.IsDefaultOrEmpty;
 
@@ -229,6 +240,20 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
     public bool HasEstimationAreas => !EstimationAreas.IsDefaultOrEmpty;
 
+    public ImmutableDictionary<string, TsunamiLevel> ForecastAreaLevels =>
+        State.SelectedReport is null
+            ? ImmutableDictionary<string, TsunamiLevel>.Empty
+            : State.SelectedReport.ForecastAreas
+                .Where(area => !string.IsNullOrWhiteSpace(area.Code))
+                .GroupBy(area => area.Code, StringComparer.Ordinal)
+                .ToImmutableDictionary(
+                    group => group.Key,
+                    group => group
+                        .Select(area => JmaTsunamiClassifier.Classify(area.KindName, area.KindCode))
+                        .OrderByDescending(GetLevelPriority)
+                        .FirstOrDefault(TsunamiLevel.Unknown),
+                    StringComparer.Ordinal);
+
     public ImmutableArray<TsunamiInformationItemDisplay> InformationItems =>
         State.SelectedReport is null
             ? []
@@ -332,6 +357,24 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         timestamp is null
             ? "未提供"
             : timestamp.Value.ToString("yyyy-MM-dd HH:mm:ss zzz", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static TsunamiMapGeometry LoadMapGeometry()
+    {
+        string path = Path.Combine(
+            AppContext.BaseDirectory,
+            "Assets",
+            "Data",
+            "Map",
+            "jma-tsunami-forecast-lines-overview.geojson");
+        try
+        {
+            return TsunamiMapGeometry.LoadFromFile(path);
+        }
+        catch (Exception exception) when (exception is JsonException or FormatException or IOException)
+        {
+            return TsunamiMapGeometry.Empty;
+        }
+    }
 
     private static TsunamiForecastAreaDisplay CreateForecastAreaDisplay(
         JmaTsunamiForecastArea area)

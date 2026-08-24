@@ -337,15 +337,25 @@ public sealed class JmaJsonEarthquakeSource : IRealtimeEarthquakeSource
         };
     }
 
-    private static int? ParseSerial(string? value)
+    private static int? ParseSerial(JsonElement value)
     {
-        return int.TryParse(
-            value,
-            NumberStyles.Integer,
-            CultureInfo.InvariantCulture,
-            out int result)
-            ? result
-            : null;
+        if (value.ValueKind == JsonValueKind.Number &&
+            value.TryGetInt32(out int numericResult))
+        {
+            return numericResult;
+        }
+
+        if (value.ValueKind == JsonValueKind.String &&
+            int.TryParse(
+                value.GetString(),
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out int stringResult))
+        {
+            return stringResult;
+        }
+
+        return null;
     }
 
     private static string? NullIfUnknown(string? value)
@@ -385,7 +395,7 @@ public sealed class JmaJsonEarthquakeSource : IRealtimeEarthquakeSource
         public string? InformationType { get; set; }
 
         [JsonPropertyName("ser")]
-        public string? Serial { get; set; }
+        public JsonElement Serial { get; set; }
 
         [JsonPropertyName("mag")]
         public string? Magnitude { get; set; }

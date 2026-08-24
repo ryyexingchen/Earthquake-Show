@@ -1,0 +1,32 @@
+<UserControl x:Class="EarthquakeShow.App.Views.TsunamiMapView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             MinHeight="260">
+    <Border Background="#D9EEF3"
+            BorderBrush="#8EAAB3"
+            BorderThickness="1"
+            CornerRadius="6">
+        <Grid>
+            <Canvas x:Name="MapCanvas"
+                    Background="#D9EEF3"
+                    ClipToBounds="True"
+                    SizeChanged="OnMapSizeChanged" />
+            <Border Margin="10"
+                    Padding="8,5"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Background="#EAF4F5"
+                    BorderBrush="#9EB8BF"
+                    BorderThickness="1"
+                    CornerRadius="4">
+                <StackPanel>
+                    <TextBlock FontWeight="SemiBold" Text="海啸预报区" />
+                    <TextBlock Margin="0,3,0,0"
+                               Foreground="#53666D"
+                               FontSize="10"
+                               Text="JMA 沿岸线 · 观测点仅在有官方坐标时显示" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

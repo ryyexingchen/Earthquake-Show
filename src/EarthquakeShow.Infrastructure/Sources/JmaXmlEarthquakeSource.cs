@@ -92,7 +92,10 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncreme
 
             string feedPayload = await feedResponse.Content.ReadAsStringAsync(cancellationToken)
                 .ConfigureAwait(false);
-            ImmutableArray<JmaXmlFeedEntry> allEntries = ParseFeedEntries(feedPayload, _maxEntries);
+            // 增量回补必须先保留完整 Feed，再按缓存时间筛选，避免把离线期间的报文截掉。
+            ImmutableArray<JmaXmlFeedEntry> allEntries = ParseFeedEntries(
+                feedPayload,
+                since is null ? _maxEntries : int.MaxValue);
             var failures = ImmutableArray.CreateBuilder<string>();
             bool hasRateLimit = false;
             bool hasDisconnected = false;
@@ -117,7 +120,7 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncreme
                             .ConfigureAwait(false);
                         ImmutableArray<JmaXmlFeedEntry> longEntries = ParseFeedEntries(
                             longFeedPayload,
-                            Math.Max(_maxEntries, 100));
+                            since is null ? Math.Max(_maxEntries, 100) : int.MaxValue);
                         allEntries = allEntries
                             .Concat(longEntries)
                             .GroupBy(entry => entry.SourceMessageId, StringComparer.Ordinal)
@@ -247,6 +250,8 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncreme
             .Select(ParseEntry)
             .Where(entry => entry is not null)
             .Select(entry => entry!)
+            .OrderByDescending(entry => entry.IssuedAt ?? DateTimeOffset.MinValue)
+            .ThenByDescending(entry => entry.SourceMessageId, StringComparer.Ordinal)
             .Take(maxEntries)
             .ToImmutableArray();
     }

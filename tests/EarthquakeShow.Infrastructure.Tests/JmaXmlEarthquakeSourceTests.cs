@@ -155,6 +155,42 @@ public sealed class JmaXmlEarthquakeSourceTests
     }
 
     [Fact]
+    public async Task FetchSince_DoesNotTruncateEntriesBeforeIncrementalFilter()
+    {
+        const string feed = """
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <entry><id>https://example.test/20260824125441_0_VXSE53_010000.xml</id><link type="application/xml" href="https://example.test/report.xml" /></entry>
+              <entry><id>https://example.test/20260824125341_0_VXSE53_010000.xml</id><link type="application/xml" href="https://example.test/report.xml" /></entry>
+              <entry><id>https://example.test/20260824125241_0_VXSE53_010000.xml</id><link type="application/xml" href="https://example.test/report.xml" /></entry>
+            </feed>
+            """;
+        const string xml = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <Report xmlns="http://xml.kishou.go.jp/jmaxml1/">
+              <Control><DateTime>2026-08-24T12:55:00+09:00</DateTime><Status>通常</Status><EditorialOffice>気象庁本庁</EditorialOffice><PublishingOffice>気象庁</PublishingOffice><Title>地震情報</Title><EventID>20260824125441</EventID><ReportDateTime>2026-08-24T12:55:00+09:00</ReportDateTime><InfoType>発表</InfoType></Control>
+              <Head><HeadlineText>地震情報</HeadlineText><InfoKind>地震情報</InfoKind><InfoKindVersion>1</InfoKindVersion></Head>
+              <Body><Earthquake><OriginTime>2026-08-24T12:54:00+09:00</OriginTime><Hypocenter><Area><Name>釧路地方中南部</Name><Coordinate>43.2+145.0-80000/</Coordinate></Area></Hypocenter><Magnitude type="Mj">3.3</Magnitude></Earthquake></Body>
+            </Report>
+            """;
+        using var httpClient = new HttpClient(new RoutingResponseHandler(uri =>
+            uri.AbsoluteUri.EndsWith("feed.xml", StringComparison.Ordinal)
+                ? Response(HttpStatusCode.OK, feed)
+                : Response(HttpStatusCode.OK, xml)));
+        var source = new JmaXmlEarthquakeSource(
+            httpClient,
+            endpoint: "https://example.test/feed.xml",
+            maxEntries: 1);
+
+        EarthquakeSourceFetchResult result = await source.FetchSinceAsync(
+            new DateTimeOffset(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9)));
+
+        Assert.Equal(3, result.Reports.Length);
+        Assert.Contains(result.Reports, report =>
+            report.Source.SourceMessageId.StartsWith("20260824125441", StringComparison.Ordinal));
+        Assert.Contains("命中 3 条", result.Status.Detail);
+    }
+
+    [Fact]
     public async Task FetchSince_UsesLongFeedWhenShortFeedDoesNotCoverSince()
     {
         const string shortFeed = """

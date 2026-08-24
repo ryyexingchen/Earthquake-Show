@@ -55,6 +55,58 @@ public sealed class JmaJsonEarthquakeSourceTests
     }
 
     [Fact]
+    public async Task Fetch_MixedNumericAndStringSerial_ParsesWholeList()
+    {
+        const string json = """
+            [
+              {
+                "ctt": "20260824125723",
+                "eid": "20260824125441",
+                "rdt": "2026-08-24T12:57:00+09:00",
+                "ttl": "震源・震度情報",
+                "ift": "発表",
+                "ser": "1",
+                "at": "2026-08-24T12:54:00+09:00",
+                "anm": "釧路地方中南部",
+                "acd": "161",
+                "cod": "+43.2+145.0-80000/",
+                "mag": "3.3",
+                "maxi": "1"
+              },
+              {
+                "ctt": "20260824120000",
+                "eid": "20260824115900",
+                "rdt": "2026-08-24T12:00:00+09:00",
+                "ttl": "震源に関する情報",
+                "ift": "発表",
+                "ser": 0,
+                "at": "2026-08-24T11:59:00+09:00",
+                "anm": "相模湾",
+                "acd": "493",
+                "cod": "+35.0+139.0-10000/",
+                "mag": "3.0",
+                "maxi": ""
+              }
+            ]
+            """;
+        using var httpClient = new HttpClient(new StaticResponseHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json),
+            }));
+        var source = new JmaJsonEarthquakeSource(httpClient);
+
+        EarthquakeSourceFetchResult result = await source.FetchAsync();
+
+        Assert.Equal(2, result.Reports.Length);
+        Assert.Equal(SourceConnectionState.Online, result.Status.State);
+        Assert.Contains(result.Reports, report =>
+            report.EventId == "20260824125441" && report.Serial == 1);
+        Assert.Contains(result.Reports, report =>
+            report.EventId == "20260824115900" && report.Serial == 0);
+    }
+
+    [Fact]
     public async Task Fetch_RateLimited_ReturnsStatusWithoutReports()
     {
         using var httpClient = new HttpClient(new StaticResponseHandler(

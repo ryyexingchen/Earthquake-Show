@@ -285,6 +285,9 @@ public partial class EarthquakeMapView : UserControl
                     ? new SolidColorBrush(OutlineStroke)
                     : null,
                 StrokeThickness = 1,
+                StrokeLineJoin = PenLineJoin.Round,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
                 ToolTip = polygon.Name,
             };
             MapCanvas.Children.Add(shape);
@@ -306,6 +309,9 @@ public partial class EarthquakeMapView : UserControl
                     ? new SolidColorBrush(Color.FromArgb(225, 42, 50, 55))
                     : new SolidColorBrush(OutlineStroke),
                 StrokeThickness = 0.8,
+                StrokeLineJoin = PenLineJoin.Round,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
                 ToolTip = hasIntensity
                     ? $"{municipality.Name} · 震度 {GetIntensityText(municipality.Intensity)}"
                     : null,

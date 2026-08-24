@@ -30,7 +30,7 @@ JMA 页面说明地图制作使用了国土地理院数据。发布前仍需记�
 | `20190125_AreaInformationPrefectureEarthquake_GIS.zip` | 地震情報／都道府県等 | Polygon / 47 | 地震信息都道府县聚合边界，可用于全国概览和都道府县级摘要 | 地震页面辅助层，非区域树主键 |
 | `20230517_AreaForecastLocalM_matome_GIS.zip` | 市町村等をまとめた地域等 | Polygon / 384 | 一般气象业务中若干市町村的组合发布区 | 当前地震、EEW、海啸功能不使用 |
 | `20240520_AreaForecastLocalE_GIS.zip` | 地震情報／細分区域 | Polygon / 194 | 地震信息细分区域，代码对应 JMAXML 地震区域代码 | `0.30.0` 地震区域着色和区域树第一层，最高优先级 |
-| `20240520_AreaTsunami_GIS.zip` | 津波予報区 | PolyLine / 70 | 海啸预报区沿岸线，按预报区代码着色；不是可直接填充的面 | 海啸页面和地震详情海啸范围 |
+| `20240520_AreaTsunami_GIS.zip` | 津波予報区 | PolyLine / 70 | 海啸预报区沿岸线，按预报区代码着色；不是可直接填充的面 | `0.55.0` 接入，`0.55.1` 修复页面可见性 |
 | `20241128_AreaInformationCity_quake_GIS.zip` | 市町村等（地震津波関係） | Polygon / 1910 | 地震/海啸业务市町村边界，代码用于市町村震度映射 | `0.33.0` 市町村着色、三层树定位，最高优先级 |
 
 ## 4. 字段和样例
@@ -73,7 +73,7 @@ JMA 页面说明地图制作使用了国土地理院数据。发布前仍需记�
 
 ### 5.3 海啸页面
 
-- `20240520_AreaTsunami_GIS.zip`：70 条海啸预报区沿岸线，按注意报、警报和大海啸警报等级改变线色和线宽。
+- `20240520_AreaTsunami_GIS.zip`：JMA 海啸预报区沿岸线，`0.55.0` 转换为约 5.8 MB 的运行时 GeoJSON，`0.55.1` 修复未选中报文时地图被详情容器隐藏；按注意报、警报和大海啸警报等级改变线色和线宽；线层不代表填充面。
 - `20241128_AreaInformationCity_quake_GIS.zip`：需要市町村级详情或关联地震观测时作为辅助面图层。
 
 海啸预报区是 `PolyLine`，不能按普通 Polygon 直接填充。正式渲染器必须支持沿岸线选中、命中测试和多段线。
@@ -111,7 +111,7 @@ JMA 页面说明地图制作使用了国土地理院数据。发布前仍需记�
 ## 8. 当前审计结论
 
 - 10 个 ZIP 均可打开并读取 `.shp/.shx/.dbf` 结构。
-- 三个当前关键包 `AreaForecastLocalE`、`AreaInformationCity_quake`、`AreaTsunami` 已通过现有严格资源审计工具。
+- 三个当前关键包 `AreaForecastLocalE`、`AreaInformationCity_quake`、`AreaTsunami` 已通过现有严格资源审计工具；`AreaTsunami` 的派生线层已由 `tools/convert_jma_tsunami_gis.py` 接入 App。
 - 五个派生文件已进入 `src/EarthquakeShow.App/Assets/Data/Map/`，项目的通配复制规则会将其带入构建输出；当前入口使用低内存概览层，区域边界资源已完成解析、震度分组和 WPF 绘制。
 - 概览层随应用启动加载，当前事件只绘制代码匹配的市町村；中精度三件套在 `ZoomLevel > 2` 后台按需加载并一起替换。高精度层仍用于后续地图放大或详情页按需加载，不用于应用启动阶段的全国概览。
 
