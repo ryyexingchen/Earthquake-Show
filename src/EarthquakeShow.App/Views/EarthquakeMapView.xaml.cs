@@ -462,7 +462,7 @@ public partial class EarthquakeMapView : UserControl
             JmaIntensity.Four => Color.FromRgb(232, 154, 60),
             JmaIntensity.FiveLower => Color.FromRgb(232, 94, 63),
             JmaIntensity.FiveUpper => Color.FromRgb(240, 68, 56),
-            JmaIntensity.SixLower => Color.FromRgb(216, 27, 96),
+            JmaIntensity.SixLower => Color.FromRgb(181, 18, 85),
             JmaIntensity.SixUpper => Color.FromRgb(142, 36, 170),
             JmaIntensity.Seven => Color.FromRgb(74, 20, 140),
             _ => Color.FromRgb(230, 235, 239),

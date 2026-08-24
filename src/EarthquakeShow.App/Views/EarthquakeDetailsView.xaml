@@ -33,7 +33,7 @@
                     <Setter Property="BorderBrush" Value="White" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Kind}" Value="SixLower">
-                    <Setter Property="Background" Value="#D81B60" />
+                    <Setter Property="Background" Value="#B51255" />
                     <Setter Property="BorderBrush" Value="White" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Kind}" Value="SixUpper">
@@ -88,7 +88,7 @@
                     <Setter Property="BorderBrush" Value="White" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IntensityKind}" Value="SixLower">
-                    <Setter Property="Background" Value="#D81B60" />
+                    <Setter Property="Background" Value="#B51255" />
                     <Setter Property="BorderBrush" Value="White" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IntensityKind}" Value="SixUpper">

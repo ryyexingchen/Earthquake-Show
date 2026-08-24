@@ -179,6 +179,12 @@ public sealed class TsunamiPageViewModelTests
 
         await viewModel.LoadAsync();
         Assert.True(viewModel.SelectReport(
+            issued.EventId,
+            issued.Source.SourceId,
+            issued.Source.SourceMessageId));
+        Assert.False(viewModel.HasReportDifferences);
+        Assert.Equal("首报，没有上一报可比较", viewModel.ReportDifferenceStatusText);
+        Assert.True(viewModel.SelectReport(
             cancelled.EventId,
             cancelled.Source.SourceId,
             cancelled.Source.SourceMessageId));
@@ -190,6 +196,13 @@ public sealed class TsunamiPageViewModelTests
         Assert.True(viewModel.TimelineReports[1].IsCancellation);
         Assert.Equal("解除", viewModel.TimelineReports[1].LevelText);
         Assert.Equal("解除", viewModel.TimelineReports[1].StatusText);
+        Assert.Contains(
+            viewModel.ReportDifferences,
+            item => item.FieldText == "状态" && item.PreviousText == "发布" && item.CurrentText == "取消");
+        Assert.Contains(
+            viewModel.ReportDifferences,
+            item => item.FieldText == "最高等级" && item.PreviousText == "津波警報" && item.CurrentText == "解除");
+        Assert.Contains("项变化", viewModel.ReportDifferenceStatusText);
     }
 
     private static JmaTsunamiReport CreateReport(

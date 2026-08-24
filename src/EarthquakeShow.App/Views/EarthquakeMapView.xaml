@@ -120,7 +120,7 @@
                         <TextBlock Margin="5,0,0,0" FontSize="10" Text="5+" />
                     </StackPanel>
                     <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#D81B60" CornerRadius="2" />
+                        <Border Width="14" Height="10" Background="#B51255" CornerRadius="2" />
                         <TextBlock Margin="5,0,0,0" FontSize="10" Text="6-" />
                     </StackPanel>
                     <StackPanel Margin="0,2,0,0" Orientation="Horizontal">

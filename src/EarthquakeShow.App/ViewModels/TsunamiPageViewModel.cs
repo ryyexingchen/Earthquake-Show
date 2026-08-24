@@ -45,6 +45,11 @@ public sealed record TsunamiTimelineItemDisplay(
     string StructureText,
     bool IsCancellation);
 
+public sealed record TsunamiReportDifferenceDisplay(
+    string FieldText,
+    string PreviousText,
+    string CurrentText);
+
 public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly ITsunamiReportRepository _repository;
@@ -102,6 +107,9 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(HasInformationItems));
             OnPropertyChanged(nameof(TimelineReports));
             OnPropertyChanged(nameof(HasTimelineReports));
+            OnPropertyChanged(nameof(ReportDifferences));
+            OnPropertyChanged(nameof(HasReportDifferences));
+            OnPropertyChanged(nameof(ReportDifferenceStatusText));
             OnPropertyChanged(nameof(RawXmlText));
             OnPropertyChanged(nameof(HasRawXml));
             OnPropertyChanged(nameof(CanCopyRawXml));
@@ -190,9 +198,9 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public TsunamiLevel SelectedReportLevel => GetReportLevel(State.SelectedReport);
+    public TsunamiLevel SelectedReportLevel => GetDisplayedReportLevel(State.SelectedReport);
 
-    public string SelectedReportLevelText => GetLevelText(SelectedReportLevel);
+    public string SelectedReportLevelText => GetReportLevelTextForDisplay(State.SelectedReport);
 
     public ImmutableArray<TsunamiForecastAreaDisplay> ForecastAreas =>
         State.SelectedReport is null
@@ -246,6 +254,55 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
                 .ToImmutableArray();
 
     public bool HasTimelineReports => !TimelineReports.IsDefaultOrEmpty;
+
+    public ImmutableArray<TsunamiReportDifferenceDisplay> ReportDifferences
+    {
+        get
+        {
+            JmaTsunamiReport? current = State.SelectedReport;
+            JmaTsunamiReport? previous = FindPreviousReport(current);
+            if (current is null || previous is null)
+            {
+                return [];
+            }
+
+            TsunamiReportDifferenceDisplay?[] candidates =
+            [
+                CreateDifference("报文代码", previous.ReportCode, current.ReportCode),
+                CreateDifference("状态", GetStatusText(previous.Status), GetStatusText(current.Status)),
+                CreateDifference("场景", GetContextText(previous.Context), GetContextText(current.Context)),
+                CreateDifference("最高等级", GetReportLevelTextForDisplay(previous), GetReportLevelTextForDisplay(current)),
+                CreateDifference("标题", FormatOptional(previous.HeadlineText), FormatOptional(current.HeadlineText)),
+                CreateDifference("信息项", previous.Items.Length.ToString(), current.Items.Length.ToString()),
+                CreateDifference("预报区", previous.ForecastAreas.Length.ToString(), current.ForecastAreas.Length.ToString()),
+                CreateDifference("沿岸观测", previous.ObservationStations.Length.ToString(), current.ObservationStations.Length.ToString()),
+                CreateDifference("近海推定", previous.EstimationAreas.Length.ToString(), current.EstimationAreas.Length.ToString()),
+            ];
+            return candidates
+                .Where(item => item is not null)
+                .Select(item => item!)
+                .ToImmutableArray();
+        }
+    }
+
+    public bool HasReportDifferences => !ReportDifferences.IsDefaultOrEmpty;
+
+    public string ReportDifferenceStatusText
+    {
+        get
+        {
+            if (State.SelectedReport is null)
+            {
+                return string.Empty;
+            }
+
+            return FindPreviousReport(State.SelectedReport) is null
+                ? "首报，没有上一报可比较"
+                : HasReportDifferences
+                    ? $"与上一报相比有 {ReportDifferences.Length} 项变化"
+                    : "与上一报无字段差异";
+        }
+    }
 
     public string RawXmlText => State.SelectedReport?.Source.SourcePayload ?? string.Empty;
 
@@ -332,6 +389,16 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             isCancellation);
     }
 
+    private static TsunamiReportDifferenceDisplay? CreateDifference(
+        string fieldText,
+        string previousText,
+        string currentText) => string.Equals(previousText, currentText, StringComparison.Ordinal)
+        ? null
+        : new(fieldText, previousText, currentText);
+
+    private static string FormatOptional(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "未提供" : value!;
+
     private static string GetStatusText(ReportStatus? status) => status switch
     {
         ReportStatus.Issued => "发布",
@@ -348,6 +415,25 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         _ => "不明",
     };
 
+    private JmaTsunamiReport? FindPreviousReport(JmaTsunamiReport? current)
+    {
+        if (current is null)
+        {
+            return null;
+        }
+
+        JmaTsunamiReport[] reports = State.Reports
+            .Where(report => string.Equals(report.EventId, current.EventId, StringComparison.Ordinal))
+            .OrderBy(report => report.IssuedAt)
+            .ThenBy(report => report.ReceivedAt)
+            .ThenBy(report => report.Source.SourceMessageId, StringComparer.Ordinal)
+            .ToArray();
+        int currentIndex = Array.FindIndex(reports, report =>
+            string.Equals(report.Source.SourceId, current.Source.SourceId, StringComparison.Ordinal) &&
+            string.Equals(report.Source.SourceMessageId, current.Source.SourceMessageId, StringComparison.Ordinal));
+        return currentIndex > 0 ? reports[currentIndex - 1] : null;
+    }
+
     private static TsunamiLevel GetReportLevel(JmaTsunamiReport? report)
     {
         if (report is null)
@@ -362,6 +448,16 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             .OrderByDescending(GetLevelPriority)
             .FirstOrDefault(TsunamiLevel.Unknown);
     }
+
+    private static TsunamiLevel GetDisplayedReportLevel(JmaTsunamiReport? report) =>
+        report?.Status == ReportStatus.Cancelled
+            ? TsunamiLevel.Unknown
+            : GetReportLevel(report);
+
+    private static string GetReportLevelTextForDisplay(JmaTsunamiReport? report) =>
+        report?.Status == ReportStatus.Cancelled
+            ? "解除"
+            : GetLevelText(GetReportLevel(report));
 
     private static int GetLevelPriority(TsunamiLevel level) => level switch
     {

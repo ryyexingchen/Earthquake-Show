@@ -305,7 +305,7 @@
                             <Setter TargetName="IntensityBadge" Property="TextElement.Foreground" Value="White" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding MaxIntensity}" Value="SixLower">
-                            <Setter TargetName="IntensityBadge" Property="Background" Value="#D81B60" />
+                            <Setter TargetName="IntensityBadge" Property="Background" Value="#B51255" />
                             <Setter TargetName="IntensityBadge" Property="BorderBrush" Value="White" />
                             <Setter TargetName="IntensityBadge" Property="TextElement.Foreground" Value="White" />
                         </DataTrigger>
