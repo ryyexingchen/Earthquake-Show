@@ -592,6 +592,13 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             return new("津波 调查中", "Investigating");
         }
 
+        // JMA 的“津波警报等（大津波警报・津波警报あるいは津波注意報）”是通用模板，
+        // 不能从括号内的枚举文本推断当前实际等级。
+        if (IsGenericTsunamiStatusComment(comment))
+        {
+            return new("津波 调查中", "Investigating");
+        }
+
         if (comment.Contains("大津波警報", StringComparison.Ordinal) ||
             comment.Contains("大海嘯警報", StringComparison.Ordinal))
         {
@@ -624,6 +631,14 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         }
 
         return new(comment.Trim(), "NoConcern");
+    }
+
+    private static bool IsGenericTsunamiStatusComment(string comment)
+    {
+        return comment.Contains("津波警報等（", StringComparison.Ordinal) ||
+            comment.Contains("津波警報等(", StringComparison.Ordinal) ||
+            comment.Contains("海嘯警報等（", StringComparison.Ordinal) ||
+            comment.Contains("海嘯警報等(", StringComparison.Ordinal);
     }
 
     private sealed class ReportDisplaySnapshot

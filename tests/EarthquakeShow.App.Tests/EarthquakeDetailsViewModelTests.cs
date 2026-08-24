@@ -328,6 +328,25 @@ public sealed class EarthquakeDetailsViewModelTests
         Assert.Equal("NoConcern", details.TsunamiStatus.Kind);
     }
 
+    [Fact]
+    public async Task Details_GenericTsunamiTemplate_DoesNotInferMajorWarning()
+    {
+        EarthquakeReport report = CreateReport(
+            "generic-tsunami",
+            BaseTime,
+            tsunamiComment: "津波警報等（大津波警報・津波警報あるいは津波注意報）を発表中です。");
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+        using var details = new EarthquakeDetailsViewModel(page, map);
+
+        Assert.Equal("津波 调查中", details.TsunamiStatus.Text);
+        Assert.Equal("Investigating", details.TsunamiStatus.Kind);
+    }
+
     private static string GetField(EarthquakeDetailsViewModel details, string label)
     {
         return details.SummaryFields.Single(field => field.Label == label).Value;
