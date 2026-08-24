@@ -69,6 +69,76 @@ public sealed class TsunamiPageViewModelTests
         Assert.False(viewModel.State.IsRefreshing);
     }
 
+    [Fact]
+    public async Task SelectedReport_ProjectsDetailsAndTsunamiLevel()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
+        JmaTsunamiReport report = CreateReport("details", issuedAt) with
+        {
+            Items =
+            [
+                new JmaTsunamiInformationItem(
+                    "津波注意報",
+                    null,
+                    null,
+                    null,
+                    [new JmaTsunamiArea("茨城県", "JP08")]),
+            ],
+            ForecastAreas =
+            [
+                new JmaTsunamiForecastArea(
+                    "茨城県",
+                    "JP08",
+                    "津波注意報",
+                    null,
+                    null,
+                    null,
+                    issuedAt.AddHours(1),
+                    "到達予定",
+                    new JmaTsunamiHeight(0.5, null, null, "m", "高さ"),
+                    []),
+            ],
+            ObservationStations =
+            [
+                new JmaTsunamiObservationStation(
+                    "茨城県",
+                    "JP08",
+                    "大洗",
+                    "ST01",
+                    null,
+                    issuedAt.AddHours(2),
+                    null,
+                    "微弱",
+                    null,
+                    null,
+                    null),
+            ],
+            EstimationAreas =
+            [
+                new JmaTsunamiEstimationArea(
+                    "茨城県沖",
+                    "OFF01",
+                    null,
+                    null,
+                    new JmaTsunamiHeight(null, "巨大", null, null, null)),
+            ],
+        };
+        var repository = new StubTsunamiReportRepository([report]);
+        using var viewModel = new TsunamiPageViewModel(repository);
+
+        await viewModel.LoadAsync();
+
+        Assert.Equal(TsunamiLevel.Advisory, viewModel.SelectedReportLevel);
+        Assert.Equal("津波注意報", viewModel.SelectedReportLevelText);
+        Assert.Single(viewModel.ForecastAreas);
+        Assert.Equal("0.5 m", viewModel.ForecastAreas[0].HeightText);
+        Assert.Equal("到達予定", viewModel.ForecastAreas[0].ArrivalText.Split('（')[1].TrimEnd('）'));
+        Assert.Single(viewModel.ObservationStations);
+        Assert.Equal("微弱", viewModel.ObservationStations[0].InitialText);
+        Assert.Single(viewModel.EstimationAreas);
+        Assert.Equal("巨大", viewModel.EstimationAreas[0].HeightText);
+    }
+
     private static JmaTsunamiReport CreateReport(
         string sourceMessageId,
         DateTimeOffset issuedAt) => new()

@@ -3,8 +3,31 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using EarthquakeShow.Core.Abstractions;
 using EarthquakeShow.Core.Models;
+using EarthquakeShow.Core.Services;
 
 namespace EarthquakeShow.App.ViewModels;
+
+public sealed record TsunamiForecastAreaDisplay(
+    string Name,
+    string Code,
+    TsunamiLevel Level,
+    string LevelText,
+    string ArrivalText,
+    string HeightText);
+
+public sealed record TsunamiObservationStationDisplay(
+    string AreaName,
+    string Name,
+    string Code,
+    string ArrivalText,
+    string HeightText,
+    string InitialText);
+
+public sealed record TsunamiEstimationAreaDisplay(
+    string Name,
+    string Code,
+    string ArrivalText,
+    string HeightText);
 
 public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 {
@@ -50,6 +73,14 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(SelectedReportHeadlineText));
             OnPropertyChanged(nameof(SelectedReportIdentityText));
             OnPropertyChanged(nameof(SelectedReportStructureText));
+            OnPropertyChanged(nameof(SelectedReportLevel));
+            OnPropertyChanged(nameof(SelectedReportLevelText));
+            OnPropertyChanged(nameof(ForecastAreas));
+            OnPropertyChanged(nameof(ObservationStations));
+            OnPropertyChanged(nameof(EstimationAreas));
+            OnPropertyChanged(nameof(HasForecastAreas));
+            OnPropertyChanged(nameof(HasObservationStations));
+            OnPropertyChanged(nameof(HasEstimationAreas));
         }
     }
 
@@ -145,6 +176,37 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public TsunamiLevel SelectedReportLevel => GetReportLevel(State.SelectedReport);
+
+    public string SelectedReportLevelText => GetLevelText(SelectedReportLevel);
+
+    public ImmutableArray<TsunamiForecastAreaDisplay> ForecastAreas =>
+        State.SelectedReport is null
+            ? []
+            : State.SelectedReport.ForecastAreas
+                .Select(CreateForecastAreaDisplay)
+                .ToImmutableArray();
+
+    public ImmutableArray<TsunamiObservationStationDisplay> ObservationStations =>
+        State.SelectedReport is null
+            ? []
+            : State.SelectedReport.ObservationStations
+                .Select(CreateObservationStationDisplay)
+                .ToImmutableArray();
+
+    public ImmutableArray<TsunamiEstimationAreaDisplay> EstimationAreas =>
+        State.SelectedReport is null
+            ? []
+            : State.SelectedReport.EstimationAreas
+                .Select(CreateEstimationAreaDisplay)
+                .ToImmutableArray();
+
+    public bool HasForecastAreas => !ForecastAreas.IsDefaultOrEmpty;
+
+    public bool HasObservationStations => !ObservationStations.IsDefaultOrEmpty;
+
+    public bool HasEstimationAreas => !EstimationAreas.IsDefaultOrEmpty;
+
     public string EmptyMessage => ShowError
         ? State.ErrorMessage ?? "海啸报文读取失败"
         : "本地缓存中没有海啸报文";
@@ -153,6 +215,99 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         timestamp is null
             ? "未提供"
             : timestamp.Value.ToString("yyyy-MM-dd HH:mm:ss zzz", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static TsunamiForecastAreaDisplay CreateForecastAreaDisplay(
+        JmaTsunamiForecastArea area)
+    {
+        TsunamiLevel level = JmaTsunamiClassifier.Classify(area.KindName, area.KindCode);
+        return new(
+            area.Name,
+            area.Code,
+            level,
+            GetLevelText(level, area.KindName),
+            FormatArrival(area.FirstArrivalTime, area.FirstArrivalCondition),
+            FormatHeight(area.MaximumHeight));
+    }
+
+    private static TsunamiObservationStationDisplay CreateObservationStationDisplay(
+        JmaTsunamiObservationStation station) => new(
+            station.AreaName,
+            station.Name,
+            station.Code,
+            FormatArrival(station.FirstArrivalTime, station.FirstArrivalCondition),
+            FormatHeight(station.MaximumHeight),
+            string.IsNullOrWhiteSpace(station.Initial) ? "未提供" : station.Initial!);
+
+    private static TsunamiEstimationAreaDisplay CreateEstimationAreaDisplay(
+        JmaTsunamiEstimationArea area) => new(
+            area.Name,
+            area.Code,
+            FormatArrival(area.FirstArrivalTime, area.FirstArrivalCondition),
+            FormatHeight(area.MaximumHeight));
+
+    private static TsunamiLevel GetReportLevel(JmaTsunamiReport? report)
+    {
+        if (report is null)
+        {
+            return TsunamiLevel.Unknown;
+        }
+
+        return report.Items
+            .Select(item => JmaTsunamiClassifier.Classify(item.KindName, item.KindCode))
+            .Concat(report.ForecastAreas.Select(area =>
+                JmaTsunamiClassifier.Classify(area.KindName, area.KindCode)))
+            .OrderByDescending(GetLevelPriority)
+            .FirstOrDefault(TsunamiLevel.Unknown);
+    }
+
+    private static int GetLevelPriority(TsunamiLevel level) => level switch
+    {
+        TsunamiLevel.MajorWarning => 6,
+        TsunamiLevel.Warning => 5,
+        TsunamiLevel.Advisory => 4,
+        TsunamiLevel.MinorChange => 3,
+        TsunamiLevel.NoConcern => 2,
+        TsunamiLevel.Investigating => 1,
+        _ => 0,
+    };
+
+    private static string GetLevelText(
+        TsunamiLevel level,
+        string? originalText = null) =>
+        level switch
+        {
+            TsunamiLevel.NoConcern => "津波の心配なし",
+            TsunamiLevel.MinorChange => "若干の海面変動",
+            TsunamiLevel.Advisory => "津波注意報",
+            TsunamiLevel.Warning => "津波警報",
+            TsunamiLevel.MajorWarning => "大津波警報",
+            TsunamiLevel.Investigating => string.IsNullOrWhiteSpace(originalText)
+                ? "津波 調査中"
+                : originalText!,
+            _ => string.IsNullOrWhiteSpace(originalText) ? "等级未提供" : originalText!,
+        };
+
+    private static string FormatArrival(
+        DateTimeOffset? timestamp,
+        string? condition) => timestamp is null
+            ? string.IsNullOrWhiteSpace(condition) ? "未提供" : condition!
+            : $"{FormatTimestamp(timestamp)}{(string.IsNullOrWhiteSpace(condition) ? string.Empty : $"（{condition}）")}";
+
+    private static string FormatHeight(JmaTsunamiHeight? height)
+    {
+        if (height is null)
+        {
+            return "未提供";
+        }
+
+        if (height.Meters is double meters && double.IsFinite(meters))
+        {
+            string unit = string.IsNullOrWhiteSpace(height.Unit) ? "m" : height.Unit!;
+            return $"{meters:0.##} {unit}";
+        }
+
+        return string.IsNullOrWhiteSpace(height.Description) ? "未提供" : height.Description!;
+    }
 
     public async ValueTask LoadAsync(CancellationToken cancellationToken = default)
     {
