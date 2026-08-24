@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using EarthquakeShow.Core.Models;
 using EarthquakeShow.Core.Services;
 using EarthquakeShow.Infrastructure.Persistence;
+using EarthquakeShow.Infrastructure.Sources;
 using Microsoft.Data.Sqlite;
 using Xunit;
 
@@ -95,6 +96,56 @@ public sealed class SqliteTsunamiReportRepositoryTests
         }
     }
 
+    [Fact]
+    public async Task Refresh_UsesLatestIssuedAt_PersistsStatusAndKeepsReportsOnFailure()
+    {
+        using var database = new TemporaryDatabase();
+        JmaTsunamiReport report = LoadOfficialReports()[0] with
+        {
+            Source = LoadOfficialReports()[0].Source with { SourceId = "test-tsunami" },
+        };
+        var source = new StubTsunamiSource(
+            new TsunamiSourceFetchResult(
+                [report],
+                new SourceStatus(
+                    "test-tsunami",
+                    SourceConnectionState.Online,
+                    report.ReceivedAt,
+                    report.ReceivedAt,
+                    "测试海啸源在线")));
+        var repository = new SqliteTsunamiReportRepository(database.Path, source);
+
+        await repository.InitializeAsync();
+        Assert.Equal(SourceConnectionState.Disabled, Assert.Single(repository.SourceStatuses).State);
+
+        await repository.RefreshAsync();
+        Assert.Null(source.LastSince);
+        Assert.Equal(SourceConnectionState.Online, Assert.Single(repository.SourceStatuses).State);
+        Assert.Single(await repository.ListReportsAsync());
+
+        source.Result = new TsunamiSourceFetchResult(
+            [],
+            new SourceStatus(
+                "test-tsunami",
+                SourceConnectionState.Disconnected,
+                report.ReceivedAt.AddMinutes(1),
+                Detail: "测试网络失败"));
+        await repository.RefreshAsync();
+
+        Assert.Equal(report.IssuedAt, source.LastSince);
+        Assert.Single(await repository.ListReportsAsync());
+        Assert.Equal(
+            SourceConnectionState.Disconnected,
+            Assert.Single(repository.SourceStatuses).State);
+
+        repository.Dispose();
+        var reloaded = new SqliteTsunamiReportRepository(database.Path, source);
+        await reloaded.InitializeAsync();
+        Assert.Equal(SourceConnectionState.Disabled, Assert.Single(reloaded.SourceStatuses).State);
+        Assert.Equal(report.ReceivedAt, Assert.Single(reloaded.SourceStatuses).LastReceivedAt);
+        reloaded.Dispose();
+    }
+
     private static ImmutableArray<JmaTsunamiReport> LoadOfficialReports()
     {
         string directory = Path.Combine(
@@ -122,6 +173,33 @@ public sealed class SqliteTsunamiReportRepositoryTests
                     new SourceReference("jma-xml-tsunami", file, new Uri(path), xml),
                     ReceivedAt: new DateTimeOffset(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(8))));
         }).ToImmutableArray();
+    }
+
+    private sealed class StubTsunamiSource(TsunamiSourceFetchResult result) :
+        IRealtimeTsunamiSource,
+        IIncrementalTsunamiSource
+    {
+        public TsunamiSourceFetchResult Result { get; set; } = result;
+
+        public DateTimeOffset? LastSince { get; private set; }
+
+        public string SourceId => Result.Status.SourceId;
+
+        public Task<TsunamiSourceFetchResult> FetchAsync(
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(Result);
+        }
+
+        public Task<TsunamiSourceFetchResult> FetchSinceAsync(
+            DateTimeOffset? since,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            LastSince = since;
+            return Task.FromResult(Result);
+        }
     }
 
     private sealed class TemporaryDatabase : IDisposable

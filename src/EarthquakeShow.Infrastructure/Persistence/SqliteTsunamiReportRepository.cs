@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text.Json;
 using EarthquakeShow.Core.Abstractions;
 using EarthquakeShow.Core.Models;
+using EarthquakeShow.Infrastructure.Sources;
 using Microsoft.Data.Sqlite;
 
 namespace EarthquakeShow.Infrastructure.Persistence;
@@ -10,23 +11,67 @@ namespace EarthquakeShow.Infrastructure.Persistence;
 /// <summary>
 /// 使用独立 SQLite 表保存 JMA VTSE 海啸报文。
 /// </summary>
-public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository
+public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, IDisposable
 {
     private const int CurrentSchemaVersion = 2;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+    private readonly object _syncRoot = new();
     private readonly SemaphoreSlim _writeGate = new(1, 1);
     private readonly string _databasePath;
+    private readonly ImmutableArray<IRealtimeTsunamiSource> _realtimeSources;
+    private ImmutableArray<SourceStatus> _sourceStatuses = [];
+    private bool _initialized;
+    private bool _disposed;
 
     public SqliteTsunamiReportRepository(string databasePath)
+        : this(databasePath, Array.Empty<IRealtimeTsunamiSource>())
+    {
+    }
+
+    public SqliteTsunamiReportRepository(
+        string databasePath,
+        IRealtimeTsunamiSource? realtimeSource,
+        params IRealtimeTsunamiSource[] additionalSources)
+        : this(
+            databasePath,
+            (realtimeSource is null ? Array.Empty<IRealtimeTsunamiSource>() : [realtimeSource])
+                .Concat(additionalSources ?? Array.Empty<IRealtimeTsunamiSource>()))
+    {
+    }
+
+    public SqliteTsunamiReportRepository(
+        string databasePath,
+        IEnumerable<IRealtimeTsunamiSource> realtimeSources)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
+        ArgumentNullException.ThrowIfNull(realtimeSources);
         _databasePath = Path.GetFullPath(databasePath);
+        _realtimeSources = realtimeSources
+            .Where(source => source is not null)
+            .ToImmutableArray();
+    }
+
+    public ImmutableArray<SourceStatus> SourceStatuses
+    {
+        get
+        {
+            lock (_syncRoot)
+            {
+                return _sourceStatuses;
+            }
+        }
     }
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
         cancellationToken.ThrowIfCancellationRequested();
+        if (_initialized)
+        {
+            return;
+        }
+
         string? directory = Path.GetDirectoryName(_databasePath);
         if (!string.IsNullOrEmpty(directory))
         {
@@ -36,11 +81,78 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository
         await using SqliteConnection connection = CreateConnection();
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         await EnsureSchemaAsync(connection, cancellationToken).ConfigureAwait(false);
+
+        ImmutableArray<SourceStatus> existing = await ReadSourceStatusesAsync(
+            connection,
+            cancellationToken).ConfigureAwait(false);
+        ImmutableArray<SourceStatus> statuses = BuildOfflineStatuses(existing);
+        if (!statuses.IsDefaultOrEmpty)
+        {
+            await SaveSourceStatusesToConnectionAsync(
+                connection,
+                statuses,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        SetSourceStatuses(statuses);
+        _initialized = true;
+    }
+
+    public async Task RefreshAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        cancellationToken.ThrowIfCancellationRequested();
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+        if (_realtimeSources.IsDefaultOrEmpty)
+        {
+            return;
+        }
+
+        var reports = ImmutableArray.CreateBuilder<JmaTsunamiReport>();
+        var statuses = ImmutableArray.CreateBuilder<SourceStatus>();
+        foreach (IRealtimeTsunamiSource source in _realtimeSources)
+        {
+            TsunamiSourceFetchResult result;
+            try
+            {
+                DateTimeOffset? since = await GetLatestIssuedAtAsync(
+                    source.SourceId,
+                    cancellationToken).ConfigureAwait(false);
+                result = source is IIncrementalTsunamiSource incrementalSource
+                    ? await incrementalSource.FetchSinceAsync(since, cancellationToken).ConfigureAwait(false)
+                    : await source.FetchAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (HttpRequestException exception)
+            {
+                result = new TsunamiSourceFetchResult(
+                    [],
+                    new SourceStatus(
+                        source.SourceId,
+                        SourceConnectionState.Disconnected,
+                        DateTimeOffset.UtcNow,
+                        Detail: $"数据源网络错误：{exception.Message}"));
+            }
+
+            reports.AddRange(result.Reports);
+            statuses.Add(result.Status);
+        }
+
+        ImmutableArray<SourceStatus> sourceStatuses = statuses.ToImmutable();
+        ImmutableArray<SourceStatus> persistedStatuses = await SaveReportsAndStatusesAsync(
+            reports.ToImmutable(),
+            sourceStatuses,
+            cancellationToken).ConfigureAwait(false);
+        SetSourceStatuses(persistedStatuses);
     }
 
     public async ValueTask<ImmutableArray<JmaTsunamiReport>> ListReportsAsync(
         CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
         await using SqliteConnection connection = await OpenInitializedConnectionAsync(cancellationToken)
             .ConfigureAwait(false);
         return await ReadReportsAsync(connection, null, cancellationToken).ConfigureAwait(false);
@@ -50,6 +162,7 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository
         string eventId,
         CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
         ArgumentException.ThrowIfNullOrWhiteSpace(eventId);
         await using SqliteConnection connection = await OpenInitializedConnectionAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -60,6 +173,7 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository
         IEnumerable<JmaTsunamiReport> reports,
         CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
         ArgumentNullException.ThrowIfNull(reports);
         ImmutableArray<JmaTsunamiReport> incomingReports = reports.ToImmutableArray();
         cancellationToken.ThrowIfCancellationRequested();
@@ -76,45 +190,141 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository
             await using SqliteConnection connection = CreateConnection();
             await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
             await EnsureSchemaAsync(connection, cancellationToken).ConfigureAwait(false);
-            await using SqliteTransaction transaction = (SqliteTransaction)await connection
-                .BeginTransactionAsync(cancellationToken)
-                .ConfigureAwait(false);
-
-            foreach (JmaTsunamiReport report in incomingReports)
-            {
-                TsunamiReportPayloadDto payload = TsunamiReportPayloadDto.FromDomain(report);
-                await using SqliteCommand command = connection.CreateCommand();
-                command.Transaction = transaction;
-                command.CommandText = """
-                    INSERT INTO tsunami_reports(
-                        event_id, source_id, source_message_id, report_code,
-                        issued_at, received_at, payload_json)
-                    VALUES ($event_id, $source_id, $source_message_id, $report_code,
-                        $issued_at, $received_at, $payload_json)
-                    ON CONFLICT(event_id, source_id, source_message_id) DO UPDATE SET
-                        report_code = excluded.report_code,
-                        issued_at = excluded.issued_at,
-                        received_at = excluded.received_at,
-                        payload_json = excluded.payload_json;
-                    """;
-                command.Parameters.AddWithValue("$event_id", report.EventId);
-                command.Parameters.AddWithValue("$source_id", report.Source.SourceId);
-                command.Parameters.AddWithValue("$source_message_id", report.Source.SourceMessageId);
-                command.Parameters.AddWithValue("$report_code", report.ReportCode);
-                command.Parameters.AddWithValue("$issued_at", FormatDateTime(report.IssuedAt));
-                command.Parameters.AddWithValue("$received_at", FormatDateTime(report.ReceivedAt));
-                command.Parameters.AddWithValue(
-                    "$payload_json",
-                    JsonSerializer.Serialize(payload, JsonOptions));
-                await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-            }
-
-            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            await SaveReportsAndStatusesToConnectionAsync(
+                connection,
+                incomingReports,
+                [],
+                cancellationToken).ConfigureAwait(false);
         }
         finally
         {
             _writeGate.Release();
         }
+    }
+
+    private async Task<ImmutableArray<SourceStatus>> SaveReportsAndStatusesAsync(
+        ImmutableArray<JmaTsunamiReport> reports,
+        ImmutableArray<SourceStatus> statuses,
+        CancellationToken cancellationToken)
+    {
+        await _writeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            string? directory = Path.GetDirectoryName(_databasePath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            await using SqliteConnection connection = CreateConnection();
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+            await EnsureSchemaAsync(connection, cancellationToken).ConfigureAwait(false);
+            ImmutableArray<SourceStatus> existingStatuses = await ReadSourceStatusesAsync(
+                connection,
+                cancellationToken).ConfigureAwait(false);
+            ImmutableArray<SourceStatus> persistedStatuses = statuses
+                .Select(status =>
+                {
+                    SourceStatus? prior = existingStatuses.FirstOrDefault(existing =>
+                        string.Equals(existing.SourceId, status.SourceId, StringComparison.Ordinal));
+                    return status with
+                    {
+                        LastReceivedAt = status.LastReceivedAt ?? prior?.LastReceivedAt,
+                    };
+                })
+                .ToImmutableArray();
+            await SaveReportsAndStatusesToConnectionAsync(
+                connection,
+                reports,
+                persistedStatuses,
+                cancellationToken).ConfigureAwait(false);
+            return persistedStatuses;
+        }
+        finally
+        {
+            _writeGate.Release();
+        }
+    }
+
+    private static async Task SaveReportsAndStatusesToConnectionAsync(
+        SqliteConnection connection,
+        ImmutableArray<JmaTsunamiReport> reports,
+        ImmutableArray<SourceStatus> statuses,
+        CancellationToken cancellationToken)
+    {
+        await using SqliteTransaction transaction = (SqliteTransaction)await connection
+            .BeginTransactionAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        foreach (JmaTsunamiReport report in reports)
+        {
+            TsunamiReportPayloadDto payload = TsunamiReportPayloadDto.FromDomain(report);
+            await using SqliteCommand command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = """
+                INSERT INTO tsunami_reports(
+                    event_id, source_id, source_message_id, report_code,
+                    issued_at, received_at, payload_json)
+                VALUES ($event_id, $source_id, $source_message_id, $report_code,
+                    $issued_at, $received_at, $payload_json)
+                ON CONFLICT(event_id, source_id, source_message_id) DO UPDATE SET
+                    report_code = excluded.report_code,
+                    issued_at = excluded.issued_at,
+                    received_at = excluded.received_at,
+                    payload_json = excluded.payload_json;
+                """;
+            command.Parameters.AddWithValue("$event_id", report.EventId);
+            command.Parameters.AddWithValue("$source_id", report.Source.SourceId);
+            command.Parameters.AddWithValue("$source_message_id", report.Source.SourceMessageId);
+            command.Parameters.AddWithValue("$report_code", report.ReportCode);
+            command.Parameters.AddWithValue("$issued_at", FormatDateTime(report.IssuedAt));
+            command.Parameters.AddWithValue("$received_at", FormatDateTime(report.ReceivedAt));
+            command.Parameters.AddWithValue(
+                "$payload_json",
+                JsonSerializer.Serialize(payload, JsonOptions));
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        foreach (SourceStatus status in statuses)
+        {
+            await using SqliteCommand command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = """
+                INSERT INTO source_status(
+                    source_id, state, checked_at, last_received_at, detail)
+                VALUES ($source_id, $state, $checked_at, $last_received_at, $detail)
+                ON CONFLICT(source_id) DO UPDATE SET
+                    state = excluded.state,
+                    checked_at = excluded.checked_at,
+                    last_received_at = excluded.last_received_at,
+                    detail = excluded.detail;
+                """;
+            command.Parameters.AddWithValue("$source_id", status.SourceId);
+            command.Parameters.AddWithValue("$state", status.State.ToString());
+            command.Parameters.AddWithValue("$checked_at", FormatDateTime(status.CheckedAt));
+            command.Parameters.AddWithValue(
+                "$last_received_at",
+                status.LastReceivedAt is null
+                    ? DBNull.Value
+                    : FormatDateTime(status.LastReceivedAt.Value));
+            command.Parameters.AddWithValue(
+                "$detail",
+                status.Detail is null ? DBNull.Value : status.Detail);
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _writeGate.Dispose();
     }
 
     private SqliteConnection CreateConnection()
@@ -154,6 +364,13 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository
             CREATE TABLE IF NOT EXISTS schema_info (
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS source_status (
+                source_id TEXT PRIMARY KEY,
+                state TEXT NOT NULL,
+                checked_at TEXT NOT NULL,
+                last_received_at TEXT NULL,
+                detail TEXT NULL
             );
             CREATE TABLE IF NOT EXISTS tsunami_reports (
                 event_id TEXT NOT NULL,
@@ -247,6 +464,121 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository
 
         return reports.ToImmutable();
     }
+
+    private async Task<DateTimeOffset?> GetLatestIssuedAtAsync(
+        string sourceId,
+        CancellationToken cancellationToken)
+    {
+        await using SqliteConnection connection = CreateConnection();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await EnsureSchemaAsync(connection, cancellationToken).ConfigureAwait(false);
+        await using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT MAX(issued_at)
+            FROM tsunami_reports
+            WHERE source_id = $source_id;
+            """;
+        command.Parameters.AddWithValue("$source_id", sourceId);
+        object? value = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        return value is null or DBNull
+            ? null
+            : ParseDateTime(value.ToString()!);
+    }
+
+    private static async Task<ImmutableArray<SourceStatus>> ReadSourceStatusesAsync(
+        SqliteConnection connection,
+        CancellationToken cancellationToken)
+    {
+        var statuses = ImmutableArray.CreateBuilder<SourceStatus>();
+        await using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT source_id, state, checked_at, last_received_at, detail
+            FROM source_status
+            ORDER BY source_id;
+            """;
+        await using SqliteDataReader reader = await command
+            .ExecuteReaderAsync(cancellationToken)
+            .ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            statuses.Add(new SourceStatus(
+                reader.GetString(0),
+                ParseConnectionState(reader.GetString(1)),
+                ParseDateTime(reader.GetString(2)),
+                reader.IsDBNull(3) ? null : ParseDateTime(reader.GetString(3)),
+                reader.IsDBNull(4) ? null : reader.GetString(4)));
+        }
+
+        return statuses.ToImmutable();
+    }
+
+    private ImmutableArray<SourceStatus> BuildOfflineStatuses(
+        ImmutableArray<SourceStatus> existing)
+    {
+        DateTimeOffset checkedAt = DateTimeOffset.UtcNow;
+        return _realtimeSources
+            .Select(source =>
+            {
+                SourceStatus? prior = existing.FirstOrDefault(status =>
+                    string.Equals(status.SourceId, source.SourceId, StringComparison.Ordinal));
+                return new SourceStatus(
+                    source.SourceId,
+                    SourceConnectionState.Disabled,
+                    checkedAt,
+                    prior?.LastReceivedAt,
+                    "离线缓存，尚未连接实时数据源");
+            })
+            .OrderBy(status => status.SourceId, StringComparer.Ordinal)
+            .ToImmutableArray();
+    }
+
+    private static async Task SaveSourceStatusesToConnectionAsync(
+        SqliteConnection connection,
+        ImmutableArray<SourceStatus> statuses,
+        CancellationToken cancellationToken)
+    {
+        foreach (SourceStatus status in statuses)
+        {
+            await using SqliteCommand command = connection.CreateCommand();
+            command.CommandText = """
+                INSERT INTO source_status(
+                    source_id, state, checked_at, last_received_at, detail)
+                VALUES ($source_id, $state, $checked_at, $last_received_at, $detail)
+                ON CONFLICT(source_id) DO UPDATE SET
+                    state = excluded.state,
+                    checked_at = excluded.checked_at,
+                    last_received_at = excluded.last_received_at,
+                    detail = excluded.detail;
+                """;
+            command.Parameters.AddWithValue("$source_id", status.SourceId);
+            command.Parameters.AddWithValue("$state", status.State.ToString());
+            command.Parameters.AddWithValue("$checked_at", FormatDateTime(status.CheckedAt));
+            command.Parameters.AddWithValue(
+                "$last_received_at",
+                status.LastReceivedAt is null
+                    ? DBNull.Value
+                    : FormatDateTime(status.LastReceivedAt.Value));
+            command.Parameters.AddWithValue(
+                "$detail",
+                status.Detail is null ? DBNull.Value : status.Detail);
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private void SetSourceStatuses(ImmutableArray<SourceStatus> statuses)
+    {
+        lock (_syncRoot)
+        {
+            _sourceStatuses = statuses;
+        }
+    }
+
+    private static SourceConnectionState ParseConnectionState(string value) =>
+        Enum.TryParse(value, ignoreCase: false, out SourceConnectionState state)
+            ? state
+            : throw new InvalidDataException($"无法解析海啸来源状态：{value}。");
+
+    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, this);
 
     private static string FormatDateTime(DateTimeOffset value) =>
         value.ToString("O", CultureInfo.InvariantCulture);

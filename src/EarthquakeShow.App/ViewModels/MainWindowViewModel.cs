@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
@@ -10,6 +11,7 @@ using EarthquakeShow.Core.Models;
 using EarthquakeShow.Core.Services;
 using EarthquakeShow.Infrastructure.Sources;
 using EarthquakeShow.Infrastructure.Persistence;
+using Microsoft.Data.Sqlite;
 
 namespace EarthquakeShow.App.ViewModels;
 
@@ -23,9 +25,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
     private readonly SemaphoreSlim _streamingRestartGate = new(1, 1);
     private readonly ApplicationSettingsStore _settingsStore;
     private readonly SqliteEarthquakeEventRepository _repository;
+    private readonly SqliteTsunamiReportRepository _tsunamiRepository;
     private readonly IReadOnlyList<EarthquakeReport> _seedReports;
     private readonly HttpClient? _httpClient;
     private readonly JmaJsonEarthquakeSource? _realtimeSource;
+    private readonly IRealtimeTsunamiSource? _tsunamiSource;
     private readonly IReadOnlyList<IRealtimeEarthquakeSource> _realtimeSources = [];
     private readonly Func<WebSocketConnectionSettings, IStreamingEarthquakeSource>? _streamingSourceFactory;
     private IStreamingEarthquakeSource? _streamingSource;
@@ -38,6 +42,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
     private string _currentTime = string.Empty;
     private string _cacheStatus = "缓存：初始化中";
     private string _autoRefreshStatus = "自动刷新：未启动";
+    private ImmutableArray<SourceStatus> _tsunamiSourceStatuses = [];
     private ApplicationSettings _applicationSettings;
     private bool _isInitialized;
     private bool _isDisposed;
@@ -48,7 +53,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         bool enableNetwork = true,
         IStreamingEarthquakeSource? streamingSource = null,
         string? settingsPath = null,
-        Func<WebSocketConnectionSettings, IStreamingEarthquakeSource>? streamingSourceFactory = null)
+        Func<WebSocketConnectionSettings, IStreamingEarthquakeSource>? streamingSourceFactory = null,
+        IRealtimeTsunamiSource? tsunamiSource = null)
     {
         AppVersion = GetAppVersion();
         _settingsStore = new(settingsPath ?? GetDefaultSettingsPath());
@@ -70,6 +76,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
                 stationCatalog: stationCatalog);
             P2pQuakeEarthquakeSource p2pQuakeSource = new(_httpClient);
             _realtimeSources = [_realtimeSource, xmlSource, p2pQuakeSource];
+            _tsunamiSource = tsunamiSource ?? new JmaTsunamiXmlSource(_httpClient);
             _streamingSourceFactory = streamingSource is null
                 ? streamingSourceFactory ?? CreateStreamingSource
                 : streamingSourceFactory;
@@ -79,6 +86,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         }
         else
         {
+            _tsunamiSource = tsunamiSource;
             _streamingSourceFactory = streamingSourceFactory;
             _streamingSource = streamingSource ??
                 streamingSourceFactory?.Invoke(_applicationSettings.WebSocketSettings);
@@ -88,6 +96,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
             cachePath ?? GetDefaultCachePath(),
             _realtimeSources,
             stationCatalog);
+        _tsunamiRepository = new SqliteTsunamiReportRepository(
+            cachePath ?? GetDefaultCachePath(),
+            _tsunamiSource);
         EarthquakePage = new EarthquakePageViewModel(
             _repository);
         EventList = new EarthquakeEventListViewModel(EarthquakePage);
@@ -189,6 +200,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
 
     public SettingsViewModel Settings { get; }
 
+    public ImmutableArray<SourceStatus> TsunamiSourceStatuses => _tsunamiSourceStatuses;
+
     public ValueTask InitializeAsync(
         CancellationToken cancellationToken = default)
     {
@@ -207,11 +220,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         CancellationToken token = linkedCancellation?.Token ?? _lifetimeCancellation.Token;
         await _repository.InitializeAsync(_seedReports, token);
         CacheStatus = _repository.CacheStatus;
+        await _tsunamiRepository.InitializeAsync(token);
+        UpdateTsunamiSourceStatuses();
         EarthquakePage.SetSourceState(
             _repository.SourceStatuses,
             isOffline: true);
         await EarthquakePage.LoadAsync(token);
-        if (_realtimeSource is not null)
+        if (_realtimeSource is not null || _tsunamiSource is not null)
         {
             await RefreshFromNetworkAsync(token);
             _refreshLoopTask ??= RunRefreshLoopAsync(_lifetimeCancellation.Token);
@@ -286,6 +301,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         Map.Dispose();
         EventList.Dispose();
         EarthquakePage.Dispose();
+        _tsunamiRepository.Dispose();
         _httpClient?.Dispose();
         _streamingSessionCancellation?.Dispose();
         _streamingSessionCancellation = null;
@@ -321,6 +337,25 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         try
         {
             await EarthquakePage.RefreshAsync(cancellationToken);
+            if (_tsunamiSource is not null)
+            {
+                try
+                {
+                    await _tsunamiRepository.RefreshAsync(cancellationToken);
+                    UpdateTsunamiSourceStatuses();
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception exception) when (
+                    exception is IOException or UnauthorizedAccessException or SqliteException or
+                    InvalidDataException or FormatException or ArgumentException or
+                    InvalidOperationException)
+                {
+                    UpdateTsunamiSourceStatuses();
+                }
+            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -328,6 +363,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested)
         {
         }
+    }
+
+    private void UpdateTsunamiSourceStatuses()
+    {
+        ImmutableArray<SourceStatus> statuses = _tsunamiRepository.SourceStatuses;
+        if (_tsunamiSourceStatuses == statuses)
+        {
+            return;
+        }
+
+        _tsunamiSourceStatuses = statuses;
+        OnPropertyChanged(nameof(TsunamiSourceStatuses));
     }
 
     private async Task RunRefreshLoopAsync(CancellationToken cancellationToken)

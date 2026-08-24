@@ -107,6 +107,67 @@ public sealed class MainWindowViewModelTests
     }
 
     [Fact]
+    public async Task Initialize_TsunamiSource_PersistsIndependentlyAndStopsOnDispose()
+    {
+        string cachePath = CreateTemporaryCachePath();
+        DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
+        var source = new StubTsunamiSource(new TsunamiSourceFetchResult(
+            [new JmaTsunamiReport
+            {
+                EventId = "20260824120000",
+                ReportCode = "VTSE41",
+                Status = ReportStatus.Issued,
+                Context = ReportContext.Normal,
+                IssuedAt = issuedAt,
+                ReceivedAt = issuedAt.AddSeconds(1),
+                Source = new SourceReference(
+                    "jma-xml-tsunami",
+                    "20260824120000_VTSE41_0001.xml"),
+            }],
+            new SourceStatus(
+                "jma-xml-tsunami",
+                SourceConnectionState.Online,
+                issuedAt.AddSeconds(1),
+                issuedAt,
+                "测试海啸源在线")));
+        var viewModel = new MainWindowViewModel(
+            cachePath,
+            enableNetwork: false,
+            tsunamiSource: source);
+
+        try
+        {
+            await viewModel.InitializeAsync();
+
+            Assert.Contains(
+                viewModel.TsunamiSourceStatuses,
+                status => status.SourceId == "jma-xml-tsunami" &&
+                    status.State == SourceConnectionState.Online);
+            Assert.DoesNotContain(
+                viewModel.EarthquakePage.State.Events,
+                earthquakeEvent => earthquakeEvent.EventId == "20260824120000");
+
+            await viewModel.DisposeAsync();
+
+            var repository = new SqliteTsunamiReportRepository(cachePath);
+            try
+            {
+                ImmutableArray<JmaTsunamiReport> reports = await repository.ListReportsAsync();
+                Assert.Contains(reports, report => report.EventId == "20260824120000");
+            }
+            finally
+            {
+                repository.Dispose();
+            }
+        }
+        finally
+        {
+            viewModel.Dispose();
+            DeleteTemporaryCache(cachePath);
+        }
+    }
+
+    [Fact]
     public void MainWindow_XamlResources_LoadOnStaThread()
     {
         Exception? capturedException = null;
@@ -345,6 +406,28 @@ public sealed class MainWindowViewModelTests
             {
                 _stopped.TrySetResult();
             }
+        }
+    }
+
+    private sealed class StubTsunamiSource(TsunamiSourceFetchResult result) :
+        IRealtimeTsunamiSource,
+        IIncrementalTsunamiSource
+    {
+        public string SourceId => result.Status.SourceId;
+
+        public Task<TsunamiSourceFetchResult> FetchAsync(
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(result);
+        }
+
+        public Task<TsunamiSourceFetchResult> FetchSinceAsync(
+            DateTimeOffset? since,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(result);
         }
     }
 }

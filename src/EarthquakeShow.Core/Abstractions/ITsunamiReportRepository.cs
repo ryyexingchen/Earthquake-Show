@@ -8,7 +8,11 @@ namespace EarthquakeShow.Core.Abstractions;
 /// </summary>
 public interface ITsunamiReportRepository
 {
+    ImmutableArray<SourceStatus> SourceStatuses { get; }
+
     Task InitializeAsync(CancellationToken cancellationToken = default);
+
+    Task RefreshAsync(CancellationToken cancellationToken = default);
 
     ValueTask<ImmutableArray<JmaTsunamiReport>> ListReportsAsync(
         CancellationToken cancellationToken = default);
