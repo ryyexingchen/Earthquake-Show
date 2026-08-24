@@ -63,7 +63,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
             {
                 Timeout = TimeSpan.FromSeconds(15),
             };
-            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.35.1");
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.41.0");
             _realtimeSource = new JmaJsonEarthquakeSource(_httpClient);
             JmaXmlEarthquakeSource xmlSource = new(
                 _httpClient,

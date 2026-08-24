@@ -630,7 +630,7 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             return new("津波の心配なし", "NoConcern");
         }
 
-        return new(comment.Trim(), "NoConcern");
+        return new(comment.Trim(), "Investigating");
     }
 
     private static bool IsGenericTsunamiStatusComment(string comment)

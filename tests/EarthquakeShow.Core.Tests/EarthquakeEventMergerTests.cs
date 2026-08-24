@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using EarthquakeShow.Core.Models;
 using EarthquakeShow.Core.Services;
 using Xunit;
@@ -124,6 +125,85 @@ public sealed class EarthquakeEventMergerTests
             earthquakeEvent.Reports.Select(report => report.Source.SourceId));
         Assert.Equal("jma-xml", earthquakeEvent.LatestReport?.Source.SourceId);
         Assert.Equal("VXSE53", earthquakeEvent.LatestReport?.ReportCode);
+    }
+
+    [Fact]
+    public void Merge_JmaTemporaryEventIds_Vxse51AndVxse52CreateOneEvent()
+    {
+        EarthquakeReport intensity = CreateReport(
+            "VXSE51",
+            "temporary-51",
+            1,
+            eventId: "20260824040519");
+        EarthquakeReport hypocenter = CreateReport(
+            "VXSE52",
+            "temporary-52",
+            2,
+            eventId: "20260824040526");
+
+        ImmutableArray<EarthquakeEvent> result = EarthquakeEventMerger.Merge(
+            [intensity, hypocenter]);
+
+        EarthquakeEvent earthquakeEvent = Assert.Single(result);
+        Assert.Equal("20260824040526", earthquakeEvent.EventId);
+        Assert.Equal(["VXSE51", "VXSE52"],
+            earthquakeEvent.Reports.Select(report => report.ReportCode));
+    }
+
+    [Fact]
+    public void Merge_JmaTemporaryEventIds_Vxse51AndVxse53CreateOneEvent()
+    {
+        EarthquakeReport intensity = CreateReport(
+            "VXSE51",
+            "temporary-51",
+            1,
+            eventId: "20260824040519");
+        EarthquakeReport detail = CreateReport(
+            "VXSE53",
+            "temporary-53",
+            2,
+            eventId: "20260824040526");
+
+        EarthquakeEvent earthquakeEvent = Assert.Single(
+            EarthquakeEventMerger.Merge([intensity, detail]));
+
+        Assert.Equal("20260824040526", earthquakeEvent.EventId);
+    }
+
+    [Fact]
+    public void Merge_JmaTemporaryEventIds_DifferentIntensityDoesNotMerge()
+    {
+        EarthquakeReport intensity = CreateReport(
+            "VXSE51",
+            "temporary-51",
+            1,
+            eventId: "20260824040519",
+            intensity: JmaIntensity.Three);
+        EarthquakeReport hypocenter = CreateReport(
+            "VXSE52",
+            "temporary-52",
+            2,
+            eventId: "20260824040526",
+            intensity: JmaIntensity.Four);
+
+        Assert.Equal(2, EarthquakeEventMerger.Merge([intensity, hypocenter]).Length);
+    }
+
+    [Fact]
+    public void Merge_JmaTemporaryEventIds_OutsideTimeWindowDoesNotMerge()
+    {
+        EarthquakeReport intensity = CreateReport(
+            "VXSE51",
+            "temporary-51",
+            1,
+            eventId: "20260824040519");
+        EarthquakeReport hypocenter = CreateReport(
+            "VXSE52",
+            "temporary-52",
+            10,
+            eventId: "20260824040630");
+
+        Assert.Equal(2, EarthquakeEventMerger.Merge([intensity, hypocenter]).Length);
     }
 
     [Fact]

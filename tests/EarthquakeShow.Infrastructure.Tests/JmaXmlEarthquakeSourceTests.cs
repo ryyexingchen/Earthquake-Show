@@ -87,6 +87,56 @@ public sealed class JmaXmlEarthquakeSourceTests
     }
 
     [Fact]
+    public async Task FetchSince_FiltersFeedEntriesBeforeCachedIssuedAt()
+    {
+        string root = Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..", "..", "tests", "TestData");
+        string xmlPath = Path.Combine(
+            root,
+            "JmaXml",
+            "Official",
+            "20260818221432_0_VXSE53_270000.xml");
+        string xml = await File.ReadAllTextAsync(xmlPath);
+        const string feed = """
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <entry>
+                <id>https://example.test/20260818221317_0_VXSE52_270000.xml</id>
+                <link type="application/xml" href="https://example.test/old.xml" />
+              </entry>
+              <entry>
+                <id>https://example.test/20260818221432_0_VXSE53_270000.xml</id>
+                <link type="application/xml" href="https://example.test/new.xml" />
+              </entry>
+            </feed>
+            """;
+        using var httpClient = new HttpClient(new RoutingResponseHandler(uri =>
+        {
+            if (uri.AbsoluteUri.EndsWith("feed.xml", StringComparison.Ordinal))
+            {
+                return Response(HttpStatusCode.OK, feed);
+            }
+
+            return Response(HttpStatusCode.OK, xml);
+        }));
+        var source = new JmaXmlEarthquakeSource(
+            httpClient,
+            endpoint: "https://example.test/feed.xml");
+
+        EarthquakeSourceFetchResult result = await source.FetchSinceAsync(
+            new DateTimeOffset(2026, 8, 18, 22, 14, 0, TimeSpan.FromHours(9)));
+
+        EarthquakeReport report = Assert.Single(result.Reports);
+        Assert.Equal("20260818221432_0_VXSE53_270000.xml", report.Source.SourceMessageId);
+        Assert.Contains("Feed 2 条，命中 1 条", result.Status.Detail);
+
+        EarthquakeSourceFetchResult incomplete = await source.FetchSinceAsync(
+            new DateTimeOffset(2026, 8, 18, 22, 0, 0, TimeSpan.FromHours(9)));
+        Assert.Equal(SourceConnectionState.Delayed, incomplete.Status.State);
+        Assert.Contains("覆盖可能不足", incomplete.Status.Detail);
+    }
+
+    [Fact]
     public async Task Fetch_MalformedFeed_ReturnsParseFailedStatus()
     {
         using var httpClient = new HttpClient(new RoutingResponseHandler(_ =>

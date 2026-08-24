@@ -269,6 +269,29 @@ public sealed class SqliteEarthquakeEventRepositoryTests
     }
 
     [Fact]
+    public async Task Refresh_IncrementalSource_ReceivesLatestCachedIssuedAt()
+    {
+        using var database = new TemporaryDatabase();
+        var source = new StubIncrementalSource(
+            new EarthquakeSourceFetchResult(
+                [],
+                new SourceStatus(
+                    "jma-xml",
+                    SourceConnectionState.Online,
+                    DateTimeOffset.UtcNow,
+                    Detail: "增量测试")));
+        var repository = new SqliteEarthquakeEventRepository(database.Path, source);
+        ImmutableArray<EarthquakeReport> cached = LoadReports();
+        await repository.InitializeAsync(cached);
+
+        await repository.RefreshAsync();
+
+        Assert.Equal(
+            cached.Max(report => report.IssuedAt),
+            source.LastSince);
+    }
+
+    [Fact]
     public async Task Refresh_FailedSource_KeepsCachedEventsAndUpdatesStatus()
     {
         using var database = new TemporaryDatabase();
@@ -457,6 +480,30 @@ public sealed class SqliteEarthquakeEventRepositoryTests
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(result);
+        }
+    }
+
+    private sealed class StubIncrementalSource(
+        EarthquakeSourceFetchResult result) : IRealtimeEarthquakeSource, IIncrementalEarthquakeSource
+    {
+        public string SourceId => result.Status.SourceId;
+
+        public DateTimeOffset? LastSince { get; private set; }
+
+        public Task<EarthquakeSourceFetchResult> FetchAsync(
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(result);
+        }
+
+        public Task<EarthquakeSourceFetchResult> FetchSinceAsync(
+            DateTimeOffset? since,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            LastSince = since;
             return Task.FromResult(result);
         }
     }

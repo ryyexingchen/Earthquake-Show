@@ -234,7 +234,10 @@ public sealed class SqliteEarthquakeEventRepository :
             EarthquakeSourceFetchResult result;
             try
             {
-                result = await source.FetchAsync(cancellationToken).ConfigureAwait(false);
+                DateTimeOffset? since = GetLatestIssuedAt(source.SourceId);
+                result = source is IIncrementalEarthquakeSource incrementalSource
+                    ? await incrementalSource.FetchSinceAsync(since, cancellationToken).ConfigureAwait(false)
+                    : await source.FetchAsync(cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -265,6 +268,20 @@ public sealed class SqliteEarthquakeEventRepository :
                 ? $"缓存：实时源已更新 {reports.Count} 条报文"
                 : "缓存：保留已有数据，至少一个来源不可用",
             cancellationToken).ConfigureAwait(false);
+    }
+
+    private DateTimeOffset? GetLatestIssuedAt(string sourceId)
+    {
+        lock (_syncRoot)
+        {
+            return _reports
+                .Where(report => string.Equals(
+                    report.Source.SourceId,
+                    sourceId,
+                    StringComparison.Ordinal))
+                .Select(report => (DateTimeOffset?)report.IssuedAt)
+                .Max();
+        }
     }
 
     public async Task SaveReportsAsync(

@@ -11,6 +11,13 @@ public interface IRealtimeEarthquakeSource
         CancellationToken cancellationToken = default);
 }
 
+public interface IIncrementalEarthquakeSource
+{
+    Task<EarthquakeSourceFetchResult> FetchSinceAsync(
+        DateTimeOffset? since,
+        CancellationToken cancellationToken = default);
+}
+
 public sealed record EarthquakeSourceFetchResult(
     ImmutableArray<EarthquakeReport> Reports,
     SourceStatus Status);

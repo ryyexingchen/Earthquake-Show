@@ -8,7 +8,7 @@ using EarthquakeShow.Core.Services;
 
 namespace EarthquakeShow.Infrastructure.Sources;
 
-public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource
+public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncrementalEarthquakeSource
 {
     public const string DefaultEndpoint = "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml";
     private const string SourceName = "jma-xml";
@@ -54,6 +54,13 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource
     public async Task<EarthquakeSourceFetchResult> FetchAsync(
         CancellationToken cancellationToken = default)
     {
+        return await FetchSinceAsync(null, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<EarthquakeSourceFetchResult> FetchSinceAsync(
+        DateTimeOffset? since,
+        CancellationToken cancellationToken = default)
+    {
         DateTimeOffset checkedAt = DateTimeOffset.UtcNow;
         try
         {
@@ -75,7 +82,12 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource
 
             string feedPayload = await feedResponse.Content.ReadAsStringAsync(cancellationToken)
                 .ConfigureAwait(false);
-            ImmutableArray<JmaXmlFeedEntry> entries = ParseFeedEntries(feedPayload, _maxEntries);
+            ImmutableArray<JmaXmlFeedEntry> allEntries = ParseFeedEntries(feedPayload, _maxEntries);
+            ImmutableArray<JmaXmlFeedEntry> entries = since is null
+                ? allEntries
+                : allEntries
+                    .Where(entry => entry.IssuedAt is null || entry.IssuedAt >= since.Value)
+                    .ToImmutableArray();
             var reports = ImmutableArray.CreateBuilder<EarthquakeReport>();
             var failures = ImmutableArray.CreateBuilder<string>();
             bool hasRateLimit = false;
@@ -130,7 +142,9 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource
             }
 
             SourceConnectionState state = failures.Count == 0
-                ? SourceConnectionState.Online
+                ? IsCoverageIncomplete(allEntries, since)
+                    ? SourceConnectionState.Delayed
+                    : SourceConnectionState.Online
                 : hasRateLimit
                     ? SourceConnectionState.RateLimited
                     : hasDisconnected
@@ -139,9 +153,15 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource
             DateTimeOffset? latestReceivedAt = reports.Count == 0
                 ? null
                 : reports.Max(report => (DateTimeOffset?)report.ReceivedAt);
+            string coverage = since is null
+                ? $"Feed {allEntries.Length} 条"
+                : $"增量起点 {since:O}，Feed {allEntries.Length} 条，命中 {entries.Length} 条" +
+                    (IsCoverageIncomplete(allEntries, since)
+                        ? $"；覆盖可能不足，Feed 最早条目 {GetOldestIssuedAt(allEntries):O}"
+                        : "；覆盖起点正常");
             string detail = failures.Count == 0
-                ? $"JMA XML：{reports.Count} 条"
-                : $"JMA XML：成功 {reports.Count} 条，失败 {failures.Count} 条；{string.Join("；", failures.Take(3))}";
+                ? $"JMA XML：成功 {reports.Count} 条；{coverage}"
+                : $"JMA XML：成功 {reports.Count} 条，失败 {failures.Count} 条；{coverage}；{string.Join("；", failures.Take(3))}";
             return new EarthquakeSourceFetchResult(
                 reports.ToImmutable(),
                 new SourceStatus(SourceId, state, checkedAt, latestReceivedAt, detail));
@@ -207,8 +227,42 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource
         }
 
         string sourceMessageId = idUri.Segments[^1];
-        return new JmaXmlFeedEntry(sourceMessageId, match.Groups["code"].Value, reportUri);
+        return new JmaXmlFeedEntry(
+            sourceMessageId,
+            match.Groups["code"].Value,
+            reportUri,
+            ParseMessageIssuedAt(sourceMessageId));
     }
+
+    private static DateTimeOffset? ParseMessageIssuedAt(string sourceMessageId)
+    {
+        if (sourceMessageId.Length < 14 ||
+            !DateTime.TryParseExact(
+                sourceMessageId[..14],
+                "yyyyMMddHHmmss",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out DateTime localTime))
+        {
+            return null;
+        }
+
+        return new DateTimeOffset(localTime, TimeSpan.FromHours(9));
+    }
+
+    private static bool IsCoverageIncomplete(
+        ImmutableArray<JmaXmlFeedEntry> entries,
+        DateTimeOffset? since)
+    {
+        DateTimeOffset? oldest = GetOldestIssuedAt(entries);
+        return since is not null && oldest is not null && oldest > since.Value;
+    }
+
+    private static DateTimeOffset? GetOldestIssuedAt(
+        ImmutableArray<JmaXmlFeedEntry> entries) => entries
+        .Where(entry => entry.IssuedAt is not null)
+        .Select(entry => entry.IssuedAt)
+        .Min();
 
     private static EarthquakeSourceFetchResult Failure(
         SourceConnectionState state,
@@ -220,5 +274,6 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource
     internal sealed record JmaXmlFeedEntry(
         string SourceMessageId,
         string ReportCode,
-        Uri ReportUri);
+        Uri ReportUri,
+        DateTimeOffset? IssuedAt = null);
 }
