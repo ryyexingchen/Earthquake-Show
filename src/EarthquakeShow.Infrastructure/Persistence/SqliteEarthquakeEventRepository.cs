@@ -17,7 +17,7 @@ public sealed class SqliteEarthquakeEventRepository :
     IEarthquakeEventRepository,
     IEarthquakeSourceStatusProvider
 {
-    private const int CurrentSchemaVersion = 1;
+    private const int CurrentSchemaVersion = 2;
     private const string DefaultSourceId = "jma-xml";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -451,6 +451,18 @@ public sealed class SqliteEarthquakeEventRepository :
                 last_received_at TEXT NULL,
                 detail TEXT NULL
             );
+            CREATE TABLE IF NOT EXISTS tsunami_reports (
+                event_id TEXT NOT NULL,
+                source_id TEXT NOT NULL,
+                source_message_id TEXT NOT NULL,
+                report_code TEXT NOT NULL,
+                issued_at TEXT NOT NULL,
+                received_at TEXT NOT NULL,
+                payload_json TEXT NOT NULL,
+                PRIMARY KEY (event_id, source_id, source_message_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_tsunami_reports_event_issued
+                ON tsunami_reports(event_id, issued_at, received_at);
             INSERT OR IGNORE INTO schema_info(key, value)
             VALUES ('schema_version', '1');
             """;
@@ -464,8 +476,20 @@ public sealed class SqliteEarthquakeEventRepository :
         {
             command.CommandText = "SELECT value FROM schema_info WHERE key = 'schema_version';";
             object? value = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
-            if (!int.TryParse(value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int version) ||
-                version != CurrentSchemaVersion)
+            if (!int.TryParse(value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int version))
+            {
+                throw new InvalidDataException($"不支持的 SQLite schema 版本：{value ?? "缺失"}。");
+            }
+
+            if (version == 1)
+            {
+                await using SqliteCommand migration = connection.CreateCommand();
+                migration.CommandText = "UPDATE schema_info SET value = '2' WHERE key = 'schema_version';";
+                await migration.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+                version = 2;
+            }
+
+            if (version != CurrentSchemaVersion)
             {
                 throw new InvalidDataException($"不支持的 SQLite schema 版本：{value ?? "缺失"}。");
             }
