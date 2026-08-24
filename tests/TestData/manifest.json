@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "datasetVersion": "0.4.0",
-  "retrievedDate": "2026-08-21",
+  "datasetVersion": "0.5.0",
+  "retrievedDate": "2026-08-24",
   "feedUrl": "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml",
   "fixtures": [
     {
@@ -117,6 +117,68 @@
         "cityCount": 1,
         "stationCount": 1,
         "unresolvedStationCodes": ["9999999"]
+      }
+    }
+  ],
+  "tsunamiFixtures": [
+    {
+      "id": "official-vtse41-training",
+      "reportCode": "VTSE41",
+      "path": "JmaTsunami/Official/32-39_12_02_250206_VTSE41.xml",
+      "origin": {
+        "kind": "official",
+        "url": "https://xml.kishou.go.jp/",
+        "samplePackage": "jmaxml_20260723_Samples.zip",
+        "retrievedDate": "2026-08-24"
+      },
+      "sha256": "ff3dd5d5c94f75cb35e7743a4044e2469e05d1aef78cfcd98446e35ef3eadd77",
+      "expected": {
+        "eventId": "20160901071000",
+        "context": "訓練",
+        "forecastAreaCount": 66,
+        "forecastStationCount": 0,
+        "observationStationCount": 0,
+        "estimationAreaCount": 0
+      }
+    },
+    {
+      "id": "official-vtse51-training",
+      "reportCode": "VTSE51",
+      "path": "JmaTsunami/Official/32-39_12_03_250206_VTSE51.xml",
+      "origin": {
+        "kind": "official",
+        "url": "https://xml.kishou.go.jp/",
+        "samplePackage": "jmaxml_20260723_Samples.zip",
+        "retrievedDate": "2026-08-24"
+      },
+      "sha256": "fca45c227944008a0e46cc7db3d874bf1200e7fb4e91a63c9e18b2aa1a1d0a39",
+      "expected": {
+        "eventId": "20160901071000",
+        "context": "訓練",
+        "forecastAreaCount": 66,
+        "forecastStationCount": 182,
+        "observationStationCount": 0,
+        "estimationAreaCount": 0
+      }
+    },
+    {
+      "id": "official-vtse52-training",
+      "reportCode": "VTSE52",
+      "path": "JmaTsunami/Official/32-39_12_05_250206_VTSE52.xml",
+      "origin": {
+        "kind": "official",
+        "url": "https://xml.kishou.go.jp/",
+        "samplePackage": "jmaxml_20260723_Samples.zip",
+        "retrievedDate": "2026-08-24"
+      },
+      "sha256": "f2256c37a6ee7bfbcc8d0ff5fec8c4026bf8c62154d8828469b3aa280a3ad340",
+      "expected": {
+        "eventId": "20160901071000",
+        "context": "訓練",
+        "forecastAreaCount": 0,
+        "forecastStationCount": 0,
+        "observationStationCount": 8,
+        "estimationAreaCount": 5
       }
     }
   ],

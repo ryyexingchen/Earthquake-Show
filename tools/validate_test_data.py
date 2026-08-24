@@ -105,6 +105,56 @@ def parse_report(path: Path) -> dict[str, object]:
     }
 
 
+def parse_tsunami_report(path: Path) -> dict[str, object]:
+    root = ET.parse(path).getroot()
+    body = first(root, "Body")
+    tsunami = next(
+        (item for item in body if local_name(item.tag) == "Tsunami"),
+        None,
+    ) if body is not None else None
+
+    def section_counts(name: str) -> tuple[int, int]:
+        if tsunami is None:
+            return 0, 0
+        section = next(
+            (item for item in tsunami if local_name(item.tag) == name),
+            None,
+        )
+        if section is None:
+            return 0, 0
+        items = [item for item in section if local_name(item.tag) == "Item"]
+        return (
+            sum(
+                1
+                for item in items
+                if any(local_name(child.tag) == "Area" for child in item)
+            ),
+            sum(
+                1
+                for item in items
+                for child in item
+                if local_name(child.tag) == "Station"
+            ),
+        )
+
+    forecast_areas, forecast_stations = section_counts("Forecast")
+    _, observation_stations = section_counts("Observation")
+    estimation_areas, _ = section_counts("Estimation")
+    return {
+        "eventId": text(root, "EventID"),
+        "context": text(root, "Status"),
+        "forecastAreaCount": forecast_areas,
+        "forecastStationCount": forecast_stations,
+        "observationStationCount": observation_stations,
+        "estimationAreaCount": estimation_areas,
+        "hasForecastKind": any(
+            local_name(item.tag) == "Kind"
+            and any(local_name(child.tag) == "Code" and (child.text or "").strip() for child in item)
+            for item in (tsunami.iter() if tsunami is not None else ())
+        ),
+    }
+
+
 def json_objects(parent: object, name: str) -> list[dict[str, object]]:
     if not isinstance(parent, dict):
         return []
@@ -214,6 +264,36 @@ def validate_json_fixtures(manifest: dict[str, object]) -> None:
     )
 
 
+def validate_tsunami_fixtures(manifest: dict[str, object]) -> None:
+    fixtures = manifest.get("tsunamiFixtures", [])
+    require(len(fixtures) == 3, "官方海啸样例必须包含 VTSE41/51/52 三份报文")
+    reports = []
+    for fixture in fixtures:
+        path = DATA_ROOT / fixture["path"]
+        require(path.is_file(), f"缺少固定海啸 XML 报文：{fixture['path']}")
+        require(sha256(path) == fixture["sha256"], f"固定海啸 XML 哈希不匹配：{fixture['path']}")
+        require(fixture["reportCode"] in path.name, f"海啸样例文件名必须包含报文代码：{fixture['path']}")
+        actual = parse_tsunami_report(path)
+        for field, expected in fixture["expected"].items():
+            require(actual[field] == expected, f"{fixture['id']} 的 {field} 不匹配：{actual[field]!r}")
+        if fixture["reportCode"] in {"VTSE41", "VTSE51"}:
+            require(actual["forecastAreaCount"] > 0, f"{fixture['id']} 必须包含预报区")
+            require(actual["hasForecastKind"], f"{fixture['id']} 必须包含带代码的 Kind")
+        if fixture["reportCode"] == "VTSE52":
+            require(actual["observationStationCount"] > 0, f"{fixture['id']} 必须包含近海观测站")
+            require(actual["estimationAreaCount"] > 0, f"{fixture['id']} 必须包含推定区域")
+        reports.append(actual)
+
+    require(
+        {report["eventId"] for report in reports} == {"20160901071000"},
+        "官方海啸样例必须属于事件 20160901071000",
+    )
+    require(
+        {report["context"] for report in reports} == {"訓練"},
+        "官方海啸样例必须标记为訓練，避免作为实时事件展示",
+    )
+
+
 def expected_asset_count(manifest: dict[str, object], asset_id: str) -> int:
     asset = next(item for item in manifest["assets"] if item["id"] == asset_id)
     return int(asset["expectedRecordCount"])
@@ -299,6 +379,7 @@ def main() -> int:
     try:
         manifest, reports = validate_manifest()
         validate_json_fixtures(manifest)
+        validate_tsunami_fixtures(manifest)
         validate_event_chain(reports)
         validate_stations(manifest, reports)
         validate_formal_station_catalog()
@@ -309,7 +390,7 @@ def main() -> int:
         return 1
 
     print(
-        "固定测试数据校验通过：5 份 XML、7 份 JMA JSON、75 个固定观测点、4,368 个正式观测点、"
+        "固定测试数据校验通过：5 份地震 XML、3 份海啸 XML、7 份 JMA JSON、75 个固定观测点、4,368 个正式观测点、"
         "7 个区域测试包络、10 个震度定义。"
     )
     return 0

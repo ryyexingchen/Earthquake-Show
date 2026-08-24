@@ -11,7 +11,7 @@
 - `Gis/jma-area-test-envelopes.geojson`：根据观测点坐标生成的 7 个测试包络，仅验证区域编码匹配和离线图层加载。
 - `Definitions/intensity-scale.json`：震度标准化、排序和应用显示颜色定义。
 - `manifest.json`：每份数据的来源、哈希和预期解析结果。
-- `JmaTsunami/Official/`：预留真实 `VTSE41/51/52` 样例目录；截至 `0.45.0`，JMA 官方样例包下载未完成，目录尚未加入不完整或合成海啸报文。
+- `JmaTsunami/Official/`：从 JMA 官方 `jmaxml_20260723_Samples.zip` 固定的三份训练样例，分别覆盖 `VTSE41` 预报区、`VTSE51` 沿岸站点和 `VTSE52` 近海观测/推定区域；三份报文属于同一 `EventID`，`Control/Status` 为 `訓練`，不会作为实时事件展示。
 
 字段、空值、编码和文件结构的长期约定参见[数据契约与格式](../../docs/数据契约与格式.md)。
 
@@ -19,6 +19,7 @@
 
 - JMA 地震火山 Feed：<https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml>
 - JMA XML 数据说明：<https://www.data.jma.go.jp/developer/xml/feed/other.html>
+- JMA 官方 JMAXML 样例包：<https://xml.kishou.go.jp/jmaxml_sample.html>
 - JMA 震度观测点页面：<https://www.data.jma.go.jp/eqev/data/intens-st/index.html>
 - JMA 震度观测点坐标：<https://www.data.jma.go.jp/eqev/data/intens-st/stations.json>
 - JMA GIS 数据：<https://www.data.jma.go.jp/developer/gis.html>
@@ -35,4 +36,4 @@
 python tools\validate_test_data.py
 ```
 
-校验器检查文件哈希、XML 关键字段、事件链、订正状态、缺失坐标、观测点坐标、GeoJSON 结构和震度定义。校验过程只读取本目录，不访问网络。
+校验器检查文件哈希、地震 XML 关键字段、海啸 XML 的报文代码/事件 ID/训练标记及预报区和观测结构、事件链、订正状态、缺失坐标、观测点坐标、GeoJSON 结构和震度定义。校验过程只读取本目录，不访问网络。

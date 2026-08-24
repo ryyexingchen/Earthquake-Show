@@ -7,6 +7,74 @@ namespace EarthquakeShow.Core.Tests;
 public sealed class JmaTsunamiXmlParserTests
 {
     [Fact]
+    public async Task Parse_OfficialVtse41_ReadsForecastArrivalAndHeightDescription()
+    {
+        string xml = await ReadOfficialAsync("32-39_12_02_250206_VTSE41.xml");
+
+        JmaTsunamiReport report = JmaTsunamiXmlParser.Parse(
+            xml,
+            new JmaTsunamiXmlParseOptions(
+                "VTSE41",
+                new SourceReference("jma-xml-tsunami", "vtse41")));
+
+        Assert.Equal("20160901071000", report.EventId);
+        Assert.Equal(ReportContext.Training, report.Context);
+        Assert.NotEmpty(report.ForecastAreas);
+        JmaTsunamiForecastArea area = Assert.Single(
+            report.ForecastAreas,
+            item => item.Code == "300");
+        Assert.Equal("大津波警報：発表", area.KindName);
+        Assert.Equal("53", area.KindCode);
+        Assert.Equal(new DateTimeOffset(2016, 9, 1, 8, 10, 0, TimeSpan.FromHours(9)), area.FirstArrivalTime);
+        Assert.Null(area.MaximumHeight!.Meters);
+        Assert.Equal("巨大", area.MaximumHeight.Description);
+    }
+
+    [Fact]
+    public async Task Parse_OfficialVtse51_ReadsCoastalForecastStations()
+    {
+        string xml = await ReadOfficialAsync("32-39_12_03_250206_VTSE51.xml");
+
+        JmaTsunamiReport report = JmaTsunamiXmlParser.Parse(
+            xml,
+            new JmaTsunamiXmlParseOptions(
+                "VTSE51",
+                new SourceReference("jma-xml-tsunami", "vtse51")));
+
+        Assert.NotEmpty(report.ForecastAreas);
+        JmaTsunamiForecastArea area = Assert.Single(
+            report.ForecastAreas,
+            item => item.Code == "300");
+        JmaTsunamiStationForecast station = Assert.Single(
+            area.Stations,
+            item => item.Code == "30001");
+        Assert.Equal("大洗", station.Name);
+        Assert.Equal(new DateTimeOffset(2016, 9, 1, 16, 28, 0, TimeSpan.FromHours(9)), station.HighTideTime);
+        Assert.Equal(new DateTimeOffset(2016, 9, 1, 8, 10, 0, TimeSpan.FromHours(9)), station.FirstArrivalTime);
+    }
+
+    [Fact]
+    public async Task Parse_OfficialVtse52_ReadsObservationAndEstimation()
+    {
+        string xml = await ReadOfficialAsync("32-39_12_05_250206_VTSE52.xml");
+
+        JmaTsunamiReport report = JmaTsunamiXmlParser.Parse(
+            xml,
+            new JmaTsunamiXmlParseOptions(
+                "VTSE52",
+                new SourceReference("jma-xml-tsunami", "vtse52")));
+
+        JmaTsunamiObservationStation station = Assert.Single(
+            report.ObservationStations,
+            item => item.Code == "38090");
+        Assert.Equal("ＧＰＳ波浪計", station.Sensor);
+        Assert.Equal(new DateTimeOffset(2016, 9, 1, 7, 15, 0, TimeSpan.FromHours(9)), station.MaximumHeightTime);
+        Assert.Equal(1.8, station.MaximumHeight!.Meters);
+        Assert.NotEmpty(report.EstimationAreas);
+        Assert.Contains(report.EstimationAreas, item => item.FirstArrivalTime is not null);
+    }
+
+    [Fact]
     public void Parse_HeadlineItems_PreservesCurrentLastKindsAndAreas()
     {
         const string xml = """
@@ -50,5 +118,13 @@ public sealed class JmaTsunamiXmlParserTests
             new JmaTsunamiXmlParseOptions(
                 "VXSE53",
                 new SourceReference("jma-xml-tsunami", "invalid"))));
+    }
+
+    private static Task<string> ReadOfficialAsync(string fileName)
+    {
+        string root = Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..", "..", "tests", "TestData", "JmaTsunami", "Official");
+        return File.ReadAllTextAsync(Path.Combine(root, fileName));
     }
 }
