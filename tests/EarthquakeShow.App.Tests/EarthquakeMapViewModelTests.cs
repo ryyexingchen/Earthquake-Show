@@ -342,6 +342,111 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public async Task ZoomDetailSwitchesAllGeometryLayersAndRestoresOverview()
+    {
+        var report = CreateReport();
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+
+        string directory = Path.Combine(
+            Path.GetTempPath(),
+            "EarthquakeShowTests",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string areasPath = Path.Combine(directory, "areas.geojson");
+            string municipalitiesPath = Path.Combine(directory, "municipalities.geojson");
+            string boundariesPath = Path.Combine(directory, "boundaries.geojson");
+            await File.WriteAllTextAsync(areasPath, GeometryJson.Replace("测试离线轮廓", "中精度区域"));
+            await File.WriteAllTextAsync(
+                municipalitiesPath,
+                MunicipalityGeometryJson
+                    .Replace("测试市町村轮廓", "中精度市町村")
+                    .Replace("130.5", "129.5"));
+            await File.WriteAllTextAsync(boundariesPath, BoundaryGeometryJson.Replace("测试区域边界", "中精度边界"));
+
+            using var map = new EarthquakeMapViewModel(
+                page,
+                OfflineMapGeometry.LoadFromJson(GeometryJson),
+                OfflineMapGeometry.LoadFromJson(MunicipalityGeometryJson),
+                OfflineMapBoundaryGeometry.LoadFromJson(BoundaryGeometryJson),
+                new MapLodResourceProvider(areasPath, municipalitiesPath, boundariesPath));
+
+            for (int index = 0; index < 5; index++)
+            {
+                map.ZoomIn();
+            }
+
+            await map.EnsureDetailLevelForZoomAsync();
+
+            Assert.Equal(MapDetailLevel.Medium, map.DetailLevel);
+            Assert.Equal("中精度区域", map.GeometrySource);
+            Assert.Equal(129.5, map.Municipalities[0].Coordinates[0].Longitude, precision: 3);
+            Assert.Equal("中精度边界", map.BoundaryGeometry?.Source);
+            Assert.NotEmpty(map.Areas);
+            Assert.NotEmpty(map.Municipalities);
+            Assert.NotEmpty(map.BoundaryLayers);
+
+            while (map.ZoomLevel > 2)
+            {
+                map.ZoomOut();
+            }
+
+            await map.EnsureDetailLevelForZoomAsync();
+
+            Assert.Equal(MapDetailLevel.Overview, map.DetailLevel);
+            Assert.Equal("测试离线轮廓", map.GeometrySource);
+            Assert.Equal(130.5, map.Municipalities[0].Coordinates[0].Longitude, precision: 3);
+            Assert.Equal("测试区域边界", map.BoundaryGeometry?.Source);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task DetailLoadFailureKeepsCurrentGeometryAndReportsError()
+    {
+        var report = CreateReport();
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson),
+            OfflineMapGeometry.LoadFromJson(MunicipalityGeometryJson),
+            OfflineMapBoundaryGeometry.LoadFromJson(BoundaryGeometryJson),
+            new MapLodResourceProvider(
+                "missing-areas.geojson",
+                "missing-municipalities.geojson",
+                "missing-boundaries.geojson"));
+        string source = map.GeometrySource;
+        int areaCount = map.Areas.Count;
+        int municipalityCount = map.Municipalities.Count;
+        int boundaryCount = map.BoundaryLayers.Count;
+
+        for (int index = 0; index < 5; index++)
+        {
+            map.ZoomIn();
+        }
+
+        await map.EnsureDetailLevelForZoomAsync();
+
+        Assert.Equal(MapDetailLevel.Overview, map.DetailLevel);
+        Assert.Equal(source, map.GeometrySource);
+        Assert.Equal(areaCount, map.Areas.Count);
+        Assert.Equal(municipalityCount, map.Municipalities.Count);
+        Assert.Equal(boundaryCount, map.BoundaryLayers.Count);
+        Assert.False(string.IsNullOrWhiteSpace(map.DetailLoadError));
+        Assert.Contains("中精度加载失败", map.StatusText);
+        Assert.False(map.IsLoadingDetail);
+    }
+
+    [Fact]
     public async Task EmptyPage_StillExposesOfflineOutlineAndNoEventLayers()
     {
         using var page = new EarthquakePageViewModel(

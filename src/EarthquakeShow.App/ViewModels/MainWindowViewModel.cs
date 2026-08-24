@@ -91,29 +91,29 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         EarthquakePage = new EarthquakePageViewModel(
             _repository);
         EventList = new EarthquakeEventListViewModel(EarthquakePage);
+        string mapRoot = Path.Combine(
+            AppContext.BaseDirectory,
+            "Assets",
+            "Data",
+            "Map");
         Map = new EarthquakeMapViewModel(
             EarthquakePage,
             OfflineMapGeometry.LoadFromFile(
                 Path.Combine(
-                    AppContext.BaseDirectory,
-                    "Assets",
-                    "Data",
-                    "Map",
+                    mapRoot,
                     "jma-earthquake-areas-overview.geojson")),
             OfflineMapGeometry.LoadFromFile(
                 Path.Combine(
-                    AppContext.BaseDirectory,
-                    "Assets",
-                    "Data",
-                    "Map",
+                    mapRoot,
                     "jma-earthquake-municipalities-overview.geojson")),
             OfflineMapBoundaryGeometry.LoadFromFile(
                 Path.Combine(
-                    AppContext.BaseDirectory,
-                    "Assets",
-                    "Data",
-                    "Map",
-                    "jma-earthquake-area-boundaries-overview.geojson")));
+                    mapRoot,
+                    "jma-earthquake-area-boundaries-overview.geojson")),
+            new MapLodResourceProvider(
+                Path.Combine(mapRoot, "jma-earthquake-areas-medium.geojson"),
+                Path.Combine(mapRoot, "jma-earthquake-municipalities-medium.geojson"),
+                Path.Combine(mapRoot, "jma-earthquake-area-boundaries-medium.geojson")));
         Details = new EarthquakeDetailsViewModel(EarthquakePage, Map);
         Layout = new WindowLayoutViewModel();
         UpdateClock();

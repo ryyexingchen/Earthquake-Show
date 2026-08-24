@@ -28,7 +28,7 @@ public partial class EarthquakeMapView : UserControl
 
     private EarthquakeMapViewModel? ViewModel => DataContext as EarthquakeMapViewModel;
 
-    private void OnLoaded(object sender, RoutedEventArgs e)
+    private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         if (ViewModel is not null)
         {
@@ -36,6 +36,7 @@ public partial class EarthquakeMapView : UserControl
         }
 
         RenderMap();
+        await EnsureMapDetailLevelAsync();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -80,6 +81,11 @@ public partial class EarthquakeMapView : UserControl
         {
             RequestRender();
         }
+
+        if (e.PropertyName == nameof(EarthquakeMapViewModel.ZoomLevel))
+        {
+            _ = EnsureMapDetailLevelAsync();
+        }
     }
 
     private void RequestRender()
@@ -97,14 +103,16 @@ public partial class EarthquakeMapView : UserControl
         }));
     }
 
-    private void OnZoomInClick(object sender, RoutedEventArgs e)
+    private async void OnZoomInClick(object sender, RoutedEventArgs e)
     {
         ViewModel?.ZoomIn();
+        await EnsureMapDetailLevelAsync();
     }
 
-    private void OnZoomOutClick(object sender, RoutedEventArgs e)
+    private async void OnZoomOutClick(object sender, RoutedEventArgs e)
     {
         ViewModel?.ZoomOut();
+        await EnsureMapDetailLevelAsync();
     }
 
     private void OnResetViewClick(object sender, RoutedEventArgs e)
@@ -113,10 +121,11 @@ public partial class EarthquakeMapView : UserControl
         ViewModel?.ResetView();
     }
 
-    private void OnFocusSelectedClick(object sender, RoutedEventArgs e)
+    private async void OnFocusSelectedClick(object sender, RoutedEventArgs e)
     {
         _panOffset = default;
         ViewModel?.FocusSelectedEvent();
+        await EnsureMapDetailLevelAsync();
     }
 
     private void OnFollowSelectionClick(object sender, RoutedEventArgs e)
@@ -182,7 +191,7 @@ public partial class EarthquakeMapView : UserControl
         StopPanning();
     }
 
-    private void OnMapMouseWheel(object sender, MouseWheelEventArgs e)
+    private async void OnMapMouseWheel(object sender, MouseWheelEventArgs e)
     {
         if (ViewModel is null || MapCanvas.ActualWidth < 10 || MapCanvas.ActualHeight < 10)
         {
@@ -213,7 +222,26 @@ public partial class EarthquakeMapView : UserControl
             RequestRender();
         }
 
+        await EnsureMapDetailLevelAsync();
+
         e.Handled = true;
+    }
+
+    private async Task EnsureMapDetailLevelAsync()
+    {
+        if (ViewModel is null || !IsLoaded)
+        {
+            return;
+        }
+
+        try
+        {
+            await ViewModel.EnsureDetailLevelForZoomAsync();
+        }
+        catch (ObjectDisposedException)
+        {
+            // 控件卸载期间忽略异步加载竞态。
+        }
     }
 
     private void StopPanning()

@@ -158,13 +158,16 @@ def simplify_ring(ring: list[tuple[float, float]], tolerance: float) -> list[tup
         key=lambda index: (open_ring[index][0] - open_ring[0][0]) ** 2
         + (open_ring[index][1] - open_ring[0][1]) ** 2,
     )
-    first_path = [*open_ring[: farthest_index + 1], open_ring[0]]
+    first_path = open_ring[: farthest_index + 1]
     second_path = [open_ring[farthest_index], *open_ring[farthest_index + 1 :], open_ring[0]]
     first = simplify_open(first_path, tolerance)
     second = simplify_open(second_path, tolerance)
-    simplified = [*first[:-1], *second[1:-1]]
+    simplified = [*first, *second[1:-1]]
     if len(simplified) < 3:
-        return ring
+        if len(open_ring) < 3:
+            return ring
+        # 简化后仍需保持最小有效闭合环，不能回退整条高精度原环。
+        simplified = [open_ring[0], open_ring[len(open_ring) // 2], open_ring[-1]]
     return close_ring(simplified)
 
 
@@ -305,6 +308,19 @@ class ConverterSelfTests(unittest.TestCase):
         self.assertEqual(1, len(polygons))
         self.assertEqual(2, len(polygons[0]))
         self.assertEqual(5, len(simplify_ring(outer, 0.01)))
+
+    def test_smaller_tolerance_keeps_at_least_as_many_ring_points(self) -> None:
+        ring = close_ring([
+            (math.cos(index * math.pi / 16), math.sin(index * math.pi / 16))
+            for index in range(32)
+        ])
+
+        coarse = simplify_ring(ring, 0.1)
+        detailed = simplify_ring(ring, 0.01)
+
+        self.assertGreaterEqual(len(detailed), len(coarse))
+        self.assertEqual(ring[0], detailed[0])
+        self.assertEqual(detailed[0], detailed[-1])
 
     def test_filter_polygons_keeps_largest_when_all_are_small(self) -> None:
         polygons = [

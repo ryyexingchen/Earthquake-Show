@@ -46,25 +46,38 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     public const double MaximumZoomLevel = 12;
 
     private readonly EarthquakePageViewModel _page;
-    private readonly OfflineMapGeometry _geometry;
-    private readonly OfflineMapGeometry? _municipalityGeometry;
-    private readonly OfflineMapBoundaryGeometry? _boundaryGeometry;
+    private readonly OfflineMapGeometry _overviewGeometry;
+    private readonly OfflineMapGeometry? _overviewMunicipalityGeometry;
+    private readonly OfflineMapBoundaryGeometry? _overviewBoundaryGeometry;
+    private readonly MapLodResourceProvider? _lodResourceProvider;
+    private OfflineMapGeometry _geometry;
+    private OfflineMapGeometry? _municipalityGeometry;
+    private OfflineMapBoundaryGeometry? _boundaryGeometry;
     private double _zoomLevel = 1;
     private GeoCoordinate? _focusedCoordinate;
     private string? _reportSourceId;
     private string? _reportSourceMessageId;
+    private MapDetailLevel _detailLevel;
+    private CancellationTokenSource? _detailLoadCancellation;
+    private bool _isLoadingDetail;
+    private string? _detailLoadError;
     private bool _isDisposed;
 
     public EarthquakeMapViewModel(
         EarthquakePageViewModel page,
         OfflineMapGeometry geometry,
         OfflineMapGeometry? municipalityGeometry = null,
-        OfflineMapBoundaryGeometry? boundaryGeometry = null)
+        OfflineMapBoundaryGeometry? boundaryGeometry = null,
+        MapLodResourceProvider? lodResourceProvider = null)
     {
         _page = page ?? throw new ArgumentNullException(nameof(page));
-        _geometry = geometry ?? throw new ArgumentNullException(nameof(geometry));
-        _municipalityGeometry = municipalityGeometry;
-        _boundaryGeometry = boundaryGeometry;
+        _overviewGeometry = geometry ?? throw new ArgumentNullException(nameof(geometry));
+        _overviewMunicipalityGeometry = municipalityGeometry;
+        _overviewBoundaryGeometry = boundaryGeometry;
+        _geometry = _overviewGeometry;
+        _municipalityGeometry = _overviewMunicipalityGeometry;
+        _boundaryGeometry = _overviewBoundaryGeometry;
+        _lodResourceProvider = lodResourceProvider;
         _page.PropertyChanged += OnPagePropertyChanged;
         RebuildLayers();
     }
@@ -82,6 +95,26 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     public OfflineMapBoundaryGeometry? BoundaryGeometry => _boundaryGeometry;
 
     public int InvalidGeometryCount => _geometry.InvalidGeometryCount;
+
+    public MapDetailLevel DetailLevel => _detailLevel;
+
+    public bool IsLoadingDetail
+    {
+        get => _isLoadingDetail;
+        private set
+        {
+            if (_isLoadingDetail == value)
+            {
+                return;
+            }
+
+            _isLoadingDetail = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(StatusText));
+        }
+    }
+
+    public string? DetailLoadError => _detailLoadError;
 
     public int UnmappedAreaCount { get; private set; }
 
@@ -186,14 +219,100 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     {
         get
         {
+            string baseText;
             if (!IsOfficialBoundary)
             {
-                return HasSelectedEvent
+                baseText = HasSelectedEvent
                     ? "离线示意底图 · 当前事件图层"
                     : "离线示意底图 · 未选择事件";
             }
+            else
+            {
+                baseText = HasSelectedEvent ? "离线地图 · 当前事件图层" : "离线地图 · 未选择事件";
+            }
 
-            return HasSelectedEvent ? "离线地图 · 当前事件图层" : "离线地图 · 未选择事件";
+            if (IsLoadingDetail)
+            {
+                return $"{baseText} · 正在加载中精度";
+            }
+
+            if (!string.IsNullOrWhiteSpace(DetailLoadError))
+            {
+                return $"{baseText} · 中精度加载失败";
+            }
+
+            return DetailLevel == MapDetailLevel.Medium
+                ? $"{baseText} · 中精度"
+                : baseText;
+        }
+    }
+
+    public async Task EnsureDetailLevelForZoomAsync(
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        MapDetailLevel desiredLevel = ZoomLevel > 2
+            ? MapDetailLevel.Medium
+            : MapDetailLevel.Overview;
+        if (desiredLevel == MapDetailLevel.Overview)
+        {
+            _detailLoadCancellation?.Cancel();
+            if (_detailLevel != MapDetailLevel.Overview)
+            {
+                ApplyGeometrySet(
+                    new MapGeometrySet(
+                        _overviewGeometry,
+                        _overviewMunicipalityGeometry,
+                        _overviewBoundaryGeometry),
+                    MapDetailLevel.Overview);
+            }
+
+            return;
+        }
+
+        if (_detailLevel == MapDetailLevel.Medium || _lodResourceProvider is null)
+        {
+            return;
+        }
+
+        _detailLoadCancellation?.Cancel();
+        _detailLoadCancellation?.Dispose();
+        CancellationTokenSource loadCancellation =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _detailLoadCancellation = loadCancellation;
+        IsLoadingDetail = true;
+        try
+        {
+            MapGeometrySet geometrySet = await Task.Run(
+                () => _lodResourceProvider.LoadMedium(loadCancellation.Token),
+                loadCancellation.Token);
+            loadCancellation.Token.ThrowIfCancellationRequested();
+            if (_isDisposed)
+            {
+                return;
+            }
+
+            ApplyGeometrySet(geometrySet, MapDetailLevel.Medium);
+        }
+        catch (OperationCanceledException)
+        {
+            // 缩放方向改变时取消旧级别加载，保留当前可见地图。
+        }
+        catch (Exception exception)
+        {
+            _detailLoadError = exception.Message;
+            OnPropertyChanged(nameof(DetailLoadError));
+            OnPropertyChanged(nameof(StatusText));
+        }
+        finally
+        {
+            if (ReferenceEquals(_detailLoadCancellation, loadCancellation))
+            {
+                _detailLoadCancellation = null;
+                IsLoadingDetail = false;
+            }
+
+            loadCancellation.Dispose();
         }
     }
 
@@ -281,6 +400,9 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         }
 
         _page.PropertyChanged -= OnPagePropertyChanged;
+        _detailLoadCancellation?.Cancel();
+        _detailLoadCancellation?.Dispose();
+        _detailLoadCancellation = null;
         _isDisposed = true;
     }
 
@@ -290,6 +412,24 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         {
             RebuildLayers();
         }
+    }
+
+    private void ApplyGeometrySet(MapGeometrySet geometrySet, MapDetailLevel detailLevel)
+    {
+        _geometry = geometrySet.Areas;
+        _municipalityGeometry = geometrySet.Municipalities;
+        _boundaryGeometry = geometrySet.Boundaries;
+        _detailLevel = detailLevel;
+        _detailLoadError = null;
+        OnPropertyChanged(nameof(DetailLevel));
+        OnPropertyChanged(nameof(DetailLoadError));
+        OnPropertyChanged(nameof(GeometrySource));
+        OnPropertyChanged(nameof(IsOfficialBoundary));
+        OnPropertyChanged(nameof(GeometryBounds));
+        OnPropertyChanged(nameof(BoundaryGeometry));
+        OnPropertyChanged(nameof(InvalidGeometryCount));
+        OnPropertyChanged(nameof(StatusText));
+        RebuildLayers();
     }
 
     private void RebuildLayers()
