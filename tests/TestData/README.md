@@ -11,6 +11,7 @@
 - `Gis/jma-area-test-envelopes.geojson`：根据观测点坐标生成的 7 个测试包络，仅验证区域编码匹配和离线图层加载。
 - `Definitions/intensity-scale.json`：震度标准化、排序和应用显示颜色定义。
 - `manifest.json`：每份数据的来源、哈希和预期解析结果。
+- `JmaTsunami/Official/`：预留真实 `VTSE41/51/52` 样例目录；截至 `0.45.0`，JMA 官方样例包下载未完成，目录尚未加入不完整或合成海啸报文。
 
 字段、空值、编码和文件结构的长期约定参见[数据契约与格式](../../docs/数据契约与格式.md)。
 
