@@ -294,10 +294,10 @@
                             <Setter TargetName="IntensityBadge" Property="Background" Value="#F0C943" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding MaxIntensity}" Value="Four">
-                            <Setter TargetName="IntensityBadge" Property="Background" Value="#FFB347" />
+                            <Setter TargetName="IntensityBadge" Property="Background" Value="#E89A3C" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding MaxIntensity}" Value="FiveLower">
-                            <Setter TargetName="IntensityBadge" Property="Background" Value="#FF7A45" />
+                            <Setter TargetName="IntensityBadge" Property="Background" Value="#E85E3F" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding MaxIntensity}" Value="FiveUpper">
                             <Setter TargetName="IntensityBadge" Property="Background" Value="#F04438" />

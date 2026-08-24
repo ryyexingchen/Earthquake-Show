@@ -35,6 +35,16 @@ public sealed record TsunamiInformationItemDisplay(
     string LastKindText,
     string AreasText);
 
+public sealed record TsunamiTimelineItemDisplay(
+    string ReportCode,
+    string StatusText,
+    string ContextText,
+    string IssuedAtText,
+    TsunamiLevel Level,
+    string LevelText,
+    string StructureText,
+    bool IsCancellation);
+
 public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly ITsunamiReportRepository _repository;
@@ -90,6 +100,8 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(HasEstimationAreas));
             OnPropertyChanged(nameof(InformationItems));
             OnPropertyChanged(nameof(HasInformationItems));
+            OnPropertyChanged(nameof(TimelineReports));
+            OnPropertyChanged(nameof(HasTimelineReports));
             OnPropertyChanged(nameof(RawXmlText));
             OnPropertyChanged(nameof(HasRawXml));
             OnPropertyChanged(nameof(CanCopyRawXml));
@@ -135,21 +147,9 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
     public bool CanRefresh => !State.IsRefreshing;
 
-    public string SelectedReportStatusText => State.SelectedReport?.Status switch
-    {
-        ReportStatus.Issued => "发布",
-        ReportStatus.Correction => "订正",
-        ReportStatus.Cancelled => "取消",
-        _ => "状态不明",
-    };
+    public string SelectedReportStatusText => GetStatusText(State.SelectedReport?.Status);
 
-    public string SelectedReportContextText => State.SelectedReport?.Context switch
-    {
-        ReportContext.Normal => "正式",
-        ReportContext.Training => "训练",
-        ReportContext.Test => "测试",
-        _ => "不明",
-    };
+    public string SelectedReportContextText => GetContextText(State.SelectedReport?.Context);
 
     public string SelectedReportStatusContextText =>
         $"{SelectedReportStatusText} · {SelectedReportContextText}";
@@ -230,6 +230,23 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
     public bool HasInformationItems => !InformationItems.IsDefaultOrEmpty;
 
+    public ImmutableArray<TsunamiTimelineItemDisplay> TimelineReports =>
+        State.SelectedReport is null
+            ? []
+            : State.Reports
+                .Where(report => string.Equals(
+                    report.EventId,
+                    State.SelectedReport.EventId,
+                    StringComparison.Ordinal))
+                .OrderBy(report => report.IssuedAt)
+                .ThenBy(report => report.ReceivedAt)
+                .ThenBy(report => report.Source.SourceMessageId, StringComparer.Ordinal)
+                .Select(report => CreateTimelineItemDisplay(
+                    report))
+                .ToImmutableArray();
+
+    public bool HasTimelineReports => !TimelineReports.IsDefaultOrEmpty;
+
     public string RawXmlText => State.SelectedReport?.Source.SourcePayload ?? string.Empty;
 
     public bool HasRawXml => !string.IsNullOrWhiteSpace(RawXmlText);
@@ -298,6 +315,38 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
                 : string.Join(
                     "、",
                     item.Areas.Select(area => $"{area.Name}（{area.Code}）")));
+
+    private static TsunamiTimelineItemDisplay CreateTimelineItemDisplay(
+        JmaTsunamiReport report)
+    {
+        bool isCancellation = report.Status == ReportStatus.Cancelled;
+        TsunamiLevel level = isCancellation ? TsunamiLevel.Unknown : GetReportLevel(report);
+        return new(
+            report.ReportCode,
+            isCancellation ? "解除" : GetStatusText(report.Status),
+            GetContextText(report.Context),
+            FormatTimestamp(report.IssuedAt),
+            level,
+            isCancellation ? "解除" : GetLevelText(level),
+            $"预报区 {report.ForecastAreas.Length} · 沿岸观测 {report.ObservationStations.Length} · 推定区域 {report.EstimationAreas.Length}",
+            isCancellation);
+    }
+
+    private static string GetStatusText(ReportStatus? status) => status switch
+    {
+        ReportStatus.Issued => "发布",
+        ReportStatus.Correction => "订正",
+        ReportStatus.Cancelled => "取消",
+        _ => "状态不明",
+    };
+
+    private static string GetContextText(ReportContext? context) => context switch
+    {
+        ReportContext.Normal => "正式",
+        ReportContext.Training => "训练",
+        ReportContext.Test => "测试",
+        _ => "不明",
+    };
 
     private static TsunamiLevel GetReportLevel(JmaTsunamiReport? report)
     {

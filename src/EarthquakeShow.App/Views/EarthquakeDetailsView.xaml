@@ -23,10 +23,10 @@
                     <Setter Property="Background" Value="#F0C943" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Kind}" Value="Four">
-                    <Setter Property="Background" Value="#FFB347" />
+                    <Setter Property="Background" Value="#E89A3C" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Kind}" Value="FiveLower">
-                    <Setter Property="Background" Value="#FF7A45" />
+                    <Setter Property="Background" Value="#E85E3F" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Kind}" Value="FiveUpper">
                     <Setter Property="Background" Value="#F04438" />
@@ -78,10 +78,10 @@
                     <Setter Property="Background" Value="#F0C943" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IntensityKind}" Value="Four">
-                    <Setter Property="Background" Value="#FFB347" />
+                    <Setter Property="Background" Value="#E89A3C" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IntensityKind}" Value="FiveLower">
-                    <Setter Property="Background" Value="#FF7A45" />
+                    <Setter Property="Background" Value="#E85E3F" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IntensityKind}" Value="FiveUpper">
                     <Setter Property="Background" Value="#F04438" />

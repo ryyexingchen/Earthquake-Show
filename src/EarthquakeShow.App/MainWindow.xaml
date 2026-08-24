@@ -185,6 +185,10 @@
 
         <Grid x:Name="MainWorkspace"
               Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="68" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
             <Grid.Style>
                 <Style TargetType="Grid">
                     <Setter Property="Visibility" Value="Visible" />
@@ -196,7 +200,8 @@
                 </Style>
             </Grid.Style>
             <Grid x:Name="EarthquakeWorkspace"
-                  Grid.ColumnSpan="4">
+                  Grid.Column="0"
+                  Grid.ColumnSpan="2">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="68" />
                     <ColumnDefinition Width="280" />
@@ -209,7 +214,8 @@
                     BorderBrush="{StaticResource BorderStrongBrush}"
                     BorderThickness="0,0,1,0">
                 <StackPanel>
-                    <RadioButton IsChecked="{Binding IsEarthquakePageVisible, Mode=OneWay}"
+                    <RadioButton x:Name="EarthquakeNavigationButton"
+                                 IsChecked="{Binding IsEarthquakePageVisible, Mode=OneWay}"
                                  GroupName="PrimaryNavigation"
                                  Click="OnEarthquakeNavigationClick"
                                  Style="{StaticResource NavigationButtonStyle}">
@@ -300,7 +306,7 @@
             </Grid>
 
             <views:TsunamiPageView x:Name="TsunamiPageView"
-                                   Grid.ColumnSpan="4"
+                                   Grid.Column="1"
                                    DataContext="{Binding TsunamiPage}">
                 <views:TsunamiPageView.Style>
                     <Style TargetType="views:TsunamiPageView">

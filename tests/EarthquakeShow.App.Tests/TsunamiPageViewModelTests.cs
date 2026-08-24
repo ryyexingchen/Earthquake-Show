@@ -149,6 +149,49 @@ public sealed class TsunamiPageViewModelTests
         Assert.Equal("已复制原始 XML", viewModel.RawXmlCopyStatus);
     }
 
+    [Fact]
+    public async Task Timeline_GroupsReportsByEventAndKeepsCancellationAsRelease()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
+        JmaTsunamiReport issued = CreateReport("issued", issuedAt) with
+        {
+            Items =
+            [
+                new JmaTsunamiInformationItem(
+                    "津波警報",
+                    null,
+                    null,
+                    null,
+                    []),
+            ],
+        };
+        JmaTsunamiReport cancelled = CreateReport("cancelled", issuedAt.AddMinutes(10)) with
+        {
+            Status = ReportStatus.Cancelled,
+            Items = issued.Items,
+        };
+        JmaTsunamiReport otherEvent = CreateReport("other", issuedAt.AddMinutes(20)) with
+        {
+            EventId = "event-2",
+        };
+        var repository = new StubTsunamiReportRepository([otherEvent, cancelled, issued]);
+        using var viewModel = new TsunamiPageViewModel(repository);
+
+        await viewModel.LoadAsync();
+        Assert.True(viewModel.SelectReport(
+            cancelled.EventId,
+            cancelled.Source.SourceId,
+            cancelled.Source.SourceMessageId));
+
+        Assert.Equal(
+            ["发布", "解除"],
+            viewModel.TimelineReports.Select(item => item.StatusText));
+        Assert.Equal("津波警報", viewModel.TimelineReports[0].LevelText);
+        Assert.True(viewModel.TimelineReports[1].IsCancellation);
+        Assert.Equal("解除", viewModel.TimelineReports[1].LevelText);
+        Assert.Equal("解除", viewModel.TimelineReports[1].StatusText);
+    }
+
     private static JmaTsunamiReport CreateReport(
         string sourceMessageId,
         DateTimeOffset issuedAt) => new()

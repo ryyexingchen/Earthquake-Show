@@ -108,11 +108,11 @@
                         <TextBlock Margin="5,0,0,0" FontSize="10" Text="3" />
                     </StackPanel>
                     <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#FFB347" CornerRadius="2" />
+                        <Border Width="14" Height="10" Background="#E89A3C" CornerRadius="2" />
                         <TextBlock Margin="5,0,0,0" FontSize="10" Text="4" />
                     </StackPanel>
                     <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#FF7A45" CornerRadius="2" />
+                        <Border Width="14" Height="10" Background="#E85E3F" CornerRadius="2" />
                         <TextBlock Margin="5,0,0,0" FontSize="10" Text="5-" />
                     </StackPanel>
                     <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
