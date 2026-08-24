@@ -330,12 +330,18 @@
                            FontSize="11"
                            Text="{Binding EarthquakePage.Display.SourceText}"
                            TextTrimming="CharacterEllipsis" />
-                <TextBlock Grid.Column="3"
-                           Margin="20,0,0,0"
-                           VerticalAlignment="Center"
-                           Foreground="{StaticResource MutedTextBrush}"
-                           FontSize="11"
-                           Text="{Binding MapDataStatus}" />
+                <StackPanel Grid.Column="3"
+                            Margin="20,0,0,0"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal">
+                    <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                               FontSize="11"
+                               Text="{Binding MapDataStatus}" />
+                    <TextBlock Margin="14,0,0,0"
+                               Foreground="{StaticResource MutedTextBrush}"
+                               FontSize="11"
+                               Text="{Binding TsunamiSourceStatusText}" />
+                </StackPanel>
                 <TextBlock Grid.Column="4"
                            MaxWidth="300"
                            Margin="20,0,0,0"

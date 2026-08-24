@@ -186,6 +186,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
 
     public string MapDataStatus => Map.IsOfficialBoundary ? "地图：离线边界" : "地图：离线示意";
 
+    public string TsunamiSourceStatusText => GetTsunamiSourceStatusText();
+
     public string AppVersion { get; }
 
     public EarthquakePageViewModel EarthquakePage { get; }
@@ -375,7 +377,39 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
 
         _tsunamiSourceStatuses = statuses;
         OnPropertyChanged(nameof(TsunamiSourceStatuses));
+        OnPropertyChanged(nameof(TsunamiSourceStatusText));
     }
+
+    private string GetTsunamiSourceStatusText()
+    {
+        SourceConnectionState? state = _tsunamiSourceStatuses
+            .Select(status => (SourceConnectionState?)status.State)
+            .OrderByDescending(GetTsunamiStatusPriority)
+            .FirstOrDefault();
+        return state switch
+        {
+            SourceConnectionState.Online => "海啸：在线",
+            SourceConnectionState.Delayed => "海啸：延迟",
+            SourceConnectionState.RateLimited => "海啸：限流",
+            SourceConnectionState.ParseFailed => "海啸：解析失败",
+            SourceConnectionState.Disconnected => "海啸：离线",
+            SourceConnectionState.Disabled => "海啸：未启用",
+            SourceConnectionState.Unknown => "海啸：状态未知",
+            _ => "海啸：未启用",
+        };
+    }
+
+    private static int GetTsunamiStatusPriority(SourceConnectionState? state) => state switch
+    {
+        SourceConnectionState.ParseFailed => 6,
+        SourceConnectionState.RateLimited => 5,
+        SourceConnectionState.Disconnected => 4,
+        SourceConnectionState.Delayed => 3,
+        SourceConnectionState.Unknown => 2,
+        SourceConnectionState.Online => 1,
+        SourceConnectionState.Disabled => 0,
+        _ => -1,
+    };
 
     private async Task RunRefreshLoopAsync(CancellationToken cancellationToken)
     {
