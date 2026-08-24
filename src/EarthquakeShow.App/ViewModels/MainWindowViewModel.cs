@@ -28,7 +28,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
     private readonly SqliteTsunamiReportRepository _tsunamiRepository;
     private readonly IReadOnlyList<EarthquakeReport> _seedReports;
     private readonly HttpClient? _httpClient;
-    private readonly JmaJsonEarthquakeSource? _realtimeSource;
     private readonly IRealtimeTsunamiSource? _tsunamiSource;
     private readonly IReadOnlyList<IRealtimeEarthquakeSource> _realtimeSources = [];
     private readonly Func<WebSocketConnectionSettings, IStreamingEarthquakeSource>? _streamingSourceFactory;
@@ -71,12 +70,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
                 Timeout = TimeSpan.FromSeconds(15),
             };
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.41.0");
-            _realtimeSource = new JmaJsonEarthquakeSource(_httpClient);
             JmaXmlEarthquakeSource xmlSource = new(
                 _httpClient,
                 stationCatalog: stationCatalog);
             P2pQuakeEarthquakeSource p2pQuakeSource = new(_httpClient);
-            _realtimeSources = [_realtimeSource, xmlSource, p2pQuakeSource];
+            _realtimeSources = [xmlSource, p2pQuakeSource];
             _tsunamiSource = tsunamiSource ?? new JmaTsunamiXmlSource(_httpClient);
             _streamingSourceFactory = streamingSource is null
                 ? streamingSourceFactory ?? CreateStreamingSource
@@ -212,6 +210,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
 
     public ImmutableArray<SourceStatus> TsunamiSourceStatuses => _tsunamiSourceStatuses;
 
+    internal ImmutableArray<string> RealtimeSourceIds =>
+        _realtimeSources.Select(source => source.SourceId).ToImmutableArray();
+
     public ValueTask InitializeAsync(
         CancellationToken cancellationToken = default)
     {
@@ -237,7 +238,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
             _repository.SourceStatuses,
             isOffline: true);
         await EarthquakePage.LoadAsync(token);
-        if (_realtimeSource is not null || _tsunamiSource is not null)
+        if (_realtimeSources.Count > 0 || _tsunamiSource is not null)
         {
             await RefreshFromNetworkAsync(token);
             _refreshLoopTask ??= RunRefreshLoopAsync(_lifetimeCancellation.Token);

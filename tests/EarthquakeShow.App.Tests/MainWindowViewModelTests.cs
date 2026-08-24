@@ -19,6 +19,25 @@ namespace EarthquakeShow.App.Tests;
 public sealed class MainWindowViewModelTests
 {
     [Fact]
+    public void NetworkSources_UseXmlAndP2pWithoutJmaJson()
+    {
+        string cachePath = CreateTemporaryCachePath();
+        try
+        {
+            using var viewModel = new MainWindowViewModel(cachePath, enableNetwork: true);
+
+            Assert.Equal(
+                ["jma-xml", "p2pquake"],
+                viewModel.RealtimeSourceIds.ToArray());
+            Assert.DoesNotContain("jma-json", viewModel.RealtimeSourceIds);
+        }
+        finally
+        {
+            DeleteTemporaryCache(cachePath);
+        }
+    }
+
+    [Fact]
     public async Task Initialize_FixedJmaXml_LoadsMergedCorrectionEvent()
     {
         string cachePath = CreateTemporaryCachePath();
