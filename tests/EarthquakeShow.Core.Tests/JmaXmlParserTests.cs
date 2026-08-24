@@ -35,6 +35,17 @@ public sealed class JmaXmlParserTests
         Assert.Equal(10, report.Hypocenter?.DepthKm);
         Assert.Equal(3.8, report.Magnitude?.Value);
         Assert.Contains("津波", report.TsunamiComment);
+        Assert.Equal("0215", report.TsunamiCommentCode);
+    }
+
+    [Fact]
+    public void Parse_TsunamiCode0215_IsRetainedAndClassifiedAsNoConcern()
+    {
+        EarthquakeReport report = LoadOfficial("20260818221317_0_VXSE52_270000.xml", "VXSE52");
+
+        Assert.Equal(
+            TsunamiLevel.NoConcern,
+            JmaTsunamiClassifier.Classify(report.TsunamiComment, report.TsunamiCommentCode));
     }
 
     [Fact]
@@ -79,6 +90,37 @@ public sealed class JmaXmlParserTests
         Assert.Equal(JmaIntensity.Four, report.MaxIntensity);
         IntensityStation station = Assert.Single(report.IntensityStations);
         Assert.Null(station.Coordinate);
+    }
+
+    [Theory]
+    [InlineData("5-", JmaIntensity.FiveLower)]
+    [InlineData("5+", JmaIntensity.FiveUpper)]
+    [InlineData("6-", JmaIntensity.SixLower)]
+    [InlineData("6+", JmaIntensity.SixUpper)]
+    public void Parse_JmaAsciiIntensityNotation_MapsToIntensity(string value, JmaIntensity expected)
+    {
+        string template = """
+            <Report xmlns="http://xml.kishou.go.jp/jmaxml1/">
+              <Control><DateTime>2026-08-23T00:00:00Z</DateTime><Status>通常</Status></Control>
+              <Head xmlns="http://xml.kishou.go.jp/jmaxml1/informationBasis1/">
+                <ReportDateTime>2026-08-23T09:00:00+09:00</ReportDateTime><EventID>test-intensity</EventID><InfoType>発表</InfoType>
+              </Head>
+              <Body xmlns="http://xml.kishou.go.jp/jmaxml1/body/seismology1/">
+                <Intensity><Observation><MaxInt>__VALUE__</MaxInt><Pref><Name>茨城県</Name><Code>08</Code><MaxInt>__VALUE__</MaxInt>
+                  <Area><Name>茨城県南部</Name><Code>301</Code><MaxInt>__VALUE__</MaxInt><City><Name>小美玉市</Name><Code>0823600</Code><MaxInt>__VALUE__</MaxInt>
+                    <IntensityStation><Name>小美玉市上玉里＊</Name><Code>0823635</Code><Int>__VALUE__</Int></IntensityStation>
+                  </City></Area>
+                </Pref></Observation></Intensity>
+              </Body>
+            </Report>
+            """.Replace("__VALUE__", value, StringComparison.Ordinal);
+
+        EarthquakeReport report = JmaXmlParser.Parse(
+            template,
+            new JmaXmlParseOptions("VXSE53", new SourceReference("jma-xml", "ascii-intensity")));
+
+        Assert.Equal(expected, report.MaxIntensity);
+        Assert.Equal(expected, Assert.Single(report.IntensityStations).Intensity);
     }
 
     [Fact]

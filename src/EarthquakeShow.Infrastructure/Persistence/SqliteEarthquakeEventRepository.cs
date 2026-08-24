@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Text.Json;
+using System.Xml;
 using EarthquakeShow.Core.Abstractions;
 using EarthquakeShow.Core.Models;
 using EarthquakeShow.Core.Services;
@@ -546,10 +547,47 @@ public sealed class SqliteEarthquakeEventRepository :
                 throw new InvalidDataException("SQLite 报文负载为空。");
             }
 
-            reports.Add(FillMissingJmaStationCoordinates(payload.ToDomain()));
+            EarthquakeReport report = RefreshLegacyJmaIntensity(payload.ToDomain());
+            reports.Add(FillMissingJmaStationCoordinates(report));
         }
 
         return reports.ToImmutable();
+    }
+
+    private EarthquakeReport RefreshLegacyJmaIntensity(EarthquakeReport report)
+    {
+        if (!string.Equals(report.Source.SourceId, DefaultSourceId, StringComparison.Ordinal) ||
+            string.IsNullOrWhiteSpace(report.Source.SourcePayload) ||
+            (!report.Source.SourcePayload.Contains("<Int>5-</Int>", StringComparison.Ordinal) &&
+                !report.Source.SourcePayload.Contains("<Int>5+</Int>", StringComparison.Ordinal) &&
+                !report.Source.SourcePayload.Contains("<Int>6-</Int>", StringComparison.Ordinal) &&
+                !report.Source.SourcePayload.Contains("<Int>6+</Int>", StringComparison.Ordinal) &&
+                !report.Source.SourcePayload.Contains("<MaxInt>5-</MaxInt>", StringComparison.Ordinal) &&
+                !report.Source.SourcePayload.Contains("<MaxInt>5+</MaxInt>", StringComparison.Ordinal) &&
+                !report.Source.SourcePayload.Contains("<MaxInt>6-</MaxInt>", StringComparison.Ordinal) &&
+                !report.Source.SourcePayload.Contains("<MaxInt>6+</MaxInt>", StringComparison.Ordinal)))
+        {
+            return report;
+        }
+
+        try
+        {
+            return JmaXmlParser.Parse(
+                report.Source.SourcePayload,
+                new JmaXmlParseOptions(
+                    report.ReportCode,
+                    report.Source,
+                    ReceivedAt: report.ReceivedAt,
+                    StationCatalog: _stationCatalog));
+        }
+        catch (XmlException)
+        {
+            return report;
+        }
+        catch (FormatException)
+        {
+            return report;
+        }
     }
 
     private EarthquakeReport FillMissingJmaStationCoordinates(EarthquakeReport report)
@@ -804,6 +842,7 @@ public sealed class SqliteEarthquakeEventRepository :
         public List<IntensityMunicipalityDto> IntensityMunicipalities { get; set; } = [];
         public List<IntensityStationDto> IntensityStations { get; set; } = [];
         public string? TsunamiComment { get; set; }
+        public string? TsunamiCommentCode { get; set; }
         public SourceReferenceDto Source { get; set; } = new();
 
         public static ReportPayloadDto FromDomain(EarthquakeReport report) => new()
@@ -824,6 +863,7 @@ public sealed class SqliteEarthquakeEventRepository :
             IntensityMunicipalities = report.IntensityMunicipalities.Select(IntensityMunicipalityDto.FromDomain).ToList(),
             IntensityStations = report.IntensityStations.Select(IntensityStationDto.FromDomain).ToList(),
             TsunamiComment = report.TsunamiComment,
+            TsunamiCommentCode = report.TsunamiCommentCode,
             Source = SourceReferenceDto.FromDomain(report.Source),
         };
 
@@ -852,6 +892,7 @@ public sealed class SqliteEarthquakeEventRepository :
                 IntensityMunicipalities = IntensityMunicipalities.Select(item => item.ToDomain()).ToImmutableArray(),
                 IntensityStations = IntensityStations.Select(item => item.ToDomain()).ToImmutableArray(),
                 TsunamiComment = TsunamiComment,
+                TsunamiCommentCode = TsunamiCommentCode,
                 Source = Source.ToDomain(),
             };
         }

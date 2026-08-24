@@ -173,6 +173,33 @@ public sealed class SqliteEarthquakeEventRepositoryTests
     }
 
     [Fact]
+    public async Task Initialize_LegacyJmaAsciiIntensity_ReparsesRawXml()
+    {
+        using var database = new TemporaryDatabase();
+        const string xml = """
+            <Report xmlns="http://xml.kishou.go.jp/jmaxml1/">
+              <Control><DateTime>2026-08-23T00:00:00Z</DateTime><Status>通常</Status></Control>
+              <Head xmlns="http://xml.kishou.go.jp/jmaxml1/informationBasis1/"><ReportDateTime>2026-08-23T09:00:00+09:00</ReportDateTime><EventID>legacy-intensity</EventID><InfoType>発表</InfoType></Head>
+              <Body xmlns="http://xml.kishou.go.jp/jmaxml1/body/seismology1/"><Intensity><Observation><MaxInt>5-</MaxInt><Pref><Name>茨城県</Name><Code>08</Code><MaxInt>5-</MaxInt><Area><Name>茨城県南部</Name><Code>301</Code><MaxInt>5-</MaxInt><City><Name>小美玉市</Name><Code>0823600</Code><MaxInt>5-</MaxInt><IntensityStation><Name>小美玉市上玉里＊</Name><Code>0823635</Code><Int>5-</Int></IntensityStation></City></Area></Pref></Observation></Intensity></Body>
+            </Report>
+            """;
+        EarthquakeReport parsed = JmaXmlParser.Parse(
+            xml,
+            new JmaXmlParseOptions("VXSE53", new SourceReference("jma-xml", "legacy-intensity")));
+        EarthquakeReport legacy = parsed with { MaxIntensity = JmaIntensity.Unknown };
+
+        var writer = new SqliteEarthquakeEventRepository(database.Path);
+        await writer.InitializeAsync([legacy]);
+        var reader = new SqliteEarthquakeEventRepository(database.Path);
+        await reader.InitializeAsync([]);
+
+        EarthquakeReport reloaded = Assert.Single(
+            Assert.Single(await reader.ListEventsAsync()).Reports);
+        Assert.Equal(JmaIntensity.FiveLower, reloaded.MaxIntensity);
+        Assert.Equal(JmaIntensity.FiveLower, Assert.Single(reloaded.IntensityStations).Intensity);
+    }
+
+    [Fact]
     public async Task Initialize_PersistsOfflineSourceStatus()
     {
         using var database = new TemporaryDatabase();

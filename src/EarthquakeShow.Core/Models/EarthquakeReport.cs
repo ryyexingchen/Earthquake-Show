@@ -26,6 +26,17 @@ public enum ReportContext
     Test,
 }
 
+public enum TsunamiLevel
+{
+    Unknown,
+    NoConcern,
+    MinorChange,
+    Advisory,
+    Warning,
+    MajorWarning,
+    Investigating,
+}
+
 public sealed record EarthquakeReport
 {
     public required string EventId { get; init; }
@@ -59,6 +70,8 @@ public sealed record EarthquakeReport
     public ImmutableArray<IntensityStation> IntensityStations { get; init; } = [];
 
     public string? TsunamiComment { get; init; }
+
+    public string? TsunamiCommentCode { get; init; }
 
     public required SourceReference Source { get; init; }
 }

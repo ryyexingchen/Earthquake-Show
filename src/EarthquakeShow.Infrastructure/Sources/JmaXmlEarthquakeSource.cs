@@ -11,6 +11,7 @@ namespace EarthquakeShow.Infrastructure.Sources;
 public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncrementalEarthquakeSource
 {
     public const string DefaultEndpoint = "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml";
+    public const string DefaultLongEndpoint = "https://www.data.jma.go.jp/developer/xml/feed/eqvol_l.xml";
     private const string SourceName = "jma-xml";
     private static readonly XNamespace AtomNamespace = "http://www.w3.org/2005/Atom";
     private static readonly Regex ReportCodePattern = new(
@@ -19,6 +20,7 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncreme
 
     private readonly HttpClient _httpClient;
     private readonly Uri _endpoint;
+    private readonly Uri _longEndpoint;
     private readonly IReadOnlyDictionary<string, GeoCoordinate>? _stationCoordinates;
     private readonly JmaStationCoordinateCatalog? _stationCatalog;
     private readonly int _maxEntries;
@@ -28,7 +30,8 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncreme
         IReadOnlyDictionary<string, GeoCoordinate>? stationCoordinates = null,
         string endpoint = DefaultEndpoint,
         int maxEntries = 20,
-        JmaStationCoordinateCatalog? stationCatalog = null)
+        JmaStationCoordinateCatalog? stationCatalog = null,
+        string longEndpoint = DefaultLongEndpoint)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _stationCoordinates = stationCoordinates;
@@ -46,6 +49,13 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncreme
         }
 
         _endpoint = endpointUri;
+        if (!Uri.TryCreate(longEndpoint, UriKind.Absolute, out Uri? longEndpointUri) ||
+            longEndpointUri.Scheme is not ("http" or "https"))
+        {
+            throw new ArgumentException("JMA XML 长期 Feed 地址必须是 HTTP 或 HTTPS URL。", nameof(longEndpoint));
+        }
+
+        _longEndpoint = longEndpointUri;
         _maxEntries = maxEntries;
     }
 
@@ -83,15 +93,53 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncreme
             string feedPayload = await feedResponse.Content.ReadAsStringAsync(cancellationToken)
                 .ConfigureAwait(false);
             ImmutableArray<JmaXmlFeedEntry> allEntries = ParseFeedEntries(feedPayload, _maxEntries);
+            var failures = ImmutableArray.CreateBuilder<string>();
+            bool hasRateLimit = false;
+            bool hasDisconnected = false;
+            bool usedLongFeed = false;
+            if (since is not null && IsCoverageIncomplete(allEntries, since))
+            {
+                try
+                {
+                    using HttpResponseMessage longFeedResponse = await _httpClient
+                        .GetAsync(_longEndpoint, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                        .ConfigureAwait(false);
+                    if (!longFeedResponse.IsSuccessStatusCode)
+                    {
+                        failures.Add($"JMA XML 长期 Feed：HTTP {(int)longFeedResponse.StatusCode}");
+                        hasRateLimit |= longFeedResponse.StatusCode == HttpStatusCode.TooManyRequests;
+                        hasDisconnected |= longFeedResponse.StatusCode != HttpStatusCode.TooManyRequests;
+                    }
+                    else
+                    {
+                        string longFeedPayload = await longFeedResponse.Content
+                            .ReadAsStringAsync(cancellationToken)
+                            .ConfigureAwait(false);
+                        ImmutableArray<JmaXmlFeedEntry> longEntries = ParseFeedEntries(
+                            longFeedPayload,
+                            Math.Max(_maxEntries, 100));
+                        allEntries = allEntries
+                            .Concat(longEntries)
+                            .GroupBy(entry => entry.SourceMessageId, StringComparer.Ordinal)
+                            .Select(group => group.First())
+                            .OrderByDescending(entry => entry.IssuedAt)
+                            .ToImmutableArray();
+                        usedLongFeed = true;
+                    }
+                }
+                catch (HttpRequestException exception)
+                {
+                    failures.Add($"JMA XML 长期 Feed：{exception.Message}");
+                    hasDisconnected = true;
+                }
+            }
+
             ImmutableArray<JmaXmlFeedEntry> entries = since is null
                 ? allEntries
                 : allEntries
                     .Where(entry => entry.IssuedAt is null || entry.IssuedAt >= since.Value)
                     .ToImmutableArray();
             var reports = ImmutableArray.CreateBuilder<EarthquakeReport>();
-            var failures = ImmutableArray.CreateBuilder<string>();
-            bool hasRateLimit = false;
-            bool hasDisconnected = false;
             foreach (JmaXmlFeedEntry entry in entries)
             {
                 try
@@ -155,7 +203,7 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncreme
                 : reports.Max(report => (DateTimeOffset?)report.ReceivedAt);
             string coverage = since is null
                 ? $"Feed {allEntries.Length} 条"
-                : $"增量起点 {since:O}，Feed {allEntries.Length} 条，命中 {entries.Length} 条" +
+                : $"增量起点 {since:O}，{(usedLongFeed ? "长期 Feed 合并后 " : string.Empty)}Feed {allEntries.Length} 条，命中 {entries.Length} 条" +
                     (IsCoverageIncomplete(allEntries, since)
                         ? $"；覆盖可能不足，Feed 最早条目 {GetOldestIssuedAt(allEntries):O}"
                         : "；覆盖起点正常");

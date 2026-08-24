@@ -397,7 +397,9 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         SnapshotText = $"第 {viewedIndex + 1} / {earthquakeEvent.Reports.Length} 报 · " +
             $"{GetReportTypeText(report)} · {GetStatusText(report.Status)}";
         SummaryFields = BuildSummaryFields(earthquakeEvent.EventId, report, displaySnapshot);
-        TsunamiStatus = BuildTsunamiStatus(displaySnapshot.TsunamiComment);
+        TsunamiStatus = BuildTsunamiStatus(
+            displaySnapshot.TsunamiComment,
+            displaySnapshot.TsunamiCommentCode);
         SummaryOverview = BuildSummaryOverview(report.ReportType, displaySnapshot);
         SourceDifferences = BuildSourceDifferences(earthquakeEvent, report);
         EventAssociations = BuildEventAssociations(earthquakeEvent);
@@ -490,7 +492,11 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             fields.Add(new("震源・规模", "调查中"));
         }
 
-        fields.Add(new("海啸", BuildTsunamiStatus(displaySnapshot.TsunamiComment).Text));
+        fields.Add(new(
+            "海啸",
+            BuildTsunamiStatus(
+                displaySnapshot.TsunamiComment,
+                displaySnapshot.TsunamiCommentCode).Text));
 
         if (displaySnapshot.Hypocenter?.Coordinate is GeoCoordinate coordinate)
         {
@@ -516,7 +522,9 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         EarthquakeReportType reportType,
         ReportDisplaySnapshot snapshot)
     {
-        EarthquakeTsunamiStatusViewModel tsunamiStatus = BuildTsunamiStatus(snapshot.TsunamiComment);
+        EarthquakeTsunamiStatusViewModel tsunamiStatus = BuildTsunamiStatus(
+            snapshot.TsunamiComment,
+            snapshot.TsunamiCommentCode);
         EarthquakeIntensityDisplayViewModel? maximumIntensity = snapshot.MaxIntensity is JmaIntensity intensity
             ? new(GetIntensityText(intensity), GetIntensityKind(intensity))
             : null;
@@ -579,66 +587,35 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             if (!string.IsNullOrWhiteSpace(report.TsunamiComment))
             {
                 snapshot.TsunamiComment = report.TsunamiComment;
+                snapshot.TsunamiCommentCode = report.TsunamiCommentCode;
             }
         }
 
         return snapshot;
     }
 
-    private static EarthquakeTsunamiStatusViewModel BuildTsunamiStatus(string? comment)
+    private static EarthquakeTsunamiStatusViewModel BuildTsunamiStatus(
+        string? comment,
+        string? code = null)
     {
-        if (string.IsNullOrWhiteSpace(comment))
+        TsunamiLevel level = JmaTsunamiClassifier.Classify(comment, code);
+        if (level == TsunamiLevel.Investigating &&
+            (string.IsNullOrWhiteSpace(comment) || JmaTsunamiClassifier.IsGenericTemplate(comment)))
         {
             return new("津波 调查中", "Investigating");
         }
 
         // JMA 的“津波警报等（大津波警报・津波警报あるいは津波注意報）”是通用模板，
         // 不能从括号内的枚举文本推断当前实际等级。
-        if (IsGenericTsunamiStatusComment(comment))
+        return level switch
         {
-            return new("津波 调查中", "Investigating");
-        }
-
-        if (comment.Contains("大津波警報", StringComparison.Ordinal) ||
-            comment.Contains("大海嘯警報", StringComparison.Ordinal))
-        {
-            return new("大津波警報", "MajorWarning");
-        }
-
-        if (comment.Contains("津波警報", StringComparison.Ordinal) ||
-            comment.Contains("海嘯警報", StringComparison.Ordinal))
-        {
-            return new("津波警報", "Warning");
-        }
-
-        if (comment.Contains("津波注意報", StringComparison.Ordinal) ||
-            comment.Contains("海嘯注意報", StringComparison.Ordinal))
-        {
-            return new("津波注意報", "Advisory");
-        }
-
-        if (comment.Contains("若干の海面変動", StringComparison.Ordinal) ||
-            comment.Contains("若干の潮位変化", StringComparison.Ordinal))
-        {
-            return new("若干の海面変動", "MinorChange");
-        }
-
-        if (comment.Contains("津波の心配はありません", StringComparison.Ordinal) ||
-            comment.Contains("津波の心配なし", StringComparison.Ordinal) ||
-            comment.Contains("海嘯の心配はありません", StringComparison.Ordinal))
-        {
-            return new("津波の心配なし", "NoConcern");
-        }
-
-        return new(comment.Trim(), "Investigating");
-    }
-
-    private static bool IsGenericTsunamiStatusComment(string comment)
-    {
-        return comment.Contains("津波警報等（", StringComparison.Ordinal) ||
-            comment.Contains("津波警報等(", StringComparison.Ordinal) ||
-            comment.Contains("海嘯警報等（", StringComparison.Ordinal) ||
-            comment.Contains("海嘯警報等(", StringComparison.Ordinal);
+            TsunamiLevel.NoConcern => new("津波の心配なし", "NoConcern"),
+            TsunamiLevel.MinorChange => new("若干の海面変動", "MinorChange"),
+            TsunamiLevel.Advisory => new("津波注意報", "Advisory"),
+            TsunamiLevel.Warning => new("津波警報", "Warning"),
+            TsunamiLevel.MajorWarning => new("大津波警報", "MajorWarning"),
+            _ => new(string.IsNullOrWhiteSpace(comment) ? "津波 调查中" : comment.Trim(), "Investigating"),
+        };
     }
 
     private sealed class ReportDisplaySnapshot
@@ -654,6 +631,8 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         public DateTimeOffset? OriginTime { get; set; }
 
         public string? TsunamiComment { get; set; }
+
+        public string? TsunamiCommentCode { get; set; }
     }
 
     private static IReadOnlyList<EarthquakeSourceDifferenceItemViewModel> BuildSourceDifferences(
@@ -1057,9 +1036,11 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             fields,
             "海啸",
             previous?.TsunamiComment is string previousTsunami
-                ? BuildTsunamiStatus(previousTsunami).Text
+                ? BuildTsunamiStatus(previousTsunami, previous?.TsunamiCommentCode).Text
                 : null,
-            BuildTsunamiStatus(currentSnapshot.TsunamiComment).Text,
+            BuildTsunamiStatus(
+                currentSnapshot.TsunamiComment,
+                currentSnapshot.TsunamiCommentCode).Text,
             !string.IsNullOrWhiteSpace(current.TsunamiComment));
 
         if (current.ReportType == EarthquakeReportType.SeismicIntensity &&
@@ -1112,9 +1093,11 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             current.Hypocenter?.DepthKm is not null);
 
         EarthquakeTsunamiStatusViewModel currentTsunami =
-            BuildTsunamiStatus(currentSnapshot.TsunamiComment);
+            BuildTsunamiStatus(
+                currentSnapshot.TsunamiComment,
+                currentSnapshot.TsunamiCommentCode);
         string? previousTsunami = previous?.TsunamiComment is string previousComment
-            ? BuildTsunamiStatus(previousComment).Text
+            ? BuildTsunamiStatus(previousComment, previous?.TsunamiCommentCode).Text
             : null;
         string tsunamiText = GetCumulativeFieldText(
             previousTsunami,

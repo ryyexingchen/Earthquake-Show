@@ -73,6 +73,7 @@ public static class JmaXmlParser
             IntensityMunicipalities = Municipalities,
             IntensityStations = Stations,
             TsunamiComment = ParseTsunamiComment(root),
+            TsunamiCommentCode = ParseTsunamiCommentCode(root),
             Source = source,
         };
     }
@@ -276,10 +277,10 @@ public static class JmaXmlParser
         return normalized switch
         {
             "不明" or "-" or "－" or "" => JmaIntensity.Unknown,
-            "５弱" or "5弱" => JmaIntensity.FiveLower,
-            "５強" or "5強" => JmaIntensity.FiveUpper,
-            "６弱" or "6弱" => JmaIntensity.SixLower,
-            "６強" or "6強" => JmaIntensity.SixUpper,
+            "５弱" or "5弱" or "5-" => JmaIntensity.FiveLower,
+            "５強" or "5強" or "5+" => JmaIntensity.FiveUpper,
+            "６弱" or "6弱" or "6-" => JmaIntensity.SixLower,
+            "６強" or "6強" or "6+" => JmaIntensity.SixUpper,
             "７" => JmaIntensity.Seven,
             "１" => JmaIntensity.One,
             "２" => JmaIntensity.Two,
@@ -301,6 +302,23 @@ public static class JmaXmlParser
             .Distinct(StringComparer.Ordinal)
             .ToArray();
         return comments.Length == 0 ? null : string.Join("；", comments);
+    }
+
+    private static string? ParseTsunamiCommentCode(XElement root)
+    {
+        return root
+            .Descendants()
+            .Where(element => element.Name.LocalName == "ForecastComment" ||
+                element.Name.LocalName == "VarComment")
+            .Select(element =>
+            {
+                string? text = FirstChildValue(element, "Text");
+                string? code = FirstChildValue(element, "Code");
+                return text?.Contains("津波", StringComparison.Ordinal) == true
+                    ? code
+                    : null;
+            })
+            .FirstOrDefault(code => !string.IsNullOrWhiteSpace(code));
     }
 
     private static EarthquakeReportType GetReportType(string reportCode, XElement root)
