@@ -17,7 +17,6 @@ public partial class EarthquakeMapView : UserControl
     private bool _isPanning;
     private Point _lastPanPoint;
     private Vector _panOffset;
-    private MapProjection? _lastProjection;
     private GeoCoordinate? _pendingViewportCenter;
 
     public EarthquakeMapView()
@@ -35,8 +34,12 @@ public partial class EarthquakeMapView : UserControl
         if (ViewModel is not null)
         {
             ViewModel.PropertyChanged += OnViewModelPropertyChanged;
+            ViewModel.GeometryChanging += OnGeometryChanging;
+            ViewModel.AutoScale();
         }
 
+        _panOffset = default;
+        _pendingViewportCenter = null;
         RenderMap();
         await EnsureMapDetailLevelAsync(
             preferMedium: ViewModel?.HasSelectedEvent == true &&
@@ -47,11 +50,11 @@ public partial class EarthquakeMapView : UserControl
     {
         StopPanning();
         _panOffset = default;
-        _lastProjection = null;
         _pendingViewportCenter = null;
         if (ViewModel is not null)
         {
             ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            ViewModel.GeometryChanging -= OnGeometryChanging;
         }
     }
 
@@ -68,14 +71,15 @@ public partial class EarthquakeMapView : UserControl
             _panOffset = default;
         }
 
-        if (e.PropertyName == nameof(EarthquakeMapViewModel.GeometrySource) &&
-            _lastProjection is not null &&
-            MapCanvas.ActualWidth >= 10 &&
-            MapCanvas.ActualHeight >= 10)
+        if (e.PropertyName == nameof(EarthquakeMapViewModel.ViewedReportKey))
         {
-            _pendingViewportCenter = _lastProjection.Unproject(
-                new Point(MapCanvas.ActualWidth / 2, MapCanvas.ActualHeight / 2));
+            _pendingViewportCenter = null;
             _panOffset = default;
+            ViewModel?.AutoScale();
+            RequestRender();
+            _ = EnsureMapDetailLevelAsync(
+                preferMedium: ViewModel?.HasSelectedEvent == true &&
+                    ViewModel.EffectiveFocusMode == EarthquakeMapFocusMode.SelectedEvent);
         }
 
         if (ViewModel?.FollowSelection == true &&
@@ -285,6 +289,19 @@ public partial class EarthquakeMapView : UserControl
             Math.Max(topLeft.Latitude, bottomRight.Latitude) + latitudeMargin);
     }
 
+    private void OnGeometryChanging(object? sender, EventArgs e)
+    {
+        if (ViewModel is null || MapCanvas.ActualWidth < 10 || MapCanvas.ActualHeight < 10)
+        {
+            return;
+        }
+
+        MapProjection currentProjection = CreateProjection();
+        _pendingViewportCenter = currentProjection.Unproject(
+            new Point(MapCanvas.ActualWidth / 2, MapCanvas.ActualHeight / 2));
+        _panOffset = default;
+    }
+
     private void StopPanning()
     {
         if (!_isPanning)
@@ -322,7 +339,6 @@ public partial class EarthquakeMapView : UserControl
             selectedEventBounds,
             _pendingViewportCenter);
         _pendingViewportCenter = null;
-        _lastProjection = projection;
         bool drawBaseOutlineStroke = ViewModel.BoundaryLayers.Count == 0;
 
         foreach (MapPolygonGeometry polygon in ViewModel.Outline)

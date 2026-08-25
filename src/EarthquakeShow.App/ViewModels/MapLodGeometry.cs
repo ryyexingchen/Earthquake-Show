@@ -65,11 +65,13 @@ public sealed class MapLodResourceProvider
         cancellationToken.ThrowIfCancellationRequested();
         OfflineMapGeometry areas = OfflineMapGeometry.LoadFromFile(
             _highAreasPath,
-            viewportBounds);
+            viewportBounds,
+            cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         OfflineMapGeometry municipalities = OfflineMapGeometry.LoadFromFile(
             _highMunicipalitiesPath,
-            viewportBounds);
+            viewportBounds,
+            cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         OfflineMapBoundaryGeometry boundaries = string.IsNullOrWhiteSpace(_highBoundariesPath)
             ? OfflineMapBoundaryGeometry.FromPolygons(areas)

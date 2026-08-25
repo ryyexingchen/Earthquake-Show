@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Text;
 using EarthquakeShow.App.ViewModels;
 using EarthquakeShow.Core.Models;
 using EarthquakeShow.Core.Services;
@@ -73,6 +74,49 @@ public sealed class EarthquakeMapViewModelTests
         Assert.Empty(emptyGeometry.Polygons);
         Assert.Equal(140, emptyGeometry.Bounds.MinLongitude);
         Assert.Equal(141, emptyGeometry.Bounds.MaxLongitude);
+    }
+
+    [Fact]
+    public void LoadFromFile_UsesFeatureIndexForViewportFiltering()
+    {
+        string directory = Path.Combine(
+            Path.GetTempPath(),
+            "EarthquakeShowTests",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            const string selectedFeature =
+                "{\"type\":\"Feature\",\"properties\":{\"code\":\"selected\",\"name\":\"命中\"},\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[130,32],[131,32],[131,33],[130,32]]]}}";
+            const string outsideFeature =
+                "{\"type\":\"Feature\",\"properties\":{\"code\":\"outside\"},\"geometry\":{\"type\":\"Point\",\"coordinates\":[140,40]}}";
+            string json =
+                $"{{\"type\":\"FeatureCollection\",\"metadata\":{{\"source\":\"索引测试\"}},\"features\":[{selectedFeature},{outsideFeature}]}}";
+            byte[] bytes = Encoding.UTF8.GetBytes(json);
+            string path = Path.Combine(directory, "areas.geojson");
+            File.WriteAllBytes(path, bytes);
+
+            long selectedOffset = Encoding.UTF8.GetByteCount(
+                json[..json.IndexOf(selectedFeature, StringComparison.Ordinal)]);
+            long outsideOffset = Encoding.UTF8.GetByteCount(
+                json[..json.IndexOf(outsideFeature, StringComparison.Ordinal)]);
+            string indexJson = $$"""
+                {"version":1,"sourceLength":{{bytes.Length}},"source":"索引测试","officialBoundary":false,"features":[{"offset":{{selectedOffset}},"length":{{Encoding.UTF8.GetByteCount(selectedFeature)}},"minLongitude":130,"maxLongitude":131,"minLatitude":32,"maxLatitude":33},{"offset":{{outsideOffset}},"length":{{Encoding.UTF8.GetByteCount(outsideFeature)}},"minLongitude":140,"maxLongitude":140,"minLatitude":40,"maxLatitude":40}]}
+                """;
+            File.WriteAllText(path + ".index.json", indexJson, Encoding.UTF8);
+
+            OfflineMapGeometry geometry = OfflineMapGeometry.LoadFromFile(
+                path,
+                new MapGeometryBounds(129.5, 131.5, 31.5, 33.5));
+
+            MapPolygonGeometry polygon = Assert.Single(geometry.Polygons);
+            Assert.Equal("selected", polygon.Code);
+            Assert.Equal("索引测试", geometry.Source);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
     }
 
     [Fact]
@@ -382,6 +426,8 @@ public sealed class EarthquakeMapViewModelTests
         map.BeginManualInteraction();
         Assert.False(map.FollowSelection);
         Assert.True(map.FocusedCoordinate.HasValue);
+        Assert.Equal(EarthquakeMapFocusMode.SelectedEvent, map.EffectiveFocusMode);
+        Assert.Equal(EarthquakeMapFocusMode.SelectedEvent, page.State.Map.FocusMode);
         GeoCoordinate manualFocus = map.FocusedCoordinate.Value;
         map.BeginManualInteraction();
         Assert.Equal(manualFocus, map.FocusedCoordinate);
@@ -429,6 +475,77 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public async Task AutoScale_RestoresAutomaticBaselineAfterManualZoomAndFocus()
+    {
+        var report = CreateReport();
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+
+        map.FocusLocation(new GeoCoordinate(32.75, 130.70));
+        map.ZoomIn();
+        Assert.True(map.ZoomLevel > 2);
+        Assert.NotNull(map.FocusedCoordinate);
+
+        map.AutoScale();
+
+        Assert.Equal(1, map.ZoomLevel, precision: 3);
+        Assert.Null(map.FocusedCoordinate);
+    }
+
+    [Fact]
+    public async Task AutoScale_RestoresSelectedEventFollowStateAfterManualOverview()
+    {
+        var report = CreateReport();
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+
+        map.BeginManualInteraction();
+        map.ResetView();
+        map.AutoScale();
+
+        Assert.True(map.FollowSelection);
+        Assert.Equal(EarthquakeMapFocusMode.SelectedEvent, map.EffectiveFocusMode);
+        Assert.Equal(EarthquakeMapFocusMode.SelectedEvent, page.State.Map.FocusMode);
+        Assert.Equal(1, map.ZoomLevel, precision: 3);
+    }
+
+    [Fact]
+    public async Task SelectingAnotherReportAutomaticallyRestoresEventView()
+    {
+        EarthquakeReport first = CreateReport();
+        EarthquakeReport second = CreateReport() with
+        {
+            IssuedAt = BaseTime.AddMinutes(1),
+            ReceivedAt = BaseTime.AddMinutes(1).AddSeconds(1),
+            Source = new SourceReference("p2pquake", "p2p-message"),
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([first, second]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+
+        map.ZoomIn();
+        map.ZoomIn();
+        Assert.True(map.ZoomLevel > 1);
+
+        Assert.True(page.SelectReport("p2pquake", "p2p-message"));
+
+        Assert.Equal(1, map.ZoomLevel, precision: 3);
+        Assert.True(map.FollowSelection);
+        Assert.Equal(EarthquakeMapFocusMode.SelectedEvent, map.EffectiveFocusMode);
+    }
+
+    [Fact]
     public async Task ZoomDetailSwitchesToHighGeometryAfterHighThreshold()
     {
         var report = CreateReport();
@@ -465,6 +582,8 @@ public sealed class EarthquakeMapViewModelTests
                     mediumBoundariesPath,
                     highAreasPath,
                     highMunicipalitiesPath));
+            string? sourceBeforeGeometryChange = null;
+            map.GeometryChanging += (_, _) => sourceBeforeGeometryChange = map.GeometrySource;
 
             for (int index = 0; index < 12; index++)
             {
@@ -476,6 +595,7 @@ public sealed class EarthquakeMapViewModelTests
             Assert.Equal(MapDetailLevel.High, map.DetailLevel);
             Assert.Equal("高精度区域", map.GeometrySource);
             Assert.Contains("区域轮廓", map.BoundaryGeometry?.Source);
+            Assert.Equal("测试离线轮廓", sourceBeforeGeometryChange);
         }
         finally
         {
