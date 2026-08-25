@@ -772,6 +772,11 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
     private MapDetailLevel GetDesiredDetailLevel(bool preferMedium)
     {
+        if (IsDistantEvent)
+        {
+            return MapDetailLevel.Overview;
+        }
+
         return preferMedium
             ? MapDetailLevel.Medium
             : ZoomLevel > HighDetailZoomThreshold

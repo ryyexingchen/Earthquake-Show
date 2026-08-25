@@ -172,6 +172,36 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public async Task DistantEvent_DoesNotRequestJapaneseDetailGeometry()
+    {
+        EarthquakeReport report = CreateReport() with
+        {
+            ReportType = EarthquakeReportType.DistantEarthquake,
+            DistantEarthquakeKind = DistantEarthquakeKind.Earthquake,
+            Hypocenter = new Hypocenter(
+                "南太平洋",
+                "950",
+                new GeoCoordinate(-15.4, 167.8),
+                null),
+            IntensityAreas = [],
+            IntensityMunicipalities = [],
+            IntensityStations = [],
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+
+        map.AutoScale(EarthquakeMapViewModel.MaxBigZoomLevel);
+
+        Assert.False(map.WillChangeDetailLevel(
+            preferMedium: false,
+            viewportBounds: new MapGeometryBounds(160, 175, -25, -5)));
+    }
+
+    [Fact]
     public async Task SelectedEvent_DrawsHigherIntensityStationsAfterLowerIntensityStations()
     {
         EarthquakeReport report = CreateReport() with

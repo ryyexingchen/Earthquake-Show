@@ -18,6 +18,7 @@ public partial class EarthquakeMapView : UserControl
     private bool _isPanning;
     private Point _lastPanPoint;
     private Vector _panOffset;
+    private Vector _renderedPanOffset;
     private GeoCoordinate? _viewportCenter;
     private GeoCoordinate? _lastFocusedCoordinate;
     private long _lastPanTraceAt;
@@ -42,6 +43,9 @@ public partial class EarthquakeMapView : UserControl
         }
 
         _panOffset = default;
+        _renderedPanOffset = default;
+        MapPanTransform.X = 0;
+        MapPanTransform.Y = 0;
         _viewportCenter = null;
         _lastFocusedCoordinate = ViewModel?.FocusedCoordinate;
         RenderMap();
@@ -53,6 +57,9 @@ public partial class EarthquakeMapView : UserControl
     {
         StopPanning();
         _panOffset = default;
+        _renderedPanOffset = default;
+        MapPanTransform.X = 0;
+        MapPanTransform.Y = 0;
         _viewportCenter = null;
         if (ViewModel is not null)
         {
@@ -227,7 +234,7 @@ public partial class EarthquakeMapView : UserControl
                 _lastPanTraceAt = Environment.TickCount64;
                 TraceMap("MouseMove", GetViewportCenter(), $"delta={FormatVector(delta)}");
             }
-            RequestRender();
+            ApplyPanTransform();
         }
 
         e.Handled = true;
@@ -303,7 +310,9 @@ public partial class EarthquakeMapView : UserControl
             return;
         }
 
-        MapGeometryBounds? viewportBounds = GetDetailViewportBounds();
+        MapGeometryBounds? viewportBounds = ViewModel.IsDistantEvent
+            ? null
+            : GetDetailViewportBounds();
         GeoCoordinate? viewportCenter = null;
         if (ViewModel.WillChangeDetailLevel(preferMedium, viewportBounds) &&
             GetViewportCenter() is GeoCoordinate currentCenter)
@@ -463,7 +472,10 @@ public partial class EarthquakeMapView : UserControl
             return;
         }
 
-        MapCanvas.Children.Clear();
+        MapPanTransform.X = 0;
+        MapPanTransform.Y = 0;
+        _renderedPanOffset = _panOffset;
+        MapContentCanvas.Children.Clear();
         GeoCoordinate? selectedEventFocusCoordinate =
             ViewModel.TryGetSelectedEventFocusCoordinate(out GeoCoordinate eventFocus)
                 ? eventFocus
@@ -481,8 +493,11 @@ public partial class EarthquakeMapView : UserControl
             projection.Unproject(new Point(MapCanvas.ActualWidth / 2, MapCanvas.ActualHeight / 2)),
             $"committed={FormatCoordinate(_viewportCenter)}, focus={FormatCoordinate(ViewModel.FocusedCoordinate)}");
         bool drawBaseOutlineStroke = ViewModel.BoundaryLayers.Count == 0;
+        IReadOnlyList<MapPolygonGeometry> visibleOutline = ViewModel.IsDistantEvent
+            ? []
+            : ViewModel.Outline;
 
-        foreach (MapPolygonGeometry polygon in ViewModel.Outline)
+        foreach (MapPolygonGeometry polygon in visibleOutline)
         {
             var shape = new Path
             {
@@ -497,7 +512,7 @@ public partial class EarthquakeMapView : UserControl
                 StrokeEndLineCap = PenLineCap.Round,
                 ToolTip = polygon.Name,
             };
-            MapCanvas.Children.Add(shape);
+            MapContentCanvas.Children.Add(shape);
         }
 
         foreach (EarthquakeMapMunicipality municipality in ViewModel.Municipalities)
@@ -523,7 +538,7 @@ public partial class EarthquakeMapView : UserControl
                     ? $"{municipality.Name} · 震度 {GetIntensityText(municipality.Intensity)}"
                     : null,
             };
-            MapCanvas.Children.Add(shape);
+            MapContentCanvas.Children.Add(shape);
         }
 
         foreach (EarthquakeMapBoundaryLayer layer in ViewModel.BoundaryLayers)
@@ -543,7 +558,7 @@ public partial class EarthquakeMapView : UserControl
                 StrokeEndLineCap = PenLineCap.Round,
                 IsHitTestVisible = false,
             };
-            MapCanvas.Children.Add(shape);
+            MapContentCanvas.Children.Add(shape);
         }
 
         foreach (EarthquakeMapMarker marker in ViewModel.Markers)
@@ -602,6 +617,13 @@ public partial class EarthquakeMapView : UserControl
             (string.IsNullOrWhiteSpace(detail) ? string.Empty : $" {detail}");
         Console.WriteLine(message);
         Debug.WriteLine(message);
+    }
+
+    private void ApplyPanTransform()
+    {
+        Vector offset = _panOffset - _renderedPanOffset;
+        MapPanTransform.X = offset.X;
+        MapPanTransform.Y = offset.Y;
     }
 
     private static string FormatCoordinate(GeoCoordinate? coordinate) =>
@@ -704,7 +726,7 @@ public partial class EarthquakeMapView : UserControl
         };
         Canvas.SetLeft(shape, point.X - size / 2);
         Canvas.SetTop(shape, point.Y - size / 2);
-        MapCanvas.Children.Add(shape);
+        MapContentCanvas.Children.Add(shape);
     }
 
     private static Color GetIntensityColor(JmaIntensity intensity, byte alpha)
@@ -930,19 +952,38 @@ public partial class EarthquakeMapView : UserControl
 
         public Point Project(GeoCoordinate coordinate)
         {
+            double longitudeDelta = NormalizeLongitude(
+                coordinate.Longitude - _centerLongitude);
             return new Point(
-                _width / 2 + (coordinate.Longitude - _centerLongitude) * _scale * _longitudeScaleFactor + _panX,
+                _width / 2 + longitudeDelta * _scale * _longitudeScaleFactor + _panX,
                 _height / 2 - (coordinate.Latitude - _centerLatitude) * _scale + _panY);
         }
 
         public GeoCoordinate Unproject(Point point)
         {
+            double latitude = _centerLatitude -
+                (point.Y - _height / 2 - _panY) / _scale;
+            double longitude = _centerLongitude +
+                (point.X - _width / 2 - _panX) /
+                (_scale * _longitudeScaleFactor);
             return new GeoCoordinate(
-                _centerLatitude -
-                    (point.Y - _height / 2 - _panY) / _scale,
-                _centerLongitude +
-                    (point.X - _width / 2 - _panX) /
-                    (_scale * _longitudeScaleFactor));
+                Math.Clamp(latitude, -90, 90),
+                NormalizeLongitude(longitude));
+        }
+
+        private static double NormalizeLongitude(double longitude)
+        {
+            double normalized = longitude % 360;
+            if (normalized > 180)
+            {
+                normalized -= 360;
+            }
+            else if (normalized < -180)
+            {
+                normalized += 360;
+            }
+
+            return normalized;
         }
     }
 }

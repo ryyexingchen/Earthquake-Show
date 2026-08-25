@@ -69,6 +69,36 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Fact]
+    public void DistantProjection_UnprojectWrapsLongitudeAcrossDateLine()
+    {
+        GeoCoordinate hypocenter = new(-15.4, 167.8);
+        EarthquakeMapView.MapProjection projection = EarthquakeMapView.MapProjection.Create(
+            [],
+            [],
+            [new EarthquakeMapMarker(
+                EarthquakeMapMarkerKind.Hypocenter,
+                "远地震源",
+                hypocenter,
+                JmaIntensity.Unknown)],
+            EarthquakeMapFocusMode.SelectedEvent,
+            null,
+            hypocenter,
+            new MapGeometryBounds(167.675, 167.925, -15.525, -15.275),
+            null,
+            EarthquakeMapViewModel.MaxSmallZoomLevel,
+            1000,
+            600,
+            0,
+            0,
+            new MapGeometryBounds(126, 147, 24, 47));
+
+        GeoCoordinate coordinate = projection.Unproject(new Point(1000, 300));
+
+        Assert.InRange(coordinate.Longitude, -180, 180);
+        Assert.True(coordinate.Longitude < 0);
+    }
+
+    [Fact]
     public void RepeatedFocusNotificationDoesNotResetPan()
     {
         GeoCoordinate coordinate = new(35.25, 139.75);
