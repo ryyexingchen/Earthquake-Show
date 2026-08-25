@@ -43,7 +43,12 @@ public sealed record EarthquakeMapBoundaryLayer(
 
 public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 {
-    public const double MaximumZoomLevel = 12;
+    // max_small 和 max_big 分别限制手动、自动缩放的最小和最大倍率。
+    public const double MaxSmallZoomLevel = 0.5;
+    public const double MaxBigZoomLevel = 24;
+    public const double MaximumZoomLevel = MaxBigZoomLevel;
+    public const double MediumDetailZoomThreshold = 2;
+    public const double HighDetailZoomThreshold = 8;
 
     private readonly EarthquakePageViewModel _page;
     private readonly OfflineMapGeometry _overviewGeometry;
@@ -61,6 +66,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     private CancellationTokenSource? _detailLoadCancellation;
     private bool _isLoadingDetail;
     private string? _detailLoadError;
+    private MapDetailLevel? _detailLoadErrorLevel;
     private bool _isDisposed;
 
     public EarthquakeMapViewModel(
@@ -135,6 +141,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         get => _zoomLevel;
         private set
         {
+            value = Math.Clamp(value, MaxSmallZoomLevel, MaxBigZoomLevel);
             if (Math.Abs(_zoomLevel - value) < 0.001)
             {
                 return;
@@ -266,12 +273,18 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
             if (!string.IsNullOrWhiteSpace(DetailLoadError))
             {
-                return $"{baseText} · 中精度加载失败";
+                string levelText = _detailLoadErrorLevel == MapDetailLevel.High
+                    ? "高精度"
+                    : "中精度";
+                return $"{baseText} · {levelText}加载失败";
             }
 
-            return DetailLevel == MapDetailLevel.Medium
-                ? $"{baseText} · 中精度"
-                : baseText;
+            return DetailLevel switch
+            {
+                MapDetailLevel.High => $"{baseText} · 高精度",
+                MapDetailLevel.Medium => $"{baseText} · 中精度",
+                _ => baseText,
+            };
         }
     }
 
@@ -280,9 +293,11 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         bool preferMedium = false)
     {
         ThrowIfDisposed();
-        MapDetailLevel desiredLevel = preferMedium || ZoomLevel > 2
-            ? MapDetailLevel.Medium
-            : MapDetailLevel.Overview;
+        MapDetailLevel desiredLevel = ZoomLevel > HighDetailZoomThreshold
+            ? MapDetailLevel.High
+            : preferMedium || ZoomLevel > MediumDetailZoomThreshold
+                ? MapDetailLevel.Medium
+                : MapDetailLevel.Overview;
         if (desiredLevel == MapDetailLevel.Overview)
         {
             _detailLoadCancellation?.Cancel();
@@ -299,7 +314,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        if (_detailLevel == MapDetailLevel.Medium || _lodResourceProvider is null)
+        if (_detailLevel == desiredLevel || _lodResourceProvider is null)
         {
             return;
         }
@@ -313,7 +328,9 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         try
         {
             MapGeometrySet geometrySet = await Task.Run(
-                () => _lodResourceProvider.LoadMedium(loadCancellation.Token),
+                () => desiredLevel == MapDetailLevel.High
+                    ? _lodResourceProvider.LoadHigh(loadCancellation.Token)
+                    : _lodResourceProvider.LoadMedium(loadCancellation.Token),
                 loadCancellation.Token);
             loadCancellation.Token.ThrowIfCancellationRequested();
             if (_isDisposed)
@@ -321,7 +338,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 return;
             }
 
-            ApplyGeometrySet(geometrySet, MapDetailLevel.Medium);
+            ApplyGeometrySet(geometrySet, desiredLevel);
         }
         catch (OperationCanceledException)
         {
@@ -330,6 +347,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         catch (Exception exception)
         {
             _detailLoadError = exception.Message;
+            _detailLoadErrorLevel = desiredLevel;
             OnPropertyChanged(nameof(DetailLoadError));
             OnPropertyChanged(nameof(StatusText));
         }
@@ -348,13 +366,13 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     public void ZoomIn()
     {
         ThrowIfDisposed();
-        ZoomLevel = Math.Min(MaximumZoomLevel, ZoomLevel * 1.25);
+        ZoomLevel = Math.Min(MaxBigZoomLevel, ZoomLevel * 1.25);
     }
 
     public void ZoomOut()
     {
         ThrowIfDisposed();
-        ZoomLevel = Math.Max(1, ZoomLevel / 1.25);
+        ZoomLevel = Math.Max(MaxSmallZoomLevel, ZoomLevel / 1.25);
     }
 
     public void ResetView()
@@ -475,6 +493,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         _boundaryGeometry = geometrySet.Boundaries;
         _detailLevel = detailLevel;
         _detailLoadError = null;
+        _detailLoadErrorLevel = null;
         OnPropertyChanged(nameof(DetailLevel));
         OnPropertyChanged(nameof(DetailLoadError));
         OnPropertyChanged(nameof(GeometrySource));

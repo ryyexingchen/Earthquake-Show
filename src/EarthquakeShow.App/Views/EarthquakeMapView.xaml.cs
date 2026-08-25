@@ -17,6 +17,8 @@ public partial class EarthquakeMapView : UserControl
     private bool _isPanning;
     private Point _lastPanPoint;
     private Vector _panOffset;
+    private MapProjection? _lastProjection;
+    private GeoCoordinate? _pendingViewportCenter;
 
     public EarthquakeMapView()
     {
@@ -45,6 +47,8 @@ public partial class EarthquakeMapView : UserControl
     {
         StopPanning();
         _panOffset = default;
+        _lastProjection = null;
+        _pendingViewportCenter = null;
         if (ViewModel is not null)
         {
             ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
@@ -60,6 +64,16 @@ public partial class EarthquakeMapView : UserControl
     {
         if (e.PropertyName == nameof(EarthquakeMapViewModel.FocusedCoordinate))
         {
+            _panOffset = default;
+        }
+
+        if (e.PropertyName == nameof(EarthquakeMapViewModel.GeometrySource) &&
+            _lastProjection is not null &&
+            MapCanvas.ActualWidth >= 10 &&
+            MapCanvas.ActualHeight >= 10)
+        {
+            _pendingViewportCenter = _lastProjection.Unproject(
+                new Point(MapCanvas.ActualWidth / 2, MapCanvas.ActualHeight / 2));
             _panOffset = default;
         }
 
@@ -275,7 +289,10 @@ public partial class EarthquakeMapView : UserControl
                 : null;
         MapProjection projection = CreateProjection(
             selectedEventFocusCoordinate,
-            selectedEventBounds);
+            selectedEventBounds,
+            _pendingViewportCenter);
+        _pendingViewportCenter = null;
+        _lastProjection = projection;
         bool drawBaseOutlineStroke = ViewModel.BoundaryLayers.Count == 0;
 
         foreach (MapPolygonGeometry polygon in ViewModel.Outline)
@@ -350,7 +367,8 @@ public partial class EarthquakeMapView : UserControl
 
     private MapProjection CreateProjection(
         GeoCoordinate? selectedEventFocusCoordinate = null,
-        MapGeometryBounds? selectedEventBounds = null)
+        MapGeometryBounds? selectedEventBounds = null,
+        GeoCoordinate? preferredCenter = null)
     {
         EarthquakeMapViewModel viewModel = ViewModel!;
         if (selectedEventFocusCoordinate is null &&
@@ -373,6 +391,7 @@ public partial class EarthquakeMapView : UserControl
             viewModel.FocusedCoordinate,
             selectedEventFocusCoordinate,
             selectedEventBounds,
+            preferredCenter,
             viewModel.ZoomLevel,
             MapCanvas.ActualWidth,
             MapCanvas.ActualHeight,
@@ -519,7 +538,7 @@ public partial class EarthquakeMapView : UserControl
         };
     }
 
-    private sealed class MapProjection
+    internal sealed class MapProjection
     {
         private readonly double _scale;
         private readonly double _longitudeScaleFactor;
@@ -558,6 +577,7 @@ public partial class EarthquakeMapView : UserControl
             GeoCoordinate? focusedCoordinate,
             GeoCoordinate? selectedEventFocusCoordinate,
             MapGeometryBounds? selectedEventBounds,
+            GeoCoordinate? preferredCenter,
             double zoomLevel,
             double width,
             double height,
@@ -583,6 +603,12 @@ public partial class EarthquakeMapView : UserControl
                 centerLatitude = eventFocus.Latitude;
             }
 
+            if (preferredCenter is GeoCoordinate preservedCenter)
+            {
+                centerLongitude = preservedCenter.Longitude;
+                centerLatitude = preservedCenter.Latitude;
+            }
+
             if (isEventView)
             {
                 bounds = EarthquakeMapViewModel.CenterEventBounds(
@@ -599,7 +625,10 @@ public partial class EarthquakeMapView : UserControl
                 (width - horizontalPadding * 2) / (bounds.LongitudeSpan * longitudeScaleFactor),
                 (height - verticalPadding * 2) / bounds.LatitudeSpan);
             return new MapProjection(
-                scale * Math.Max(1, zoomLevel),
+                scale * Math.Clamp(
+                    zoomLevel,
+                    EarthquakeMapViewModel.MaxSmallZoomLevel,
+                    EarthquakeMapViewModel.MaxBigZoomLevel),
                 longitudeScaleFactor,
                 centerLongitude,
                 centerLatitude,

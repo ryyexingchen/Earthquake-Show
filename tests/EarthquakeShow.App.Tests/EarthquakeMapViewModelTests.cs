@@ -399,7 +399,7 @@ public sealed class EarthquakeMapViewModelTests
             map.ZoomIn();
         }
 
-        Assert.Equal(EarthquakeMapViewModel.MaximumZoomLevel, map.ZoomLevel);
+        Assert.Equal(EarthquakeMapViewModel.MaxBigZoomLevel, map.ZoomLevel);
         Assert.Equal(focus, map.FocusedCoordinate);
 
         for (int index = 0; index < 20; index++)
@@ -407,7 +407,61 @@ public sealed class EarthquakeMapViewModelTests
             map.ZoomOut();
         }
 
-        Assert.Equal(1, map.ZoomLevel);
+        Assert.Equal(EarthquakeMapViewModel.MaxSmallZoomLevel, map.ZoomLevel);
+    }
+
+    [Fact]
+    public async Task ZoomDetailSwitchesToHighGeometryAfterHighThreshold()
+    {
+        var report = CreateReport();
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+
+        string directory = Path.Combine(
+            Path.GetTempPath(),
+            "EarthquakeShowTests",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string mediumAreasPath = Path.Combine(directory, "areas-medium.geojson");
+            string mediumMunicipalitiesPath = Path.Combine(directory, "municipalities-medium.geojson");
+            string mediumBoundariesPath = Path.Combine(directory, "boundaries-medium.geojson");
+            string highAreasPath = Path.Combine(directory, "areas-high.geojson");
+            string highMunicipalitiesPath = Path.Combine(directory, "municipalities-high.geojson");
+            await File.WriteAllTextAsync(mediumAreasPath, GeometryJson.Replace("测试离线轮廓", "中精度区域"));
+            await File.WriteAllTextAsync(mediumMunicipalitiesPath, MunicipalityGeometryJson);
+            await File.WriteAllTextAsync(mediumBoundariesPath, BoundaryGeometryJson);
+            await File.WriteAllTextAsync(highAreasPath, GeometryJson.Replace("测试离线轮廓", "高精度区域"));
+            await File.WriteAllTextAsync(highMunicipalitiesPath, MunicipalityGeometryJson);
+
+            using var map = new EarthquakeMapViewModel(
+                page,
+                OfflineMapGeometry.LoadFromJson(GeometryJson),
+                OfflineMapGeometry.LoadFromJson(MunicipalityGeometryJson),
+                OfflineMapBoundaryGeometry.LoadFromJson(BoundaryGeometryJson),
+                new MapLodResourceProvider(
+                    mediumAreasPath,
+                    mediumMunicipalitiesPath,
+                    mediumBoundariesPath,
+                    highAreasPath,
+                    highMunicipalitiesPath));
+
+            for (int index = 0; index < 12; index++)
+            {
+                map.ZoomIn();
+            }
+
+            await map.EnsureDetailLevelForZoomAsync();
+
+            Assert.Equal(MapDetailLevel.High, map.DetailLevel);
+            Assert.Equal("高精度区域", map.GeometrySource);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
     }
 
     [Fact]
