@@ -13,17 +13,23 @@ public sealed class EarthquakeEventListViewModelTests
         new(2026, 8, 19, 12, 0, 0, TimeSpan.FromHours(9));
 
     [Fact]
-    public async Task Load_DefaultSortsByLatestIssuedWithEventIdTieBreaker()
+    public async Task Load_DefaultSortsByOriginTimeInsteadOfIssuedTime()
     {
         using EarthquakePageViewModel page = await CreatePageAsync([
-            CreateReport("event-b", 1),
-            CreateReport("event-c", 2),
-            CreateReport("event-a", 2),
+            CreateReport(
+                "issued-later-origin-older",
+                3,
+                originTime: BaseTime.AddHours(-2)),
+            CreateReport(
+                "issued-earlier-origin-newer",
+                1,
+                originTime: BaseTime.AddHours(-1)),
         ]);
         using var list = new EarthquakeEventListViewModel(page, () => BaseTime);
 
+        Assert.Equal(EarthquakeEventSortOrder.LatestOriginTime, list.SortOrder);
         Assert.Equal(
-            ["event-a", "event-c", "event-b"],
+            ["issued-earlier-origin-newer", "issued-later-origin-older"],
             list.Items.Select(item => item.EventId));
         Assert.All(list.Items, item => Assert.False(item.IsNew));
     }
@@ -32,7 +38,8 @@ public sealed class EarthquakeEventListViewModelTests
     public async Task OriginTimeSort_PlacesUnknownTimeAfterKnownTimes()
     {
         using EarthquakePageViewModel page = await CreatePageAsync([
-            CreateReport("unknown", 3),
+            CreateReport("unknown-z-older-issued", 0),
+            CreateReport("unknown-a-newer-issued", 3),
             CreateReport("older", 1, originTime: BaseTime.AddHours(-2)),
             CreateReport("newer", 2, originTime: BaseTime.AddHours(-1)),
         ]);
@@ -41,7 +48,7 @@ public sealed class EarthquakeEventListViewModelTests
         list.SortOrder = EarthquakeEventSortOrder.LatestOriginTime;
 
         Assert.Equal(
-            ["newer", "older", "unknown"],
+            ["newer", "older", "unknown-a-newer-issued", "unknown-z-older-issued"],
             list.Items.Select(item => item.EventId));
     }
 

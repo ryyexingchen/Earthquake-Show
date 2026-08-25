@@ -303,14 +303,22 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         }
     }
 
-    public bool CanGoPrevious => GetViewedReportIndex() > 0;
+    public bool CanGoPrevious
+    {
+        get
+        {
+            EarthquakeReport[] sourceReports = GetViewedSourceReports();
+            return GetViewedSourceReportIndex(sourceReports) > 0;
+        }
+    }
 
     public bool CanGoNext
     {
         get
         {
-            int index = GetViewedReportIndex();
-            return index >= 0 && index < (_page.State.SelectedEvent?.Reports.Length ?? 0) - 1;
+            EarthquakeReport[] sourceReports = GetViewedSourceReports();
+            int index = GetViewedSourceReportIndex(sourceReports);
+            return index >= 0 && index < sourceReports.Length - 1;
         }
     }
 
@@ -331,7 +339,11 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
 
     public void ReturnToLatestReport()
     {
-        _page.ReturnToLatestReport();
+        EarthquakeReport? target = GetViewedSourceReports().LastOrDefault();
+        if (target is not null)
+        {
+            _page.SelectReport(target.Source.SourceId, target.Source.SourceMessageId);
+        }
     }
 
     public void ToggleSource()
@@ -946,10 +958,17 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         var items = new List<EarthquakeTimelineItemViewModel>();
         ReportDisplaySnapshot previousSnapshot = new();
         bool hasPrevious = false;
-        foreach (EarthquakeReport report in earthquakeEvent.Reports)
+        EarthquakeReport[] sourceReports = earthquakeEvent.Reports
+            .Where(report => string.Equals(
+                report.Source.SourceId,
+                selectedReport.Source.SourceId,
+                StringComparison.Ordinal))
+            .ToArray();
+        for (int index = 0; index < sourceReports.Length; index++)
         {
+            EarthquakeReport report = sourceReports[index];
             ReportDisplaySnapshot currentSnapshot = BuildDisplaySnapshot(
-                earthquakeEvent.Reports.Take(items.Count + 1));
+                sourceReports.Take(index + 1));
             items.Add(new EarthquakeTimelineItemViewModel(
                 report.Source.SourceId,
                 report.Source.SourceMessageId,
@@ -1050,16 +1069,49 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
 
     private void SelectRelativeReport(int offset)
     {
-        EarthquakeEvent? earthquakeEvent = _page.State.SelectedEvent;
-        int index = GetViewedReportIndex();
+        EarthquakeReport[] sourceReports = GetViewedSourceReports();
+        int index = GetViewedSourceReportIndex(sourceReports);
         int targetIndex = index + offset;
-        if (earthquakeEvent is null || targetIndex < 0 || targetIndex >= earthquakeEvent.Reports.Length)
+        if (targetIndex < 0 || targetIndex >= sourceReports.Length)
         {
             return;
         }
 
-        EarthquakeReport target = earthquakeEvent.Reports[targetIndex];
+        EarthquakeReport target = sourceReports[targetIndex];
         _page.SelectReport(target.Source.SourceId, target.Source.SourceMessageId);
+    }
+
+    private EarthquakeReport[] GetViewedSourceReports()
+    {
+        EarthquakeEvent? earthquakeEvent = _page.State.SelectedEvent;
+        string? sourceId = _page.State.ViewedReport?.Source.SourceId;
+        return earthquakeEvent is null || sourceId is null
+            ? []
+            : earthquakeEvent.Reports
+                .Where(report => string.Equals(
+                    report.Source.SourceId,
+                    sourceId,
+                    StringComparison.Ordinal))
+                .ToArray();
+    }
+
+    private int GetViewedSourceReportIndex(EarthquakeReport[] sourceReports)
+    {
+        SourceReference? source = _page.State.ViewedReport?.Source;
+        if (source is null)
+        {
+            return -1;
+        }
+
+        for (int index = 0; index < sourceReports.Length; index++)
+        {
+            if (IsSameSource(sourceReports[index].Source, source))
+            {
+                return index;
+            }
+        }
+
+        return -1;
     }
 
     private int GetViewedReportIndex()

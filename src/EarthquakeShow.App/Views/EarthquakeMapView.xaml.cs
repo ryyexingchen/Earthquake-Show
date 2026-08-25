@@ -494,6 +494,7 @@ public partial class EarthquakeMapView : UserControl
             projection.Unproject(new Point(MapCanvas.ActualWidth / 2, MapCanvas.ActualHeight / 2)),
             $"committed={FormatCoordinate(_viewportCenter)}, focus={FormatCoordinate(ViewModel.FocusedCoordinate)}");
         bool drawBaseOutlineStroke = ViewModel.BoundaryLayers.Count == 0;
+        bool fillIntensityAreas = ShouldFillIntensityAreas(ViewModel.ViewedReportType);
         IReadOnlyList<MapPolygonGeometry> visibleOutline = ViewModel.IsDistantEvent
             ? []
             : ViewModel.Outline;
@@ -516,20 +517,23 @@ public partial class EarthquakeMapView : UserControl
             MapContentCanvas.Children.Add(shape);
         }
 
-        foreach (EarthquakeMapArea area in ViewModel.Areas)
+        if (fillIntensityAreas)
         {
-            var shape = new Path
+            foreach (EarthquakeMapArea area in ViewModel.Areas)
             {
-                Data = ToPathGeometry(GetRings(area.Rings, area.Coordinates), projection),
-                Fill = new SolidColorBrush(GetIntensityColor(area.Intensity, 150)),
-                Stroke = new SolidColorBrush(GetIntensityBorderColor(area.Intensity, 235)),
-                StrokeThickness = 1.1,
-                StrokeLineJoin = PenLineJoin.Round,
-                StrokeStartLineCap = PenLineCap.Round,
-                StrokeEndLineCap = PenLineCap.Round,
-                ToolTip = $"{area.Name} · 震度 {GetIntensityText(area.Intensity)}",
-            };
-            MapContentCanvas.Children.Add(shape);
+                var shape = new Path
+                {
+                    Data = ToPathGeometry(GetRings(area.Rings, area.Coordinates), projection),
+                    Fill = new SolidColorBrush(GetIntensityColor(area.Intensity, 150)),
+                    Stroke = new SolidColorBrush(GetIntensityBorderColor(area.Intensity, 235)),
+                    StrokeThickness = 1.1,
+                    StrokeLineJoin = PenLineJoin.Round,
+                    StrokeStartLineCap = PenLineCap.Round,
+                    StrokeEndLineCap = PenLineCap.Round,
+                    ToolTip = $"{area.Name} · 震度 {GetIntensityText(area.Intensity)}",
+                };
+                MapContentCanvas.Children.Add(shape);
+            }
         }
 
         foreach (EarthquakeMapMunicipality municipality in ViewModel.Municipalities)
@@ -568,7 +572,9 @@ public partial class EarthquakeMapView : UserControl
             var shape = new Path
             {
                 Data = ToBoundaryPathGeometry(layer.Boundaries, projection),
-                Stroke = new SolidColorBrush(GetIntensityBorderColor(layer.Intensity, 245)),
+                Stroke = new SolidColorBrush(fillIntensityAreas
+                    ? GetIntensityBorderColor(layer.Intensity, 245)
+                    : GetIntensityColor(layer.Intensity, 245)),
                 StrokeThickness = 1.8,
                 StrokeLineJoin = PenLineJoin.Round,
                 StrokeStartLineCap = PenLineCap.Round,
@@ -646,6 +652,12 @@ public partial class EarthquakeMapView : UserControl
         }
 
         return result;
+    }
+
+    internal static bool ShouldFillIntensityAreas(EarthquakeReportType reportType)
+    {
+        return reportType is EarthquakeReportType.SeismicIntensity or
+            EarthquakeReportType.Hypocenter;
     }
 
     private MapProjection CreateProjection(

@@ -175,6 +175,9 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public EarthquakeReportType ViewedReportType =>
+        _page.State.ViewedReport?.ReportType ?? EarthquakeReportType.Unknown;
+
     public double ZoomLevel
     {
         get => _zoomLevel;
@@ -1033,6 +1036,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(EffectiveFocusMode));
         OnPropertyChanged(nameof(HasSelectedEvent));
         OnPropertyChanged(nameof(IsDistantEvent));
+        OnPropertyChanged(nameof(ViewedReportType));
         OnPropertyChanged(nameof(HasDrawableLayers));
         OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(FocusedCoordinate));

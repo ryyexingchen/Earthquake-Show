@@ -279,11 +279,65 @@ public sealed class EarthquakeDetailsViewModelTests
         Assert.False(details.HasEventAssociations);
         Assert.True(details.CanToggleSource);
         Assert.Equal("jma-xml", page.State.ViewedReport?.Source.SourceId);
+        EarthquakeTimelineItemViewModel jmaTimelineItem =
+            Assert.Single(details.TimelineItems);
+        Assert.Equal("jma-xml", jmaTimelineItem.SourceId);
 
         details.ToggleSource();
 
         Assert.Equal("p2pquake", page.State.ViewedReport?.Source.SourceId);
         Assert.Equal("p2p-report", page.State.ViewedReport?.Source.SourceMessageId);
+        EarthquakeTimelineItemViewModel p2pTimelineItem =
+            Assert.Single(details.TimelineItems);
+        Assert.Equal("p2pquake", p2pTimelineItem.SourceId);
+    }
+
+    [Fact]
+    public async Task Details_TimelineNavigationStaysWithinSelectedSource()
+    {
+        EarthquakeReport jmaFirst = CreateReport(
+            "jma-first",
+            BaseTime,
+            sourceId: "jma-xml",
+            eventId: "multi-source-event");
+        EarthquakeReport p2pFirst = CreateReport(
+            "p2p-first",
+            BaseTime.AddMinutes(1),
+            sourceId: "p2pquake",
+            eventId: "multi-source-event");
+        EarthquakeReport jmaLatest = CreateReport(
+            "jma-latest",
+            BaseTime.AddMinutes(2),
+            sourceId: "jma-xml",
+            eventId: "multi-source-event");
+        EarthquakeReport p2pLatest = CreateReport(
+            "p2p-latest",
+            BaseTime.AddMinutes(3),
+            sourceId: "p2pquake",
+            eventId: "multi-source-event");
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository(
+                [jmaFirst, p2pFirst, jmaLatest, p2pLatest]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+        using var details = new EarthquakeDetailsViewModel(page, map);
+
+        Assert.Equal("jma-latest", page.State.ViewedReport?.Source.SourceMessageId);
+        Assert.Equal(2, details.TimelineItems.Count);
+        details.GoPreviousReport();
+        Assert.Equal("jma-first", page.State.ViewedReport?.Source.SourceMessageId);
+        details.ReturnToLatestReport();
+        Assert.Equal("jma-latest", page.State.ViewedReport?.Source.SourceMessageId);
+
+        details.ToggleSource();
+        Assert.Equal("p2p-latest", page.State.ViewedReport?.Source.SourceMessageId);
+        Assert.Equal(2, details.TimelineItems.Count);
+        details.GoPreviousReport();
+        Assert.Equal("p2p-first", page.State.ViewedReport?.Source.SourceMessageId);
+        details.ReturnToLatestReport();
+        Assert.Equal("p2p-latest", page.State.ViewedReport?.Source.SourceMessageId);
     }
 
     [Fact]

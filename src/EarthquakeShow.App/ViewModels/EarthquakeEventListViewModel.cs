@@ -34,8 +34,8 @@ public sealed class EarthquakeEventListViewModel : INotifyPropertyChanged, IDisp
 
     public static IReadOnlyList<EventListOption<EarthquakeEventSortOrder>> SortOptions { get; } =
     [
-        new(EarthquakeEventSortOrder.LatestIssued, "最新发布"),
         new(EarthquakeEventSortOrder.LatestOriginTime, "最新发生"),
+        new(EarthquakeEventSortOrder.LatestIssued, "最新发布"),
         new(EarthquakeEventSortOrder.HighestIntensity, "最大震度"),
     ];
 
@@ -383,6 +383,7 @@ public sealed class EarthquakeEventListViewModel : INotifyPropertyChanged, IDisp
             EarthquakeEventSortOrder.LatestOriginTime => events
                 .OrderBy(item => item.Summary?.OriginTime is null)
                 .ThenByDescending(item => item.Summary?.OriginTime)
+                .ThenByDescending(item => item.Summary?.UpdatedAt)
                 .ThenBy(item => item.EventId, StringComparer.Ordinal),
             EarthquakeEventSortOrder.HighestIntensity => events
                 .OrderBy(item => item.Summary?.MaxIntensity == JmaIntensity.Unknown)

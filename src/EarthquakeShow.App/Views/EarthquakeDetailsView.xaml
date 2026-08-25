@@ -516,6 +516,7 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <Button Grid.Column="0"
                                 AutomationProperties.Name="上一报"
@@ -542,6 +543,14 @@
                                 Content="返回最新"
                                 IsEnabled="{Binding CanReturnToLatest}" />
                         <Button Grid.Column="4"
+                                Padding="8,5"
+                                AutomationProperties.Name="切换时间线来源"
+                                Click="OnToggleSourceClick"
+                                Content="{Binding SourceToggleText}"
+                                IsEnabled="{Binding CanToggleSource}"
+                                ToolTip="切换时间线显示来源" />
+                        <Button Grid.Column="5"
+                                Margin="8,0,0,0"
                                 Padding="10,5"
                                 AutomationProperties.Name="查看当前原始数据"
                                 Click="OnShowRawDataClick"

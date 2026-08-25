@@ -71,7 +71,7 @@ public sealed record EarthquakePageState
     public string SearchText { get; init; } = string.Empty;
 
     public EarthquakeEventSortOrder SortOrder { get; init; } =
-        EarthquakeEventSortOrder.LatestIssued;
+        EarthquakeEventSortOrder.LatestOriginTime;
 
     public EarthquakeEventFilterState Filters { get; init; } = new();
 

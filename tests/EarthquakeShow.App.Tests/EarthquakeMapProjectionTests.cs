@@ -133,6 +133,19 @@ public sealed class EarthquakeMapProjectionTests
                 [JmaIntensity.Unknown, JmaIntensity.Three]));
     }
 
+    [Theory]
+    [InlineData(EarthquakeReportType.SeismicIntensity, true)]
+    [InlineData(EarthquakeReportType.Hypocenter, true)]
+    [InlineData(EarthquakeReportType.HypocenterAndIntensity, false)]
+    [InlineData(EarthquakeReportType.DistantEarthquake, false)]
+    [InlineData(EarthquakeReportType.Unknown, false)]
+    public void AreaFill_DependsOnViewedReportType(
+        EarthquakeReportType reportType,
+        bool expected)
+    {
+        Assert.Equal(expected, EarthquakeMapView.ShouldFillIntensityAreas(reportType));
+    }
+
     [Fact]
     public void HighDetailReloadStartsOnlyOutsideLoadedViewport()
     {
