@@ -31,7 +31,9 @@ src/EarthquakeShow.App/Assets/Data/Map/*
 !src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-municipalities-overview.geojson
 !src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-area-boundaries-overview.geojson
 !src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-areas-medium.geojson
+!src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-areas.geojson.index.json
 !src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-municipalities-medium.geojson
+!src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-municipalities.geojson.index.json
 !src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-area-boundaries-medium.geojson
 !src/EarthquakeShow.App/Assets/Data/Map/jma-tsunami-forecast-lines-overview.geojson
 src/EarthquakeShow.Core/bin-codex/

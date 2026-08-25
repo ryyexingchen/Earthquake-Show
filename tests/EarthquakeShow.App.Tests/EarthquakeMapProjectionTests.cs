@@ -67,4 +67,20 @@ public sealed class EarthquakeMapProjectionTests
         Assert.Equal(500, projectedCenter.X, precision: 6);
         Assert.Equal(300, projectedCenter.Y, precision: 6);
     }
+
+    [Fact]
+    public void PendingViewportCenterIsNotOverwrittenByConsecutiveGeometryChanges()
+    {
+        GeoCoordinate firstCenter = new(35.25, 139.75);
+        GeoCoordinate laterCenter = new(36.5, 140.5);
+
+        GeoCoordinate preserved = EarthquakeMapView.PreservePendingViewportCenter(
+            firstCenter,
+            laterCenter);
+
+        Assert.Equal(firstCenter, preserved);
+        Assert.Equal(
+            laterCenter,
+            EarthquakeMapView.PreservePendingViewportCenter(null, laterCenter));
+    }
 }

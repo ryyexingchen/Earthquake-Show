@@ -32,6 +32,15 @@
                            Foreground="#667179"
                            FontSize="10"
                            Text="{Binding StatusText}" />
+                <!-- 临时调试显示，确认缩放状态后删除。 -->
+                <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
+                    <TextBlock Foreground="#667179"
+                               FontSize="10"
+                               Text="ZoomLevel: " />
+                    <TextBlock Foreground="#667179"
+                               FontSize="10"
+                               Text="{Binding ZoomLevel, StringFormat={}{0:F2}}" />
+                </StackPanel>
             </StackPanel>
         </Border>
 

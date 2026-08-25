@@ -60,6 +60,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     private OfflineMapBoundaryGeometry? _boundaryGeometry;
     private double _zoomLevel = 1;
     private GeoCoordinate? _focusedCoordinate;
+    private string? _reportEventId;
     private string? _reportSourceId;
     private string? _reportSourceMessageId;
     private MapDetailLevel _detailLevel;
@@ -68,6 +69,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     private string? _detailLoadError;
     private MapDetailLevel? _detailLoadErrorLevel;
     private MapGeometryBounds? _highLoadedViewportBounds;
+    private bool _isApplyingAutoScale;
     private bool _isDisposed;
 
     public EarthquakeMapViewModel(
@@ -90,6 +92,8 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    public event EventHandler? GeometryChanging;
 
     public ImmutableArray<MapPolygonGeometry> Outline => _geometry.Polygons;
 
@@ -136,6 +140,17 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     public IReadOnlyList<EarthquakeMapMarker> Markers { get; private set; } = [];
 
     public GeoCoordinate? FocusedCoordinate => _focusedCoordinate;
+
+    public string? ViewedReportKey
+    {
+        get
+        {
+            EarthquakeReport? report = _page.State.ViewedReport;
+            return report is null
+                ? null
+                : $"{report.EventId}\u001f{report.Source.SourceId}\u001f{report.Source.SourceMessageId}";
+        }
+    }
 
     public double ZoomLevel
     {
@@ -390,6 +405,27 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         ZoomLevel = Math.Max(MaxSmallZoomLevel, ZoomLevel / 1.25);
     }
 
+    public void AutoScale()
+    {
+        ThrowIfDisposed();
+        ZoomLevel = 1;
+        if (_focusedCoordinate is not null)
+        {
+            _focusedCoordinate = null;
+            OnPropertyChanged(nameof(FocusedCoordinate));
+        }
+
+        if (HasSelectedEvent &&
+            (FocusMode != EarthquakeMapFocusMode.SelectedEvent || !FollowSelection))
+        {
+            _page.SetMapViewState(_page.State.Map with
+            {
+                FocusMode = EarthquakeMapFocusMode.SelectedEvent,
+                FollowSelection = true,
+            });
+        }
+    }
+
     public void ResetView()
     {
         ThrowIfDisposed();
@@ -444,6 +480,11 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
         _page.SetMapViewState(_page.State.Map with
         {
+            FocusMode = !followSelection &&
+                previousFocusedCoordinate is null &&
+                HasSelectedEvent
+                ? EarthquakeMapFocusMode.SelectedEvent
+                : _page.State.Map.FocusMode,
             FollowSelection = followSelection,
         });
         if (previousFocusedCoordinate != _focusedCoordinate)
@@ -497,8 +538,31 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     {
         if (eventArgs.PropertyName == nameof(EarthquakePageViewModel.State))
         {
+            if (!_isApplyingAutoScale && IsViewedReportChanged(_page.State.ViewedReport))
+            {
+                _isApplyingAutoScale = true;
+                try
+                {
+                    AutoScale();
+                }
+                finally
+                {
+                    _isApplyingAutoScale = false;
+                }
+            }
+
             RebuildLayers();
         }
+    }
+
+    private bool IsViewedReportChanged(EarthquakeReport? report)
+    {
+        return !string.Equals(_reportEventId, report?.EventId, StringComparison.Ordinal) ||
+            !string.Equals(_reportSourceId, report?.Source.SourceId, StringComparison.Ordinal) ||
+            !string.Equals(
+                _reportSourceMessageId,
+                report?.Source.SourceMessageId,
+                StringComparison.Ordinal);
     }
 
     private void ApplyGeometrySet(
@@ -506,6 +570,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         MapDetailLevel detailLevel,
         MapGeometryBounds? highViewportBounds = null)
     {
+        GeometryChanging?.Invoke(this, EventArgs.Empty);
         _geometry = geometrySet.Areas;
         _municipalityGeometry = geometrySet.Municipalities;
         _boundaryGeometry = geometrySet.Boundaries;
@@ -539,13 +604,11 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     private void RebuildLayers()
     {
         EarthquakeReport? report = _page.State.ViewedReport;
-        if (!string.Equals(_reportSourceId, report?.Source.SourceId, StringComparison.Ordinal) ||
-            !string.Equals(
-                _reportSourceMessageId,
-                report?.Source.SourceMessageId,
-                StringComparison.Ordinal))
+        bool reportChanged = IsViewedReportChanged(report);
+        if (reportChanged)
         {
             _focusedCoordinate = null;
+            _reportEventId = report?.EventId;
             _reportSourceId = report?.Source.SourceId;
             _reportSourceMessageId = report?.Source.SourceMessageId;
         }
@@ -559,6 +622,11 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             UnmappedAreaCount = 0;
             UnmappedMunicipalityCount = 0;
             RaiseLayerProperties();
+            if (reportChanged)
+            {
+                OnPropertyChanged(nameof(ViewedReportKey));
+            }
+
             return;
         }
 
@@ -653,6 +721,10 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 station.Intensity)));
         Markers = markers;
         RaiseLayerProperties();
+        if (reportChanged)
+        {
+            OnPropertyChanged(nameof(ViewedReportKey));
+        }
     }
 
     private EarthquakeReport GetMapReport(EarthquakeReport report)
