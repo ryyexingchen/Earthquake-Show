@@ -85,6 +85,24 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Fact]
+    public void RepeatedFocusNotificationDoesNotResetPan()
+    {
+        GeoCoordinate coordinate = new(35.25, 139.75);
+
+        Assert.False(EarthquakeMapView.ShouldResetPanForFocusedCoordinate(coordinate, coordinate));
+        Assert.True(EarthquakeMapView.ShouldResetPanForFocusedCoordinate(null, coordinate));
+    }
+
+    [Fact]
+    public void FollowStateResetOnlyMatchesFollowStateProperties()
+    {
+        Assert.True(EarthquakeMapView.ShouldResetPanForFollowState(
+            nameof(EarthquakeMapViewModel.EffectiveFocusMode)));
+        Assert.False(EarthquakeMapView.ShouldResetPanForFollowState(
+            nameof(EarthquakeMapViewModel.ZoomLevel)));
+    }
+
+    [Fact]
     public void GlobalZoomLevelUsesOverviewScaleAndProgressesByOnePointTwentyFive()
     {
         MapPolygonGeometry eventPolygon = new(

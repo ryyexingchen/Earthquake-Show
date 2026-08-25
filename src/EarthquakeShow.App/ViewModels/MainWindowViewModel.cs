@@ -464,11 +464,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
             while (!cancellationToken.IsCancellationRequested)
             {
                 TimeSpan delay = _refreshBackoffPolicy.GetNextDelay(
-                    EarthquakePage.State.SourceStatuses);
+                    GetHttpRefreshSourceStatuses());
                 AutoRefreshStatus = $"自动刷新：{FormatDelay(delay)} 后检查";
                 await Task.Delay(delay, cancellationToken);
                 AutoRefreshStatus = "自动刷新：检查中";
-                await RefreshFromNetworkAsync(cancellationToken);
+                try
+                {
+                    await RefreshFromNetworkAsync(cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+                {
+                    AutoRefreshStatus = $"自动刷新：本轮失败（{exception.Message}），稍后重试";
+                }
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -479,6 +490,25 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         {
             AutoRefreshStatus = "自动刷新：已停止";
         }
+    }
+
+    internal ImmutableArray<SourceStatus> GetHttpRefreshSourceStatuses()
+    {
+        return FilterRefreshSourceStatuses(
+            EarthquakePage.State.SourceStatuses,
+            _realtimeSources.Select(source => source.SourceId));
+    }
+
+    internal static ImmutableArray<SourceStatus> FilterRefreshSourceStatuses(
+        IEnumerable<SourceStatus> statuses,
+        IEnumerable<string> sourceIds)
+    {
+        ArgumentNullException.ThrowIfNull(statuses);
+        ArgumentNullException.ThrowIfNull(sourceIds);
+        HashSet<string> httpSourceIds = sourceIds.ToHashSet(StringComparer.Ordinal);
+        return statuses
+            .Where(status => httpSourceIds.Contains(status.SourceId))
+            .ToImmutableArray();
     }
 
     private async Task RunStreamingLoopAsync(

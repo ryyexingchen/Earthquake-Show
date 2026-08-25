@@ -96,13 +96,13 @@ JMA 页面说明地图制作使用了国土地理院数据。发布前仍需记�
 
 | 派生文件 | 特征数 | 用途 | 当前状态 |
 | --- | ---: | --- | --- |
-| `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-areas.geojson` | 194 | 地震信息细分区域高精度层 | `0.61.1` 在 `ZoomLevel > 12` 按 `.index.json` 包络索引只读取当前视野及 20% 缓冲命中的 Feature |
+| `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-areas.geojson` | 194 | 地震信息细分区域高精度层 | `0.62.1` 在 `ZoomLevel > 6` 按 `.index.json` 包络索引只读取当前视野及 20% 缓冲命中的 Feature |
 | `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-areas.geojson.index.json` | 194 | 区域高精度 Feature 偏移索引 | 与源文件长度绑定，失配时回退完整解析 |
-| `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-areas.geojson` | 194 | 地震信息细分区域高精度层 | `0.61.1` 在 `ZoomLevel > 12` 按 `.index.json` 包络索引只读取当前视野及 20% 缓冲命中的 Feature |
+| `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-areas.geojson` | 194 | 地震信息细分区域高精度层 | `0.62.1` 在 `ZoomLevel > 6` 按 `.index.json` 包络索引只读取当前视野及 20% 缓冲命中的 Feature |
 | `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-areas.geojson.index.json` | 194 | 区域高精度 Feature 偏移索引 | 与源文件长度绑定，失配时回退完整解析 |
 | `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-areas-overview.geojson` | 194 | 地震信息细分区域低内存概览层 | 当前运行时入口；0.015 度简化、0.0002 平方度碎片过滤 |
 | `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-areas-medium.geojson` | 194 | 地震信息细分区域中精度层 | `0.39.0` 在 `ZoomLevel > 2` 按需加载；0.003 度简化 |
-| `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-municipalities.geojson` | 1910 | 地震/海啸市町村高精度层 | `0.61.1` 在 `ZoomLevel > 12` 按 `.index.json` 包络索引只读取当前视野及 20% 缓冲命中的 Feature |
+| `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-municipalities.geojson` | 1910 | 地震/海啸市町村高精度层 | `0.62.1` 在 `ZoomLevel > 6` 按 `.index.json` 包络索引只读取当前视野及 20% 缓冲命中的 Feature |
 | `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-municipalities.geojson.index.json` | 1910 | 市町村高精度 Feature 偏移索引 | 与源文件长度绑定，失配时回退完整解析 |
 | `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-municipalities-overview.geojson` | 1910 | 地震/海啸市町村低内存层 | `0.33.0` 当前运行时入口；0.015 度简化、0.0002 平方度碎片过滤 |
 | `src/EarthquakeShow.App/Assets/Data/Map/jma-earthquake-municipalities-medium.geojson` | 1910 | 地震/海啸市町村中精度层 | `0.39.0` 在 `ZoomLevel > 2` 按需加载；0.003 度简化 |
@@ -117,7 +117,7 @@ JMA 页面说明地图制作使用了国土地理院数据。发布前仍需记�
 - 10 个 ZIP 均可打开并读取 `.shp/.shx/.dbf` 结构。
 - 三个当前关键包 `AreaForecastLocalE`、`AreaInformationCity_quake`、`AreaTsunami` 已通过现有严格资源审计工具；`AreaTsunami` 的派生线层已由 `tools/convert_jma_tsunami_gis.py` 接入 App。
 - 五个派生文件已进入 `src/EarthquakeShow.App/Assets/Data/Map/`，项目的通配复制规则会将其带入构建输出；当前入口使用低内存概览层，区域边界资源已完成解析、震度分组和 WPF 绘制。
-- 概览层随应用启动加载，当前事件只绘制代码匹配的市町村；全局 `ZoomLevel=1.0` 以全国概览自动适配为基准，中精度三件套在 `ZoomLevel > 2` 后台按需加载并一起替换，区域和市町村高精度层在 `ZoomLevel > 12` 通过 Feature 偏移索引按当前画布包络加 20% 缓冲读取，区域轮廓从同一批高精度 Polygon 派生，平移或窗口调整越过已加载包络时重新加载。精度替换前保存当前画布中心，并防止同一渲染周期的后续替换覆盖该中心，不在启动阶段解析高精度全国运行时对象。
+- 概览层随应用启动加载，当前事件只绘制代码匹配的市町村；全局 `ZoomLevel=1.0` 以全国概览自动适配为基准，中精度三件套在 `ZoomLevel > 2` 后台按需加载并一起替换，区域和市町村高精度层在 `ZoomLevel > 6` 通过 Feature 偏移索引按当前画布包络加 20% 缓冲读取，区域轮廓从同一批高精度 Polygon 派生，平移或窗口调整越过已加载包络时重新加载。精度替换前保存当前画布中心，并防止同一渲染周期的后续替换覆盖该中心，不在启动阶段解析高精度全国运行时对象。
 
 `0.33.1` 已使用 `tools/generate_jma_boundary_topology.py` 从未简化的 `20240520_AreaForecastLocalE_GIS.zip` 生成带无方向相邻代码 `areaCode1/areaCode2` 的 `LineString` 候选资源。工具通过 SQLite 临时索引处理约 1,032 万条原始线段，并支持连续边合并、线简化和微小环过滤；概览参数输出约 3.35 MB。当前报告仍有 1,128 个开放链端点，候选资源暂不进入 App；下一步先区分正常过滤/分叉与需要非端点交点拆分的异常。
 

@@ -48,7 +48,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     public const double MaxBigZoomLevel = 24;
     public const double MaximumZoomLevel = MaxBigZoomLevel;
     public const double MediumDetailZoomThreshold = 2;
-    public const double HighDetailZoomThreshold = 6;
+    public const double HighDetailZoomThreshold = 12;
 
     private readonly EarthquakePageViewModel _page;
     private readonly OfflineMapGeometry _overviewGeometry;

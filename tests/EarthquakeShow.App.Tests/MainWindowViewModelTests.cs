@@ -19,6 +19,24 @@ namespace EarthquakeShow.App.Tests;
 public sealed class MainWindowViewModelTests
 {
     [Fact]
+    public void FilterRefreshSourceStatuses_ExcludesStreamingSource()
+    {
+        DateTimeOffset checkedAt = new(2026, 8, 25, 12, 0, 0, TimeSpan.FromHours(9));
+        SourceStatus[] statuses =
+        [
+            new("jma-xml", SourceConnectionState.Online, checkedAt),
+            new("p2pquake", SourceConnectionState.Disconnected, checkedAt),
+            new("p2pquake-ws", SourceConnectionState.Disconnected, checkedAt),
+        ];
+
+        ImmutableArray<SourceStatus> filtered = MainWindowViewModel.FilterRefreshSourceStatuses(
+            statuses,
+            ["jma-xml", "p2pquake"]);
+
+        Assert.Equal(["jma-xml", "p2pquake"], filtered.Select(status => status.SourceId));
+    }
+
+    [Fact]
     public void NetworkSources_UseXmlAndP2pWithoutJmaJson()
     {
         string cachePath = CreateTemporaryCachePath();

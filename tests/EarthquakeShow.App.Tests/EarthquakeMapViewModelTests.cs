@@ -596,6 +596,10 @@ public sealed class EarthquakeMapViewModelTests
             Assert.Equal("高精度区域", map.GeometrySource);
             Assert.Contains("区域轮廓", map.BoundaryGeometry?.Source);
             Assert.Equal("测试离线轮廓", sourceBeforeGeometryChange);
+
+            await map.EnsureDetailLevelForZoomAsync(preferMedium: true);
+
+            Assert.Equal(MapDetailLevel.Medium, map.DetailLevel);
         }
         finally
         {

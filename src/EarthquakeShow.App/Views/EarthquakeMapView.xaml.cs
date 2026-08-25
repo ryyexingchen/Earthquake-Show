@@ -18,6 +18,7 @@ public partial class EarthquakeMapView : UserControl
     private Point _lastPanPoint;
     private Vector _panOffset;
     private GeoCoordinate? _pendingViewportCenter;
+    private GeoCoordinate? _lastFocusedCoordinate;
 
     public EarthquakeMapView()
     {
@@ -40,10 +41,10 @@ public partial class EarthquakeMapView : UserControl
 
         _panOffset = default;
         _pendingViewportCenter = null;
+        _lastFocusedCoordinate = ViewModel?.FocusedCoordinate;
         RenderMap();
         await EnsureMapDetailLevelAsync(
-            preferMedium: ViewModel?.HasSelectedEvent == true &&
-                ViewModel.EffectiveFocusMode == EarthquakeMapFocusMode.SelectedEvent);
+            preferMedium: ShouldPreferMediumForAutomaticView());
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -69,15 +70,15 @@ public partial class EarthquakeMapView : UserControl
 
         RequestRender();
         _ = EnsureMapDetailLevelAsync(
-            preferMedium: ViewModel?.FollowSelection == true &&
-                ViewModel.HasSelectedEvent &&
-                ViewModel.EffectiveFocusMode == EarthquakeMapFocusMode.SelectedEvent);
+            preferMedium: ShouldPreferMediumForAutomaticView());
     }
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(EarthquakeMapViewModel.FocusedCoordinate))
+        if (e.PropertyName == nameof(EarthquakeMapViewModel.FocusedCoordinate) &&
+            ShouldResetPanForFocusedCoordinate(_lastFocusedCoordinate, ViewModel?.FocusedCoordinate))
         {
+            _lastFocusedCoordinate = ViewModel?.FocusedCoordinate;
             _panOffset = default;
         }
 
@@ -88,14 +89,11 @@ public partial class EarthquakeMapView : UserControl
             ViewModel?.AutoScale(GetAutomaticZoomLevel());
             RequestRender();
             _ = EnsureMapDetailLevelAsync(
-                preferMedium: ViewModel?.HasSelectedEvent == true &&
-                    ViewModel.EffectiveFocusMode == EarthquakeMapFocusMode.SelectedEvent);
+                preferMedium: ShouldPreferMediumForAutomaticView());
         }
 
         if (ViewModel?.FollowSelection == true &&
-            e.PropertyName is nameof(EarthquakeMapViewModel.FollowSelection)
-                or nameof(EarthquakeMapViewModel.EffectiveFocusMode)
-                or nameof(EarthquakeMapViewModel.HasSelectedEvent))
+            ShouldResetPanForFollowState(e.PropertyName))
         {
             _panOffset = default;
         }
@@ -116,17 +114,36 @@ public partial class EarthquakeMapView : UserControl
         if (e.PropertyName == nameof(EarthquakeMapViewModel.ZoomLevel))
         {
             _ = EnsureMapDetailLevelAsync(
-                preferMedium: ViewModel?.FollowSelection == true &&
-                    ViewModel.HasSelectedEvent &&
-                    ViewModel.EffectiveFocusMode == EarthquakeMapFocusMode.SelectedEvent);
+                preferMedium: ShouldPreferMediumForAutomaticView());
         }
         else if (e.PropertyName is nameof(EarthquakeMapViewModel.EffectiveFocusMode)
             or nameof(EarthquakeMapViewModel.HasSelectedEvent))
         {
             _ = EnsureMapDetailLevelAsync(
-                preferMedium: ViewModel?.HasSelectedEvent == true &&
-                    ViewModel.EffectiveFocusMode == EarthquakeMapFocusMode.SelectedEvent);
+                preferMedium: ShouldPreferMediumForAutomaticView());
         }
+    }
+
+    private bool ShouldPreferMediumForAutomaticView()
+    {
+        return ViewModel?.FollowSelection == true &&
+            ViewModel.HasSelectedEvent &&
+            ViewModel.EffectiveFocusMode == EarthquakeMapFocusMode.SelectedEvent;
+    }
+
+    internal static bool ShouldResetPanForFocusedCoordinate(
+        GeoCoordinate? previous,
+        GeoCoordinate? current)
+    {
+        return !Nullable.Equals(previous, current);
+    }
+
+    internal static bool ShouldResetPanForFollowState(string? propertyName)
+    {
+        return propertyName is
+            nameof(EarthquakeMapViewModel.FollowSelection) or
+            nameof(EarthquakeMapViewModel.EffectiveFocusMode) or
+            nameof(EarthquakeMapViewModel.HasSelectedEvent);
     }
 
     private void RequestRender()
@@ -146,12 +163,14 @@ public partial class EarthquakeMapView : UserControl
 
     private async void OnZoomInClick(object sender, RoutedEventArgs e)
     {
+        ViewModel?.BeginManualInteraction();
         ViewModel?.ZoomIn();
         await EnsureMapDetailLevelAsync();
     }
 
     private async void OnZoomOutClick(object sender, RoutedEventArgs e)
     {
+        ViewModel?.BeginManualInteraction();
         ViewModel?.ZoomOut();
         await EnsureMapDetailLevelAsync();
     }
