@@ -552,6 +552,7 @@
                          Padding="8"
                          AutomationProperties.Name="报文时间线"
                          BorderThickness="0"
+                         HorizontalContentAlignment="Stretch"
                          ItemsSource="{Binding TimelineItems}"
                          SelectedItem="{Binding SelectedTimelineItem}"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -581,7 +582,8 @@
                                     </Grid>
                                     <TextBlock Margin="0,3,0,0"
                                                Foreground="{StaticResource MutedTextBrush}"
-                                               FontSize="11">
+                                               FontSize="11"
+                                               TextWrapping="Wrap">
                                         <Run Text="{Binding SerialText}" />
                                         <Run Text=" · " />
                                         <Run Text="{Binding SourceId}" />
@@ -589,10 +591,12 @@
                                     <TextBlock Margin="0,2,0,0"
                                                Foreground="{StaticResource MutedTextBrush}"
                                                FontSize="11"
-                                               Text="{Binding IssuedAtText}" />
+                                               Text="{Binding IssuedAtText}"
+                                               TextWrapping="Wrap" />
                                     <TextBlock Foreground="{StaticResource MutedTextBrush}"
                                                FontSize="11"
-                                               Text="{Binding ReceivedAtText}" />
+                                               Text="{Binding ReceivedAtText}"
+                                               TextWrapping="Wrap" />
                                     <StackPanel Margin="0,7,0,0">
                                         <StackPanel Visibility="{Binding Summary.HasMaximumIntensity, Converter={StaticResource BooleanToVisibilityConverter}}">
                                             <Grid>
@@ -613,33 +617,40 @@
                                                 </Border>
                                             </Grid>
                                         </StackPanel>
-                                        <StackPanel Margin="0,6,0,0"
-                                                    Orientation="Horizontal"
-                                                    Visibility="{Binding Summary.HasSourceDetails, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                            <StackPanel Visibility="{Binding Summary.HasMagnitude, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid Margin="0,6,0,0"
+                                              Visibility="{Binding Summary.HasSourceDetails, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0"
+                                                        Visibility="{Binding Summary.HasMagnitude, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                 <TextBlock Foreground="{StaticResource MutedTextBrush}"
                                                            FontSize="11"
                                                            Text="震级" />
                                                 <TextBlock Text="{Binding Summary.MagnitudeText}"
-                                                           TextTrimming="CharacterEllipsis" />
+                                                           TextWrapping="Wrap" />
                                             </StackPanel>
-                                            <StackPanel Margin="14,0,0,0"
+                                            <StackPanel Grid.Column="1"
+                                                        Margin="14,0,0,0"
                                                         Visibility="{Binding Summary.HasHypocenter, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                 <TextBlock Foreground="{StaticResource MutedTextBrush}"
                                                            FontSize="11"
                                                            Text="震源地" />
-                                                <TextBlock MaxWidth="135"
-                                                           Text="{Binding Summary.HypocenterText}"
-                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Summary.HypocenterText}"
+                                                           TextWrapping="Wrap" />
                                             </StackPanel>
-                                            <StackPanel Margin="14,0,0,0"
+                                            <StackPanel Grid.Column="2"
+                                                        Margin="14,0,0,0"
                                                         Visibility="{Binding Summary.HasDepth, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                 <TextBlock Foreground="{StaticResource MutedTextBrush}"
                                                            FontSize="11"
                                                            Text="深度" />
-                                                <TextBlock Text="{Binding Summary.DepthText}" />
+                                                <TextBlock Text="{Binding Summary.DepthText}"
+                                                           TextWrapping="Wrap" />
                                             </StackPanel>
-                                        </StackPanel>
+                                        </Grid>
                                         <StackPanel Margin="0,6,0,0"
                                                     Visibility="{Binding Summary.HasSourceScaleInvestigation, Converter={StaticResource BooleanToVisibilityConverter}}">
                                             <Grid>
@@ -653,11 +664,16 @@
                                                 <TextBlock Grid.Column="1" Text="调查中" />
                                             </Grid>
                                         </StackPanel>
-                                        <StackPanel Margin="0,6,0,0" Orientation="Horizontal">
-                                            <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                                        <Grid Margin="0,6,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="64" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0"
+                                                       Foreground="{StaticResource MutedTextBrush}"
                                                        FontSize="11"
                                                        Text="海啸" />
-                                            <Border Margin="12,0,0,0"
+                                            <Border Grid.Column="1"
                                                     Padding="4,1">
                                                 <Border.Style>
                                                     <Style TargetType="Border">
@@ -678,7 +694,8 @@
                                                         </Style.Triggers>
                                                     </Style>
                                                 </Border.Style>
-                                                <TextBlock Text="{Binding Summary.TsunamiStatus.Text}">
+                                                <TextBlock Text="{Binding Summary.TsunamiStatus.Text}"
+                                                           TextWrapping="Wrap">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
                                                             <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
@@ -694,7 +711,7 @@
                                                     </TextBlock.Style>
                                                 </TextBlock>
                                             </Border>
-                                        </StackPanel>
+                                        </Grid>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>

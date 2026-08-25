@@ -178,6 +178,13 @@ public sealed class P2pQuakeEarthquakeSourceTests
     [Fact]
     public async Task Fetch_InvalidSentinelCoordinate_DoesNotRejectWholeBatch()
     {
+        const string catalogJson = """
+            {
+              "prefectures": [{ "code": "01", "name": "北海道" }],
+              "areas": [{ "code": "013", "name": "釧路地方中南部", "prefectureCode": "01", "prefectureName": "北海道" }],
+              "municipalities": []
+            }
+            """;
         const string payload = """
             [{
               "code": 551, "id": "scale-prompt-1",
@@ -193,12 +200,21 @@ public sealed class P2pQuakeEarthquakeSourceTests
             Response(HttpStatusCode.OK, payload)));
         var source = new P2pQuakeEarthquakeSource(
             httpClient,
-            "https://example.test/v2/jma/quake");
+            "https://example.test/v2/jma/quake",
+            JmaIntensityRegionCatalog.Load(catalogJson));
 
         EarthquakeReport report = Assert.Single((await source.FetchAsync()).Reports);
 
         Assert.Null(report.Hypocenter);
         Assert.Null(report.Magnitude);
+        IntensityArea area = Assert.Single(report.IntensityAreas);
+        Assert.Equal("013", area.Code);
+        Assert.Equal("釧路地方中南部", area.Name);
+        Assert.Equal("01", area.PrefectureCode);
+        Assert.Equal("北海道", area.PrefectureName);
+        Assert.Equal(JmaIntensity.Three, area.MaxIntensity);
+        Assert.Empty(report.IntensityMunicipalities);
+        Assert.Empty(report.IntensityStations);
     }
 
     [Fact]

@@ -197,6 +197,100 @@ public sealed class EarthquakeEventMergerTests
     }
 
     [Fact]
+    public void Merge_P2pSequenceAndJmaXmlMatchingEvent_CreatesOneEvent()
+    {
+        EarthquakeReport scalePrompt = CreateReport(
+            "P2P-551",
+            "p2p-scale-prompt",
+            1,
+            eventId: "p2pquake:p2p-scale-prompt",
+            sourceId: "p2pquake") with
+        {
+            ReportType = EarthquakeReportType.SeismicIntensity,
+            Hypocenter = null,
+            Magnitude = null,
+        };
+        EarthquakeReport destination = CreateReport(
+            "P2P-551",
+            "p2p-destination",
+            2,
+            eventId: "p2pquake:p2p-destination",
+            sourceId: "p2pquake") with
+        {
+            ReportType = EarthquakeReportType.Hypocenter,
+        };
+        EarthquakeReport detailScale = CreateReport(
+            "P2P-551",
+            "p2p-detail-scale",
+            3,
+            eventId: "p2pquake:p2p-detail-scale",
+            sourceId: "p2pquake");
+        EarthquakeReport jma = CreateReport(
+            "VXSE53",
+            "jma-detail",
+            3,
+            eventId: "20260825180733",
+            sourceId: "jma-xml");
+
+        EarthquakeEvent earthquakeEvent = Assert.Single(
+            EarthquakeEventMerger.Merge([scalePrompt, destination, detailScale, jma]));
+
+        Assert.Equal("20260825180733", earthquakeEvent.EventId);
+        Assert.Equal(4, earthquakeEvent.Reports.Length);
+        Assert.Equal(3, earthquakeEvent.Reports.Count(report =>
+            report.Source.SourceId == "p2pquake"));
+        Assert.Equal("jma-xml", earthquakeEvent.PreferredReport?.Source.SourceId);
+    }
+
+    [Fact]
+    public void Merge_CoordinateLessP2pReports_DoesNotGuessAssociation()
+    {
+        EarthquakeReport first = CreateReport(
+            "P2P-551",
+            "p2p-scale-prompt-a",
+            1,
+            eventId: "p2pquake:p2p-scale-prompt-a",
+            sourceId: "p2pquake") with
+        {
+            ReportType = EarthquakeReportType.SeismicIntensity,
+            Hypocenter = null,
+            Magnitude = null,
+        };
+        EarthquakeReport second = CreateReport(
+            "P2P-551",
+            "p2p-scale-prompt-b",
+            2,
+            eventId: "p2pquake:p2p-scale-prompt-b",
+            sourceId: "p2pquake") with
+        {
+            ReportType = EarthquakeReportType.SeismicIntensity,
+            Hypocenter = null,
+            Magnitude = null,
+        };
+
+        Assert.Equal(2, EarthquakeEventMerger.Merge([first, second]).Length);
+    }
+
+    [Fact]
+    public void Merge_SameP2pReportStage_DoesNotMergeNearbyEvents()
+    {
+        EarthquakeReport first = CreateReport(
+            "P2P-551",
+            "p2p-detail-a",
+            1,
+            eventId: "p2pquake:p2p-detail-a",
+            sourceId: "p2pquake");
+        EarthquakeReport second = CreateReport(
+            "P2P-551",
+            "p2p-detail-b",
+            2,
+            eventId: "p2pquake:p2p-detail-b",
+            sourceId: "p2pquake");
+
+        Assert.Equal(2, EarthquakeEventMerger.Merge([first, second]).Length);
+    }
+
+    [Fact]
     public void Merge_DistantP2pAndJmaXmlMatchingEvent_CreatesOneEvent()
     {
         GeoCoordinate coordinate = new(-15.4, 167.8);

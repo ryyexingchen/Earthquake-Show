@@ -274,7 +274,7 @@
                                        Foreground="{StaticResource MutedTextBrush}"
                                        FontSize="10"
                                        Text="{Binding TsunamiText}"
-                                       TextTrimming="CharacterEllipsis" />
+                                       TextWrapping="Wrap" />
                         </Grid>
                     </Border>
                     <DataTemplate.Triggers>

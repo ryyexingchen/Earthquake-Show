@@ -80,12 +80,12 @@
             </Button>
         </StackPanel>
 
-        <Border Margin="12"
-                Width="66"
+        <Border x:Name="LegendPanel"
+                Margin="12"
                 Padding="6,7"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Bottom"
-                Background="#F4F7F8"
+                Background="#FAFFFFFF"
                 BorderBrush="#C5D0D4"
                 BorderThickness="1"
                 CornerRadius="5">
@@ -93,48 +93,7 @@
                 <TextBlock Foreground="#667179"
                            FontSize="10"
                            Text="震度" />
-                <StackPanel Margin="0,4,0,0">
-                    <StackPanel Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#E6EBEF" CornerRadius="2" />
-                        <TextBlock Margin="5,0,0,0" FontSize="10" Text="不明" />
-                    </StackPanel>
-                    <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#78C7D8" CornerRadius="2" />
-                        <TextBlock Margin="5,0,0,0" FontSize="10" Text="1" />
-                    </StackPanel>
-                    <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#70D6C1" CornerRadius="2" />
-                        <TextBlock Margin="5,0,0,0" FontSize="10" Text="2" />
-                    </StackPanel>
-                    <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#F0C943" CornerRadius="2" />
-                        <TextBlock Margin="5,0,0,0" FontSize="10" Text="3" />
-                    </StackPanel>
-                    <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#E89A3C" CornerRadius="2" />
-                        <TextBlock Margin="5,0,0,0" FontSize="10" Text="4" />
-                    </StackPanel>
-                    <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#E85E3F" CornerRadius="2" />
-                        <TextBlock Margin="5,0,0,0" FontSize="10" Text="5-" />
-                    </StackPanel>
-                    <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#F04438" CornerRadius="2" />
-                        <TextBlock Margin="5,0,0,0" FontSize="10" Text="5+" />
-                    </StackPanel>
-                    <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#B51255" CornerRadius="2" />
-                        <TextBlock Margin="5,0,0,0" FontSize="10" Text="6-" />
-                    </StackPanel>
-                    <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#8E24AA" CornerRadius="2" />
-                        <TextBlock Margin="5,0,0,0" FontSize="10" Text="6+" />
-                    </StackPanel>
-                    <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                        <Border Width="14" Height="10" Background="#4A148C" CornerRadius="2" />
-                        <TextBlock Margin="5,0,0,0" FontSize="10" Text="7" />
-                    </StackPanel>
-                </StackPanel>
+                <StackPanel x:Name="LegendItemsPanel" Margin="0,4,0,0" />
             </StackPanel>
         </Border>
 

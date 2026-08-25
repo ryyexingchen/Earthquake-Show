@@ -27,6 +27,7 @@ public static class EarthquakeEventMerger
             .Select(group => group.ToList())
             .ToList();
         MergeTemporaryJmaEvents(groups);
+        MergeTemporaryP2pEvents(groups);
         MergeCrossSourceEvents(groups);
 
         return groups
@@ -90,6 +91,106 @@ public static class EarthquakeEventMerger
         while (merged);
     }
 
+    private static void MergeTemporaryP2pEvents(List<List<EarthquakeReport>> groups)
+    {
+        bool merged;
+        do
+        {
+            merged = false;
+            for (int leftIndex = 0; leftIndex < groups.Count && !merged; leftIndex++)
+            {
+                for (int rightIndex = leftIndex + 1; rightIndex < groups.Count; rightIndex++)
+                {
+                    if (!CanMergeTemporaryP2pEvents(groups[leftIndex], groups[rightIndex]))
+                    {
+                        continue;
+                    }
+
+                    groups[leftIndex].AddRange(groups[rightIndex]);
+                    groups.RemoveAt(rightIndex);
+                    merged = true;
+                    break;
+                }
+            }
+        }
+        while (merged);
+    }
+
+    private static bool CanMergeTemporaryP2pEvents(
+        IReadOnlyList<EarthquakeReport> left,
+        IReadOnlyList<EarthquakeReport> right)
+    {
+        if (left.Count == 0 || right.Count == 0 ||
+            left.Any(report => report.Source.SourceId != "p2pquake") ||
+            right.Any(report => report.Source.SourceId != "p2pquake"))
+        {
+            return false;
+        }
+
+        HashSet<EarthquakeReportType> leftStages = left
+            .Select(report => report.ReportType)
+            .ToHashSet();
+        HashSet<EarthquakeReportType> rightStages = right
+            .Select(report => report.ReportType)
+            .ToHashSet();
+        if (leftStages.Contains(EarthquakeReportType.Unknown) ||
+            rightStages.Contains(EarthquakeReportType.Unknown) ||
+            leftStages.Overlaps(rightStages))
+        {
+            return false;
+        }
+
+        EarthquakeReport? leftOriginReport = GetOriginReport(left);
+        EarthquakeReport? rightOriginReport = GetOriginReport(right);
+        if (leftOriginReport?.OriginTime is not DateTimeOffset leftOrigin ||
+            rightOriginReport?.OriginTime is not DateTimeOffset rightOrigin ||
+            Math.Abs((leftOrigin - rightOrigin).TotalSeconds) > TemporaryEventIdDifferenceSeconds)
+        {
+            return false;
+        }
+
+        DateTimeOffset firstIssuedAt = left.Concat(right).Min(report => report.IssuedAt);
+        DateTimeOffset lastIssuedAt = left.Concat(right).Max(report => report.IssuedAt);
+        if ((lastIssuedAt - firstIssuedAt).TotalSeconds > TemporaryReportTimeDifferenceSeconds)
+        {
+            return false;
+        }
+
+        JmaIntensity leftIntensity = GetKnownMaximumIntensity(left);
+        JmaIntensity rightIntensity = GetKnownMaximumIntensity(right);
+        if (leftIntensity != JmaIntensity.Unknown &&
+            rightIntensity != JmaIntensity.Unknown &&
+            leftIntensity != rightIntensity)
+        {
+            return false;
+        }
+
+        EarthquakeReport? leftAssociation = GetAssociationReport(left);
+        EarthquakeReport? rightAssociation = GetAssociationReport(right);
+        if (leftAssociation is null && rightAssociation is null)
+        {
+            return false;
+        }
+
+        if (leftAssociation?.Hypocenter?.Coordinate is GeoCoordinate leftCoordinate &&
+            rightAssociation?.Hypocenter?.Coordinate is GeoCoordinate rightCoordinate)
+        {
+            if (CalculateDistanceKm(leftCoordinate, rightCoordinate) > CrossSourceDistanceKm)
+            {
+                return false;
+            }
+
+            if (leftAssociation.Magnitude?.Value is double leftMagnitude &&
+                rightAssociation.Magnitude?.Value is double rightMagnitude &&
+                Math.Abs(leftMagnitude - rightMagnitude) > CrossSourceMagnitudeDifference)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private static bool CanMergeCrossSourceEvents(
         IReadOnlyList<EarthquakeReport> left,
         IReadOnlyList<EarthquakeReport> right)
@@ -148,6 +249,16 @@ public static class EarthquakeEventMerger
             .FirstOrDefault(report =>
                 report.OriginTime is not null &&
                 report.Hypocenter?.Coordinate is not null);
+    }
+
+    private static EarthquakeReport? GetOriginReport(
+        IEnumerable<EarthquakeReport> reports)
+    {
+        return reports
+            .Where(report => report.Status is ReportStatus.Issued or ReportStatus.Correction)
+            .OrderByDescending(report => report.IssuedAt)
+            .ThenByDescending(report => report.ReceivedAt)
+            .FirstOrDefault(report => report.OriginTime is not null);
     }
 
     private static double CalculateDistanceKm(

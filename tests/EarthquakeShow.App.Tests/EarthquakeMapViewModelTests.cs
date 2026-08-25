@@ -144,6 +144,48 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public async Task HypocenterReport_InheritsPreviousIntensityAreaLayer()
+    {
+        EarthquakeReport intensity = CreateReport() with
+        {
+            ReportCode = "VXSE51",
+            ReportType = EarthquakeReportType.SeismicIntensity,
+            IssuedAt = BaseTime,
+            ReceivedAt = BaseTime.AddSeconds(1),
+            Hypocenter = null,
+            Magnitude = null,
+            IntensityMunicipalities = [],
+            IntensityStations = [],
+            Source = new SourceReference("jma-xml", "intensity-area"),
+        };
+        EarthquakeReport hypocenter = CreateReport() with
+        {
+            ReportCode = "VXSE52",
+            ReportType = EarthquakeReportType.Hypocenter,
+            IssuedAt = BaseTime.AddMinutes(1),
+            ReceivedAt = BaseTime.AddMinutes(1).AddSeconds(1),
+            IntensityAreas = [],
+            IntensityMunicipalities = [],
+            IntensityStations = [],
+            Source = new SourceReference("jma-xml", "hypocenter"),
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([intensity, hypocenter]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+
+        Assert.Equal("hypocenter", page.State.ViewedReport?.Source.SourceMessageId);
+        EarthquakeMapArea area = Assert.Single(map.Areas);
+        Assert.Equal("741", area.Code);
+        Assert.Equal(JmaIntensity.Four, area.Intensity);
+        Assert.Empty(map.Municipalities);
+        Assert.DoesNotContain(map.Markers, marker =>
+            marker.Kind == EarthquakeMapMarkerKind.Station);
+    }
+
+    [Fact]
     public async Task DistantEvent_DrawsOnlyHypocenterMarker()
     {
         EarthquakeReport report = CreateReport() with

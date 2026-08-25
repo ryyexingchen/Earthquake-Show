@@ -117,6 +117,23 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Fact]
+    public void LegendIntensities_UsesContinuousKnownRangeWithoutUnknown()
+    {
+        Assert.Equal(
+            [JmaIntensity.One, JmaIntensity.Two],
+            EarthquakeMapView.BuildLegendIntensities([JmaIntensity.Two]));
+    }
+
+    [Fact]
+    public void LegendIntensities_ShowsUnknownOnlyWhenPresent()
+    {
+        Assert.Equal(
+            [JmaIntensity.Unknown, JmaIntensity.One, JmaIntensity.Two, JmaIntensity.Three],
+            EarthquakeMapView.BuildLegendIntensities(
+                [JmaIntensity.Unknown, JmaIntensity.Three]));
+    }
+
+    [Fact]
     public void HighDetailReloadStartsOnlyOutsideLoadedViewport()
     {
         MapGeometryBounds loaded = new(129, 132, 31, 35);

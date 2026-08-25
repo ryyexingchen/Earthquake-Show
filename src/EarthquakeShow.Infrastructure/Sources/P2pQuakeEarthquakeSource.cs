@@ -252,6 +252,30 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
 
             string prefecture = NullIfUnknown(point.Prefecture) ?? "unknown";
             string address = point.Addr.Trim();
+            JmaIntensity intensity = ParseIntensity(point.Scale);
+            if (point.IsArea)
+            {
+                JmaIntensityAreaDefinition resolvedArea = null!;
+                bool areaResolved = regionCatalog is not null &&
+                    regionCatalog.TryResolveAreaName(address, out resolvedArea);
+                string resolvedAreaCode = areaResolved
+                    ? resolvedArea.Code
+                    : $"p2p-area:{prefecture}:{address}";
+                string resolvedPrefectureCode = areaResolved
+                    ? resolvedArea.PrefectureCode
+                    : $"p2p-pref:{prefecture}";
+                string resolvedPrefectureName = areaResolved
+                    ? resolvedArea.PrefectureName
+                    : prefecture;
+                string resolvedAreaName = areaResolved ? resolvedArea.Name : address;
+                areas[resolvedAreaCode] = UpdateIntensity(
+                    areas.TryGetValue(resolvedAreaCode, out (string Name, string PrefectureCode, string PrefectureName, JmaIntensity Intensity) existingArea)
+                        ? existingArea
+                        : (resolvedAreaName, resolvedPrefectureCode, resolvedPrefectureName, JmaIntensity.Unknown),
+                    intensity);
+                continue;
+            }
+
             JmaIntensityMunicipalityDefinition? municipalityDefinition = null;
             JmaIntensityMunicipalityDefinition resolvedDefinition = null!;
             bool resolved = regionCatalog is not null &&
@@ -279,7 +303,6 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
                 stationCatalog,
                 address,
                 prefecture);
-            JmaIntensity intensity = ParseIntensity(point.Scale);
             areas[areaCode] = UpdateIntensity(
                 areas.TryGetValue(areaCode, out (string Name, string PrefectureCode, string PrefectureName, JmaIntensity Intensity) area)
                     ? area
@@ -527,6 +550,7 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
 
     private sealed record P2pPoint(
         [property: JsonPropertyName("addr")] string? Addr,
+        [property: JsonPropertyName("isArea")] bool IsArea,
         [property: JsonPropertyName("pref")] string? Prefecture,
         [property: JsonPropertyName("scale")] int Scale);
 }

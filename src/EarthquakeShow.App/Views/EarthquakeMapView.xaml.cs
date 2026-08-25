@@ -476,6 +476,7 @@ public partial class EarthquakeMapView : UserControl
         MapPanTransform.Y = 0;
         _renderedPanOffset = _panOffset;
         MapContentCanvas.Children.Clear();
+        UpdateLegend();
         GeoCoordinate? selectedEventFocusCoordinate =
             ViewModel.TryGetSelectedEventFocusCoordinate(out GeoCoordinate eventFocus)
                 ? eventFocus
@@ -511,6 +512,22 @@ public partial class EarthquakeMapView : UserControl
                 StrokeStartLineCap = PenLineCap.Round,
                 StrokeEndLineCap = PenLineCap.Round,
                 ToolTip = polygon.Name,
+            };
+            MapContentCanvas.Children.Add(shape);
+        }
+
+        foreach (EarthquakeMapArea area in ViewModel.Areas)
+        {
+            var shape = new Path
+            {
+                Data = ToPathGeometry(GetRings(area.Rings, area.Coordinates), projection),
+                Fill = new SolidColorBrush(GetIntensityColor(area.Intensity, 150)),
+                Stroke = new SolidColorBrush(GetIntensityBorderColor(area.Intensity, 235)),
+                StrokeThickness = 1.1,
+                StrokeLineJoin = PenLineJoin.Round,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                ToolTip = $"{area.Name} · 震度 {GetIntensityText(area.Intensity)}",
             };
             MapContentCanvas.Children.Add(shape);
         }
@@ -551,7 +568,7 @@ public partial class EarthquakeMapView : UserControl
             var shape = new Path
             {
                 Data = ToBoundaryPathGeometry(layer.Boundaries, projection),
-                Stroke = new SolidColorBrush(GetIntensityColor(layer.Intensity, 245)),
+                Stroke = new SolidColorBrush(GetIntensityBorderColor(layer.Intensity, 245)),
                 StrokeThickness = 1.8,
                 StrokeLineJoin = PenLineJoin.Round,
                 StrokeStartLineCap = PenLineCap.Round,
@@ -565,6 +582,70 @@ public partial class EarthquakeMapView : UserControl
         {
             DrawMarker(marker, projection);
         }
+    }
+
+    private void UpdateLegend()
+    {
+        IEnumerable<JmaIntensity> visibleIntensities = ViewModel!.Areas
+            .Select(area => area.Intensity)
+            .Concat(ViewModel.Municipalities.Select(municipality => municipality.Intensity))
+            .Concat(ViewModel.Markers
+                .Where(marker => marker.Kind == EarthquakeMapMarkerKind.Station)
+                .Select(marker => marker.Intensity));
+        IReadOnlyList<JmaIntensity> legendIntensities =
+            BuildLegendIntensities(visibleIntensities);
+        LegendPanel.Visibility = ViewModel.IsDistantEvent || legendIntensities.Count == 0
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        LegendItemsPanel.Children.Clear();
+
+        for (int index = 0; index < legendIntensities.Count; index++)
+        {
+            JmaIntensity intensity = legendIntensities[index];
+            var row = new StackPanel
+            {
+                Margin = index == 0 ? default : new Thickness(0, 2, 0, 0),
+                Orientation = Orientation.Horizontal,
+            };
+            row.Children.Add(new Border
+            {
+                Width = 14,
+                Height = 10,
+                Background = new SolidColorBrush(GetIntensityColor(intensity, 255)),
+                CornerRadius = new CornerRadius(2),
+            });
+            row.Children.Add(new TextBlock
+            {
+                Margin = new Thickness(5, 0, 0, 0),
+                FontSize = 10,
+                Text = intensity == JmaIntensity.Unknown ? "不明" : intensity.ToCode(),
+            });
+            LegendItemsPanel.Children.Add(row);
+        }
+    }
+
+    internal static IReadOnlyList<JmaIntensity> BuildLegendIntensities(
+        IEnumerable<JmaIntensity> intensities)
+    {
+        JmaIntensity[] materialized = intensities
+            .Where(intensity => intensity is >= JmaIntensity.Unknown and <= JmaIntensity.Seven)
+            .ToArray();
+        var result = new List<JmaIntensity>();
+        if (materialized.Contains(JmaIntensity.Unknown))
+        {
+            result.Add(JmaIntensity.Unknown);
+        }
+
+        JmaIntensity maximum = materialized
+            .Where(IsKnownIntensity)
+            .DefaultIfEmpty(JmaIntensity.Unknown)
+            .Max();
+        for (int value = (int)JmaIntensity.One; value <= (int)maximum; value++)
+        {
+            result.Add((JmaIntensity)value);
+        }
+
+        return result;
     }
 
     private MapProjection CreateProjection(
