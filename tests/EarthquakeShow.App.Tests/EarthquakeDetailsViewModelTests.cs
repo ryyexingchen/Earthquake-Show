@@ -129,8 +129,11 @@ public sealed class EarthquakeDetailsViewModelTests
             OfflineMapGeometry.LoadFromJson(GeometryJson));
         using var details = new EarthquakeDetailsViewModel(page, map);
 
-        EarthquakeObservationTreeNode area = Assert.Single(
+        EarthquakeObservationTreeNode prefecture = Assert.Single(
             details.ObservationTreeNodes,
+            node => node.Kind == "都道府县");
+        EarthquakeObservationTreeNode area = Assert.Single(
+            prefecture.Children,
             node => node.Kind == "区域");
         EarthquakeObservationTreeNode municipality = Assert.Single(
             area.Children,
@@ -151,10 +154,10 @@ public sealed class EarthquakeDetailsViewModelTests
 
         details.ObservationSearchText = "熊本市";
         Assert.Single(details.ObservationTreeNodes);
-        Assert.Equal("熊本市", details.ObservationTreeNodes[0].Children[0].Name);
+        Assert.Equal("熊本県熊本", details.ObservationTreeNodes[0].Children[0].Name);
         details.ObservationSearchText = string.Empty;
         details.ShowHighestOnly = true;
-        Assert.Contains(details.ObservationTreeNodes, node => node.Kind == "区域");
+        Assert.Contains(details.ObservationTreeNodes, node => node.Kind == "都道府县");
         Assert.DoesNotContain(details.ObservationTreeNodes, node => node.Kind == "未映射");
     }
 

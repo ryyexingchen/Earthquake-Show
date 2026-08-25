@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.WebSockets;
 using System.Text;
 using EarthquakeShow.Core.Models;
+using EarthquakeShow.Core.Services;
 using EarthquakeShow.Infrastructure.Sources;
 using Xunit;
 
@@ -9,6 +10,39 @@ namespace EarthquakeShow.Infrastructure.Tests;
 
 public sealed class P2pQuakeEarthquakeSourceTests
 {
+    [Fact]
+    public async Task Fetch_RegionCatalog_MapsOfficialMunicipalityAndAreaCodes()
+    {
+        const string catalogJson = """
+            {
+              "prefectures": [{ "code": "43", "name": "熊本県" }],
+              "areas": [{ "code": "741", "name": "熊本県熊本", "prefectureCode": "43", "prefectureName": "熊本県" }],
+              "municipalities": [{ "code": "4320200", "name": "八代市", "prefectureCode": "43", "prefectureName": "熊本県", "areaCode": "741", "areaName": "熊本県熊本", "aliases": ["八代市"] }]
+            }
+            """;
+        const string payload = """
+            [{
+              "code": 551, "id": "catalog-p2p", "issue": { "correct": "None", "time": "2026/08/20 12:08:07", "type": "DetailScale" },
+              "earthquake": { "hypocenter": { "depth": 10, "latitude": 32.4, "longitude": 130.6, "magnitude": 2.9, "name": "熊本県熊本地方" }, "maxScale": 40, "time": "2026/08/20 12:04:00" },
+              "points": [{ "addr": "熊本県八代市平山新町", "pref": "熊本県", "scale": 30 }], "time": "2026/08/20 12:08:08.078"
+            }]
+            """;
+        using var httpClient = new HttpClient(new ResponseHandler(Response(HttpStatusCode.OK, payload)));
+        var source = new P2pQuakeEarthquakeSource(
+            httpClient,
+            "https://example.test/v2/jma/quake",
+            JmaIntensityRegionCatalog.Load(catalogJson));
+
+        EarthquakeReport report = Assert.Single((await source.FetchAsync()).Reports);
+
+        IntensityArea area = Assert.Single(report.IntensityAreas);
+        IntensityMunicipality municipality = Assert.Single(report.IntensityMunicipalities);
+        IntensityStation station = Assert.Single(report.IntensityStations);
+        Assert.Equal("741", area.Code);
+        Assert.Equal("4320200", municipality.Code);
+        Assert.Equal(municipality.Code, station.MunicipalityCode);
+    }
+
     [Fact]
     public async Task Fetch_DetailScale_MapsHypocenterAndStations()
     {

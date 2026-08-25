@@ -795,11 +795,21 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         EarthquakeReport report)
     {
         var items = new List<EarthquakeObservationItemViewModel>();
+        items.AddRange(report.IntensityAreas
+            .GroupBy(area => (area.PrefectureCode, area.PrefectureName))
+            .Select(group => new EarthquakeObservationItemViewModel(
+                "都道府县",
+                group.Key.PrefectureName,
+                group.Key.PrefectureCode,
+                string.Empty,
+                group.Select(item => item.MaxIntensity).Aggregate(MaxIntensity),
+                GetIntensityText(group.Select(item => item.MaxIntensity).Aggregate(MaxIntensity)),
+                null)));
         items.AddRange(report.IntensityAreas.Select(area => new EarthquakeObservationItemViewModel(
             "区域",
             area.Name,
             area.Code,
-            area.PrefectureName,
+            area.PrefectureCode,
             area.MaxIntensity,
             GetIntensityText(area.MaxIntensity),
             _map.TryGetAreaFocusCoordinate(area.Code, out GeoCoordinate coordinate)
@@ -834,6 +844,8 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
     private static IReadOnlyList<EarthquakeObservationTreeNode> BuildObservationTree(
         IReadOnlyList<EarthquakeObservationItemViewModel> observations)
     {
+        var prefectureNodes = new Dictionary<string, EarthquakeObservationTreeNode>(StringComparer.Ordinal);
+        var prefectureChildren = new Dictionary<string, List<EarthquakeObservationTreeNode>>(StringComparer.Ordinal);
         var areaNodes = new Dictionary<string, EarthquakeObservationTreeNode>(StringComparer.Ordinal);
         var areaChildren = new Dictionary<string, List<EarthquakeObservationTreeNode>>(StringComparer.Ordinal);
         var municipalityNodes = new Dictionary<string, EarthquakeObservationTreeNode>(StringComparer.Ordinal);
@@ -841,10 +853,24 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         var unmappedNodes = new List<EarthquakeObservationTreeNode>();
         var stationCodes = new HashSet<string>(StringComparer.Ordinal);
 
+        foreach (EarthquakeObservationItemViewModel observation in observations.Where(item => item.Kind == "都道府县"))
+        {
+            EarthquakeObservationTreeNode node = EarthquakeObservationTreeNode.FromObservation(observation);
+            if (string.IsNullOrWhiteSpace(observation.Code) ||
+                !prefectureNodes.TryAdd(observation.Code, node))
+            {
+                unmappedNodes.Add(node);
+                continue;
+            }
+
+            prefectureChildren[observation.Code] = [];
+        }
+
         foreach (EarthquakeObservationItemViewModel observation in observations.Where(item => item.Kind == "区域"))
         {
             EarthquakeObservationTreeNode node = EarthquakeObservationTreeNode.FromObservation(observation);
             if (string.IsNullOrWhiteSpace(observation.Code) ||
+                !prefectureNodes.ContainsKey(observation.ParentText) ||
                 !areaNodes.TryAdd(observation.Code, node))
             {
                 unmappedNodes.Add(node);
@@ -852,6 +878,7 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             }
 
             areaChildren[observation.Code] = [];
+            prefectureChildren[observation.ParentText].Add(node);
         }
 
         foreach (EarthquakeObservationItemViewModel observation in observations.Where(item => item.Kind == "市町村"))
@@ -884,16 +911,20 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         }
 
         var roots = new List<EarthquakeObservationTreeNode>();
-        foreach (EarthquakeObservationTreeNode area in areaNodes.Values)
+        foreach (EarthquakeObservationTreeNode prefecture in prefectureNodes.Values)
         {
-            var municipalities = areaChildren[area.Code]
-                .Select(municipality => municipality.WithChildren(
-                    municipalityChildren[municipality.Code]
+            var areas = prefectureChildren[prefecture.Code]
+                .Select(area => area.WithChildren(
+                    areaChildren[area.Code]
+                        .Select(municipality => municipality.WithChildren(
+                            municipalityChildren[municipality.Code]
+                                .OrderByDescending(item => item.Intensity)
+                                .ThenBy(item => item.Name, StringComparer.Ordinal)))
                         .OrderByDescending(item => item.Intensity)
                         .ThenBy(item => item.Name, StringComparer.Ordinal)))
                 .OrderByDescending(item => item.Intensity)
                 .ThenBy(item => item.Name, StringComparer.Ordinal);
-            roots.Add(area.WithChildren(municipalities));
+            roots.Add(prefecture.WithChildren(areas));
         }
 
         if (unmappedNodes.Count > 0)
@@ -1320,6 +1351,13 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             JmaIntensity.Seven => "7",
             _ => "不明",
         };
+    }
+
+    private static JmaIntensity MaxIntensity(JmaIntensity left, JmaIntensity right)
+    {
+        return left == JmaIntensity.Unknown ? right :
+            right == JmaIntensity.Unknown ? left :
+            (JmaIntensity)Math.Max((int)left, (int)right);
     }
 
     private static string GetIntensityKind(JmaIntensity intensity)

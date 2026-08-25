@@ -27,6 +27,7 @@ public sealed class SqliteEarthquakeEventRepository :
     private readonly string _databasePath;
     private readonly ImmutableArray<IRealtimeEarthquakeSource> _realtimeSources;
     private readonly JmaStationCoordinateCatalog? _stationCatalog;
+    private readonly JmaIntensityRegionCatalog? _regionCatalog;
     private ImmutableArray<EarthquakeReport> _reports = [];
     private ImmutableArray<EarthquakeEvent> _events = [];
     private ImmutableArray<SourceStatus> _sourceStatuses = [];
@@ -35,18 +36,21 @@ public sealed class SqliteEarthquakeEventRepository :
     public SqliteEarthquakeEventRepository(
         string databasePath,
         IRealtimeEarthquakeSource? realtimeSource = null,
-        JmaStationCoordinateCatalog? stationCatalog = null)
+        JmaStationCoordinateCatalog? stationCatalog = null,
+        JmaIntensityRegionCatalog? regionCatalog = null)
         : this(
             databasePath,
             realtimeSource is null ? [] : [realtimeSource],
-            stationCatalog)
+            stationCatalog,
+            regionCatalog)
     {
     }
 
     public SqliteEarthquakeEventRepository(
         string databasePath,
         IEnumerable<IRealtimeEarthquakeSource> realtimeSources,
-        JmaStationCoordinateCatalog? stationCatalog = null)
+        JmaStationCoordinateCatalog? stationCatalog = null,
+        JmaIntensityRegionCatalog? regionCatalog = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
         ArgumentNullException.ThrowIfNull(realtimeSources);
@@ -55,6 +59,7 @@ public sealed class SqliteEarthquakeEventRepository :
             .Where(source => source is not null)
             .ToImmutableArray();
         _stationCatalog = stationCatalog;
+        _regionCatalog = regionCatalog;
     }
 
     public event EventHandler<EarthquakeEventsChangedEventArgs>? EventsChanged;
@@ -637,7 +642,8 @@ public sealed class SqliteEarthquakeEventRepository :
                     report.ReportCode,
                     report.Source,
                     ReceivedAt: report.ReceivedAt,
-                    StationCatalog: _stationCatalog));
+                    StationCatalog: _stationCatalog,
+                    RegionCatalog: _regionCatalog));
         }
         catch (XmlException)
         {

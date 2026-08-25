@@ -256,6 +256,33 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public async Task SelectedP2pEvent_UsesOfficialMunicipalityCodeForMapLayer()
+    {
+        EarthquakeReport report = CreateReport() with
+        {
+            Source = new SourceReference("p2pquake", "p2p-map"),
+            IntensityMunicipalities =
+            [new IntensityMunicipality("4320200", "八代市", "741", JmaIntensity.Four)],
+            IntensityStations = [],
+        };
+        const string municipalityGeometry = """
+            {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"municipalityCode":"4320200","name":"八代市"},"geometry":{"type":"Polygon","coordinates":[[[130.4,32.4],[131,32.4],[131,33.1],[130.4,33.1],[130.4,32.4]]]}}]}
+            """;
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson),
+            OfflineMapGeometry.LoadFromJson(municipalityGeometry));
+
+        EarthquakeMapMunicipality municipality = Assert.Single(map.Municipalities);
+        Assert.Equal("4320200", municipality.Code);
+        Assert.Equal(JmaIntensity.Four, municipality.Intensity);
+        Assert.Equal(0, map.UnmappedMunicipalityCount);
+    }
+
+    [Fact]
     public async Task SelectedEventFocus_UsesAreaWhenIntensityAlertHasNoMarkers()
     {
         EarthquakeReport report = CreateReport() with

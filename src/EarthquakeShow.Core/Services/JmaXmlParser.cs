@@ -14,7 +14,8 @@ public sealed record JmaXmlParseOptions(
     SourceReference Source,
     DateTimeOffset? ReceivedAt = null,
     IReadOnlyDictionary<string, GeoCoordinate>? StationCoordinates = null,
-    JmaStationCoordinateCatalog? StationCatalog = null);
+    JmaStationCoordinateCatalog? StationCatalog = null,
+    JmaIntensityRegionCatalog? RegionCatalog = null);
 
 public sealed record JmaXmlFixture(
     string FilePath,
@@ -48,7 +49,8 @@ public static class JmaXmlParser
             JmaIntensity MaxIntensity) = ParseIntensity(
                 root,
                 options.StationCoordinates,
-                options.StationCatalog);
+                options.StationCatalog,
+                options.RegionCatalog);
 
         string reportCode = options.ReportCode.Trim();
         SourceReference source = options.Source with
@@ -182,7 +184,8 @@ public static class JmaXmlParser
         JmaIntensity MaxIntensity) ParseIntensity(
         XElement root,
         IReadOnlyDictionary<string, GeoCoordinate>? stationCoordinates,
-        JmaStationCoordinateCatalog? stationCatalog)
+        JmaStationCoordinateCatalog? stationCatalog,
+        JmaIntensityRegionCatalog? regionCatalog)
     {
         XElement? observation = FirstDescendant(root, "Observation");
         if (observation is null)
@@ -202,11 +205,22 @@ public static class JmaXmlParser
             foreach (XElement area in ChildElements(prefecture, "Area"))
             {
                 string areaCode = FirstChildValue(area, "Code") ?? string.Empty;
+                string areaName = FirstChildValue(area, "Name") ?? areaCode;
+                string resolvedPrefectureCode = prefectureCode;
+                string resolvedPrefectureName = prefectureName;
+                if (regionCatalog is not null &&
+                    ((regionCatalog.TryGetArea(areaCode, out JmaIntensityAreaDefinition definition) &&
+                        string.Equals(definition.Name, areaName, StringComparison.Ordinal)) ||
+                     (regionCatalog.TryResolveAreaName(areaName, out definition))))
+                {
+                    resolvedPrefectureCode = definition.PrefectureCode;
+                    resolvedPrefectureName = definition.PrefectureName;
+                }
                 areas.Add(new IntensityArea(
                     areaCode,
-                    FirstChildValue(area, "Name") ?? areaCode,
-                    prefectureCode,
-                    prefectureName,
+                    areaName,
+                    resolvedPrefectureCode,
+                    resolvedPrefectureName,
                     ParseIntensityValue(FirstChildValue(area, "MaxInt"))));
 
                 foreach (XElement city in ChildElements(area, "City"))

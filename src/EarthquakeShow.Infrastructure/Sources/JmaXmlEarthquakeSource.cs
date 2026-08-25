@@ -23,6 +23,7 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncreme
     private readonly Uri _longEndpoint;
     private readonly IReadOnlyDictionary<string, GeoCoordinate>? _stationCoordinates;
     private readonly JmaStationCoordinateCatalog? _stationCatalog;
+    private readonly JmaIntensityRegionCatalog? _regionCatalog;
     private readonly int _maxEntries;
 
     public JmaXmlEarthquakeSource(
@@ -31,11 +32,13 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncreme
         string endpoint = DefaultEndpoint,
         int maxEntries = 20,
         JmaStationCoordinateCatalog? stationCatalog = null,
-        string longEndpoint = DefaultLongEndpoint)
+        string longEndpoint = DefaultLongEndpoint,
+        JmaIntensityRegionCatalog? regionCatalog = null)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _stationCoordinates = stationCoordinates;
         _stationCatalog = stationCatalog;
+        _regionCatalog = regionCatalog;
         ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
         if (!Uri.TryCreate(endpoint, UriKind.Absolute, out Uri? endpointUri) ||
             endpointUri.Scheme is not ("http" or "https"))
@@ -171,7 +174,8 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncreme
                                 xml),
                             ReceivedAt: checkedAt,
                             StationCoordinates: _stationCoordinates,
-                            StationCatalog: _stationCatalog)));
+                            StationCatalog: _stationCatalog,
+                            RegionCatalog: _regionCatalog)));
                 }
                 catch (HttpRequestException exception)
                 {

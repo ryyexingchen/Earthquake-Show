@@ -124,6 +124,36 @@ public sealed class JmaXmlParserTests
     }
 
     [Fact]
+    public void Parse_RegionCatalogDerivesPrefectureFromAreaName()
+    {
+        const string catalogJson = """
+            {
+              "prefectures": [{ "code": "08", "name": "茨城県" }],
+              "areas": [{ "code": "301", "name": "茨城県南部", "prefectureCode": "08", "prefectureName": "茨城県" }],
+              "municipalities": []
+            }
+            """;
+        const string xml = """
+            <Report xmlns="http://xml.kishou.go.jp/jmaxml1/">
+              <Control><DateTime>2026-08-23T00:00:00Z</DateTime><Status>通常</Status></Control>
+              <Head xmlns="http://xml.kishou.go.jp/jmaxml1/informationBasis1/"><ReportDateTime>2026-08-23T09:00:00+09:00</ReportDateTime><EventID>catalog-prefecture</EventID><InfoType>発表</InfoType></Head>
+              <Body xmlns="http://xml.kishou.go.jp/jmaxml1/body/seismology1/"><Intensity><Observation><MaxInt>3</MaxInt><Pref><Name>旧名称</Name><Code>99</Code><Area><Name>茨城県南部</Name><Code>301</Code><MaxInt>3</MaxInt></Area></Pref></Observation></Intensity></Body>
+            </Report>
+            """;
+
+        EarthquakeReport report = JmaXmlParser.Parse(
+            xml,
+            new JmaXmlParseOptions(
+                "VXSE51",
+                new SourceReference("jma-xml", "catalog-prefecture"),
+                RegionCatalog: JmaIntensityRegionCatalog.Load(catalogJson)));
+
+        IntensityArea area = Assert.Single(report.IntensityAreas);
+        Assert.Equal("08", area.PrefectureCode);
+        Assert.Equal("茨城県", area.PrefectureName);
+    }
+
+    [Fact]
     public void Parse_StationCodeMissingFromIndex_UsesUniqueNormalizedName()
     {
         const string catalogJson = """

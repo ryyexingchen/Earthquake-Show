@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using EarthquakeShow.Core.Models;
+using EarthquakeShow.Core.Services;
 
 namespace EarthquakeShow.Infrastructure.Sources;
 
@@ -27,10 +28,12 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
 
     private readonly HttpClient _httpClient;
     private readonly Uri _endpoint;
+    private readonly JmaIntensityRegionCatalog? _regionCatalog;
 
     public P2pQuakeEarthquakeSource(
         HttpClient httpClient,
-        string endpoint = DefaultEndpoint)
+        string endpoint = DefaultEndpoint,
+        JmaIntensityRegionCatalog? regionCatalog = null)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
@@ -41,6 +44,7 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
         }
 
         _endpoint = endpointUri;
+        _regionCatalog = regionCatalog;
     }
 
     public string SourceId => SourceName;
@@ -69,7 +73,7 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
 
             string payload = await response.Content.ReadAsStringAsync(cancellationToken)
                 .ConfigureAwait(false);
-            ImmutableArray<EarthquakeReport> reports = ParseReports(payload, checkedAt, _endpoint);
+            ImmutableArray<EarthquakeReport> reports = ParseReports(payload, checkedAt, _endpoint, _regionCatalog);
             DateTimeOffset? latestReceivedAt = reports.IsDefaultOrEmpty
                 ? null
                 : reports.Max(report => (DateTimeOffset?)report.ReceivedAt);
@@ -111,7 +115,8 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
     internal static ImmutableArray<EarthquakeReport> ParseReports(
         string payload,
         DateTimeOffset receivedAt,
-        Uri endpoint)
+        Uri endpoint,
+        JmaIntensityRegionCatalog? regionCatalog = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(payload);
         using JsonDocument document = JsonDocument.Parse(payload);
@@ -123,7 +128,7 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
         var reports = ImmutableArray.CreateBuilder<EarthquakeReport>();
         foreach (JsonElement element in document.RootElement.EnumerateArray())
         {
-            reports.Add(ParseReport(element, receivedAt, endpoint));
+            reports.Add(ParseReport(element, receivedAt, endpoint, regionCatalog));
         }
 
         return reports.ToImmutable();
@@ -132,18 +137,20 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
     internal static EarthquakeReport ParseReport(
         JsonElement element,
         DateTimeOffset receivedAt,
-        Uri endpoint)
+        Uri endpoint,
+        JmaIntensityRegionCatalog? regionCatalog = null)
     {
         P2pQuakeItem item = element.Deserialize<P2pQuakeItem>(JsonOptions)
             ?? throw new JsonException("P2PQuake 报文不能为空。");
-        return ToReport(item, element.GetRawText(), receivedAt, endpoint);
+        return ToReport(item, element.GetRawText(), receivedAt, endpoint, regionCatalog);
     }
 
     private static EarthquakeReport ToReport(
         P2pQuakeItem item,
         string rawPayload,
         DateTimeOffset receivedAt,
-        Uri endpoint)
+        Uri endpoint,
+        JmaIntensityRegionCatalog? regionCatalog)
     {
         if (string.IsNullOrWhiteSpace(item.Id))
         {
@@ -176,7 +183,7 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
         JmaIntensity maxIntensity = ParseIntensity(item.Earthquake.MaxScale);
         (ImmutableArray<IntensityArea> areas,
             ImmutableArray<IntensityMunicipality> municipalities,
-            ImmutableArray<IntensityStation> stations) = ParseObservations(item.Points);
+            ImmutableArray<IntensityStation> stations) = ParseObservations(item.Points, regionCatalog);
 
         return new EarthquakeReport
         {
@@ -209,14 +216,15 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
         ImmutableArray<IntensityArea> Areas,
         ImmutableArray<IntensityMunicipality> Municipalities,
         ImmutableArray<IntensityStation> Stations) ParseObservations(
-        P2pPoint[]? points)
+        P2pPoint[]? points,
+        JmaIntensityRegionCatalog? regionCatalog)
     {
         if (points is null or { Length: 0 })
         {
             return ([], [], []);
         }
 
-        var areas = new Dictionary<string, (string Name, JmaIntensity Intensity)>(StringComparer.Ordinal);
+        var areas = new Dictionary<string, (string Name, string PrefectureCode, string PrefectureName, JmaIntensity Intensity)>(StringComparer.Ordinal);
         var municipalities = new Dictionary<string, (string Name, string AreaCode, JmaIntensity Intensity)>(StringComparer.Ordinal);
         var stations = ImmutableArray.CreateBuilder<IntensityStation>();
         foreach (P2pPoint point in points)
@@ -228,14 +236,34 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
 
             string prefecture = NullIfUnknown(point.Prefecture) ?? "unknown";
             string address = point.Addr.Trim();
-            string municipalityName = ParseMunicipalityName(address, prefecture);
-            string areaCode = $"p2p-area:{prefecture}";
-            string municipalityCode = $"p2p-municipality:{prefecture}:{municipalityName}";
+            JmaIntensityMunicipalityDefinition? municipalityDefinition = null;
+            JmaIntensityMunicipalityDefinition resolvedDefinition = null!;
+            bool resolved = regionCatalog is not null &&
+                regionCatalog.TryResolveMunicipality(
+                    prefecture,
+                    address,
+                    out resolvedDefinition);
+            if (resolved)
+            {
+                municipalityDefinition = resolvedDefinition;
+            }
+            string municipalityName = resolved
+                ? municipalityDefinition!.Name
+                : ParseMunicipalityName(address, prefecture);
+            string areaCode = resolved ? municipalityDefinition!.AreaCode : $"p2p-area:{prefecture}";
+            string municipalityCode = resolved
+                ? municipalityDefinition!.Code
+                : $"p2p-municipality:{prefecture}:{municipalityName}";
+            string prefectureCode = resolved
+                ? municipalityDefinition!.PrefectureCode
+                : $"p2p-pref:{prefecture}";
+            string prefectureName = resolved ? municipalityDefinition!.PrefectureName : prefecture;
+            string areaName = resolved ? municipalityDefinition!.AreaName : prefecture;
             JmaIntensity intensity = ParseIntensity(point.Scale);
             areas[areaCode] = UpdateIntensity(
-                areas.TryGetValue(areaCode, out (string Name, JmaIntensity Intensity) area)
+                areas.TryGetValue(areaCode, out (string Name, string PrefectureCode, string PrefectureName, JmaIntensity Intensity) area)
                     ? area
-                    : (prefecture, JmaIntensity.Unknown),
+                    : (areaName, prefectureCode, prefectureName, JmaIntensity.Unknown),
                 intensity);
             municipalities[municipalityCode] = UpdateMunicipalityIntensity(
                 municipalities.TryGetValue(municipalityCode, out (string Name, string AreaCode, JmaIntensity Intensity) municipality)
@@ -255,8 +283,8 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
             areas.Select(item => new IntensityArea(
                     item.Key,
                     item.Value.Name,
-                    $"p2p-pref:{item.Value.Name}",
-                    item.Value.Name,
+                    item.Value.PrefectureCode,
+                    item.Value.PrefectureName,
                     item.Value.Intensity))
                 .OrderBy(item => item.Name, StringComparer.Ordinal)
                 .ToImmutableArray(),
@@ -279,11 +307,11 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
         return match.Success ? match.Groups["name"].Value : "unknown";
     }
 
-    private static (string Name, JmaIntensity Intensity) UpdateIntensity(
-        (string Name, JmaIntensity Intensity) current,
+    private static (string Name, string PrefectureCode, string PrefectureName, JmaIntensity Intensity) UpdateIntensity(
+        (string Name, string PrefectureCode, string PrefectureName, JmaIntensity Intensity) current,
         JmaIntensity value)
     {
-        return (current.Name, MaxIntensity(current.Intensity, value));
+        return (current.Name, current.PrefectureCode, current.PrefectureName, MaxIntensity(current.Intensity, value));
     }
 
     private static (string Name, string AreaCode, JmaIntensity Intensity) UpdateMunicipalityIntensity(

@@ -63,6 +63,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         Settings = new(settingsLoad, ApplyWebSocketSettingsAsync);
         JmaStationCoordinateCatalog stationCatalog = FixedJmaXmlDataLoader.LoadStationCatalog();
         _seedReports = FixedJmaXmlDataLoader.LoadReports(stationCatalog);
+        JmaIntensityRegionCatalog? regionCatalog = LoadRegionCatalog();
         if (enableNetwork)
         {
             _httpClient = new HttpClient
@@ -72,8 +73,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("EarthquakeShow/0.41.0");
             JmaXmlEarthquakeSource xmlSource = new(
                 _httpClient,
-                stationCatalog: stationCatalog);
-            P2pQuakeEarthquakeSource p2pQuakeSource = new(_httpClient);
+                stationCatalog: stationCatalog,
+                regionCatalog: regionCatalog);
+            P2pQuakeEarthquakeSource p2pQuakeSource = new(
+                _httpClient,
+                regionCatalog: regionCatalog);
             _realtimeSources = [xmlSource, p2pQuakeSource];
             _tsunamiSource = tsunamiSource ?? new JmaTsunamiXmlSource(_httpClient);
             _streamingSourceFactory = streamingSource is null
@@ -94,7 +98,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         _repository = new SqliteEarthquakeEventRepository(
             cachePath ?? GetDefaultCachePath(),
             _realtimeSources,
-            stationCatalog);
+            stationCatalog,
+            regionCatalog);
         _tsunamiRepository = new SqliteTsunamiReportRepository(
             cachePath ?? GetDefaultCachePath(),
             _tsunamiSource);
@@ -571,6 +576,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         return delay.TotalMinutes >= 1
             ? $"{delay.TotalMinutes:0.#} 分钟"
             : $"{Math.Max(1, delay.TotalSeconds):0} 秒";
+    }
+
+    private static JmaIntensityRegionCatalog? LoadRegionCatalog()
+    {
+        string path = Path.Combine(
+            AppContext.BaseDirectory,
+            "Assets",
+            "Data",
+            "Intensity",
+            "jma-intensity-regions.json");
+        return File.Exists(path) ? JmaIntensityRegionCatalog.LoadFile(path) : null;
     }
 
     private static string GetDefaultCachePath()
