@@ -58,6 +58,7 @@ public partial class EarthquakeMapView : UserControl
     private void OnSizeChanged(object sender, SizeChangedEventArgs e)
     {
         RequestRender();
+        _ = EnsureMapDetailLevelAsync();
     }
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -185,7 +186,7 @@ public partial class EarthquakeMapView : UserControl
         e.Handled = true;
     }
 
-    private void OnMapMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    private async void OnMapMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton != MouseButton.Left || !_isPanning)
         {
@@ -193,12 +194,18 @@ public partial class EarthquakeMapView : UserControl
         }
 
         StopPanning();
+        await EnsureMapDetailLevelAsync();
         e.Handled = true;
     }
 
     private void OnMapLostMouseCapture(object sender, MouseEventArgs e)
     {
+        bool wasPanning = _isPanning;
         StopPanning();
+        if (wasPanning)
+        {
+            _ = EnsureMapDetailLevelAsync();
+        }
     }
 
     private async void OnMapMouseWheel(object sender, MouseWheelEventArgs e)
@@ -247,12 +254,35 @@ public partial class EarthquakeMapView : UserControl
         try
         {
             await ViewModel.EnsureDetailLevelForZoomAsync(
-                preferMedium: preferMedium);
+                preferMedium: preferMedium,
+                viewportBounds: GetDetailViewportBounds());
         }
         catch (ObjectDisposedException)
         {
             // 控件卸载期间忽略异步加载竞态。
         }
+    }
+
+    private MapGeometryBounds? GetDetailViewportBounds()
+    {
+        if (MapCanvas.ActualWidth < 10 || MapCanvas.ActualHeight < 10)
+        {
+            return null;
+        }
+
+        MapProjection projection = CreateProjection();
+        GeoCoordinate topLeft = projection.Unproject(new Point(0, 0));
+        GeoCoordinate bottomRight = projection.Unproject(
+            new Point(MapCanvas.ActualWidth, MapCanvas.ActualHeight));
+        double longitudeSpan = Math.Abs(bottomRight.Longitude - topLeft.Longitude);
+        double latitudeSpan = Math.Abs(bottomRight.Latitude - topLeft.Latitude);
+        double longitudeMargin = Math.Max(0.1, longitudeSpan * 0.2);
+        double latitudeMargin = Math.Max(0.1, latitudeSpan * 0.2);
+        return new MapGeometryBounds(
+            Math.Min(topLeft.Longitude, bottomRight.Longitude) - longitudeMargin,
+            Math.Max(topLeft.Longitude, bottomRight.Longitude) + longitudeMargin,
+            Math.Min(topLeft.Latitude, bottomRight.Latitude) - latitudeMargin,
+            Math.Max(topLeft.Latitude, bottomRight.Latitude) + latitudeMargin);
     }
 
     private void StopPanning()

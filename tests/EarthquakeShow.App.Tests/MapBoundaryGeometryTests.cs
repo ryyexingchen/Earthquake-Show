@@ -56,6 +56,34 @@ public sealed class MapBoundaryGeometryTests
         Assert.Throws<FormatException>(() => OfflineMapBoundaryGeometry.LoadFromJson(json));
     }
 
+    [Fact]
+    public void LoadFromJson_FiltersLinesOutsideViewportBounds()
+    {
+        OfflineMapBoundaryGeometry geometry = OfflineMapBoundaryGeometry.LoadFromJson(
+            ValidJson,
+            new MapGeometryBounds(129.5, 130.5, 29.5, 30.5));
+
+        Assert.Equal(2, geometry.Boundaries.Length);
+        Assert.Single(geometry.GetForArea("A"));
+        Assert.Equal(2, geometry.GetForArea("B").Count);
+    }
+
+    [Fact]
+    public void FromPolygons_CreatesIndexedHighDetailOutlines()
+    {
+        OfflineMapGeometry geometry = OfflineMapGeometry.LoadFromJson(
+            """
+            {"type":"FeatureCollection","metadata":{"source":"高精度区域"},"features":[{"type":"Feature","properties":{"areaCode":"100","name":"区域"},"geometry":{"type":"Polygon","coordinates":[[[130,32],[131,32],[131,33],[130,33],[130,32]]]}}]}
+            """);
+
+        OfflineMapBoundaryGeometry boundaries =
+            OfflineMapBoundaryGeometry.FromPolygons(geometry);
+
+        Assert.Single(boundaries.Boundaries);
+        Assert.Single(boundaries.GetForArea("100"));
+        Assert.Contains("区域轮廓", boundaries.Source);
+    }
+
     private const string ValidJson = """
         {
           "type":"FeatureCollection",

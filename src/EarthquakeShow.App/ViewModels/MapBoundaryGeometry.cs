@@ -64,11 +64,30 @@ public sealed class OfflineMapBoundaryGeometry
             : [];
     }
 
-    public static OfflineMapBoundaryGeometry LoadFromJson(string json)
+    public static OfflineMapBoundaryGeometry LoadFromJson(
+        string json,
+        MapGeometryBounds? filterBounds = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
 
         using JsonDocument document = JsonDocument.Parse(json);
+        return LoadFromDocument(document, filterBounds);
+    }
+
+    public static OfflineMapBoundaryGeometry LoadFromFile(
+        string path,
+        MapGeometryBounds? filterBounds = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        using FileStream stream = File.OpenRead(path);
+        using JsonDocument document = JsonDocument.Parse(stream);
+        return LoadFromDocument(document, filterBounds);
+    }
+
+    private static OfflineMapBoundaryGeometry LoadFromDocument(
+        JsonDocument document,
+        MapGeometryBounds? filterBounds)
+    {
         JsonElement root = document.RootElement;
         if (!root.TryGetProperty("features", out JsonElement features) ||
             features.ValueKind != JsonValueKind.Array)
@@ -118,7 +137,8 @@ public sealed class OfflineMapBoundaryGeometry
                         boundariesByArea,
                         areaCode1,
                         areaCode2,
-                        coordinates);
+                        coordinates,
+                        filterBounds);
                     break;
                 case "MultiLineString":
                     if (coordinates.ValueKind == JsonValueKind.Array)
@@ -131,7 +151,8 @@ public sealed class OfflineMapBoundaryGeometry
                                 boundariesByArea,
                                 areaCode1,
                                 areaCode2,
-                                line);
+                                line,
+                                filterBounds);
                         }
                     }
                     break;
@@ -145,7 +166,7 @@ public sealed class OfflineMapBoundaryGeometry
             }
         }
 
-        if (boundaries.Count == 0 || points.Count == 0)
+        if ((boundaries.Count == 0 || points.Count == 0) && filterBounds is null)
         {
             throw new FormatException("边界 GeoJSON 没有可用的 LineString。");
         }
@@ -158,7 +179,9 @@ public sealed class OfflineMapBoundaryGeometry
             item => item.Key,
             item => item.Value.ToImmutableArray(),
             StringComparer.Ordinal);
-        MapGeometryBounds bounds = CalculateBounds(points);
+        MapGeometryBounds bounds = points.Count > 0
+            ? CalculateBounds(points)
+            : filterBounds!.Value;
         return new OfflineMapBoundaryGeometry(
             boundaries.ToImmutable(),
             immutableIndex,
@@ -172,10 +195,48 @@ public sealed class OfflineMapBoundaryGeometry
             bounds);
     }
 
-    public static OfflineMapBoundaryGeometry LoadFromFile(string path)
+    public static OfflineMapBoundaryGeometry FromPolygons(OfflineMapGeometry geometry)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        return LoadFromJson(File.ReadAllText(path));
+        ArgumentNullException.ThrowIfNull(geometry);
+
+        var boundaries = ImmutableArray.CreateBuilder<EarthquakeMapBoundary>();
+        var boundariesByArea = new Dictionary<string, List<EarthquakeMapBoundary>>(
+            StringComparer.Ordinal);
+        foreach (MapPolygonGeometry polygon in geometry.Polygons)
+        {
+            IEnumerable<ImmutableArray<GeoCoordinate>> rings = polygon.Rings.IsDefaultOrEmpty
+                ? [polygon.Coordinates]
+                : polygon.Rings;
+            foreach (ImmutableArray<GeoCoordinate> ring in rings)
+            {
+                if (ring.Length < 2)
+                {
+                    continue;
+                }
+
+                var boundary = new EarthquakeMapBoundary(polygon.Code, string.Empty, ring);
+                boundaries.Add(boundary);
+                AddToIndex(boundariesByArea, polygon.Code, boundary);
+            }
+        }
+
+        ImmutableArray<EarthquakeMapBoundary> immutableBoundaries = boundaries.ToImmutable();
+        ImmutableDictionary<string, ImmutableArray<EarthquakeMapBoundary>> immutableIndex =
+            boundariesByArea.ToImmutableDictionary(
+                item => item.Key,
+                item => item.Value.ToImmutableArray(),
+                StringComparer.Ordinal);
+        return new OfflineMapBoundaryGeometry(
+            immutableBoundaries,
+            immutableIndex,
+            $"{geometry.Source} · 区域轮廓",
+            "derived-high",
+            geometry.IsOfficialBoundary,
+            geometry.InvalidGeometryCount,
+            0,
+            0,
+            0,
+            geometry.Bounds);
     }
 
     private static void AddLine(
@@ -184,9 +245,15 @@ public sealed class OfflineMapBoundaryGeometry
         Dictionary<string, List<EarthquakeMapBoundary>> boundariesByArea,
         string areaCode1,
         string areaCode2,
-        JsonElement coordinates)
+        JsonElement coordinates,
+        MapGeometryBounds? filterBounds)
     {
         if (!TryReadLine(coordinates, out ImmutableArray<GeoCoordinate> line))
+        {
+            return;
+        }
+
+        if (filterBounds is MapGeometryBounds bounds && !Intersects(line, bounds))
         {
             return;
         }
@@ -256,6 +323,17 @@ public sealed class OfflineMapBoundaryGeometry
             points.Max(item => item.Longitude),
             points.Min(item => item.Latitude),
             points.Max(item => item.Latitude));
+    }
+
+    private static bool Intersects(
+        ImmutableArray<GeoCoordinate> line,
+        MapGeometryBounds bounds)
+    {
+        return line.Length > 0 &&
+            line.Min(item => item.Longitude) <= bounds.MaxLongitude &&
+            line.Max(item => item.Longitude) >= bounds.MinLongitude &&
+            line.Min(item => item.Latitude) <= bounds.MaxLatitude &&
+            line.Max(item => item.Latitude) >= bounds.MinLatitude;
     }
 
     private static string? GetString(JsonElement element, string propertyName)

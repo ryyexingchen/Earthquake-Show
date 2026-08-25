@@ -58,6 +58,24 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public void LoadFromJson_FiltersPolygonsOutsideViewportBounds()
+    {
+        OfflineMapGeometry geometry = OfflineMapGeometry.LoadFromJson(
+            GeometryJson,
+            new MapGeometryBounds(130.2, 130.8, 32.2, 32.8));
+
+        Assert.Single(geometry.Polygons);
+        Assert.Equal("741", geometry.Polygons[0].Code);
+
+        OfflineMapGeometry emptyGeometry = OfflineMapGeometry.LoadFromJson(
+            GeometryJson,
+            new MapGeometryBounds(140, 141, 40, 41));
+        Assert.Empty(emptyGeometry.Polygons);
+        Assert.Equal(140, emptyGeometry.Bounds.MinLongitude);
+        Assert.Equal(141, emptyGeometry.Bounds.MaxLongitude);
+    }
+
+    [Fact]
     public async Task SelectedEvent_BuildsAreaHypocenterAndCoordinateStationLayers()
     {
         var report = CreateReport();
@@ -457,6 +475,7 @@ public sealed class EarthquakeMapViewModelTests
 
             Assert.Equal(MapDetailLevel.High, map.DetailLevel);
             Assert.Equal("高精度区域", map.GeometrySource);
+            Assert.Contains("区域轮廓", map.BoundaryGeometry?.Source);
         }
         finally
         {

@@ -48,7 +48,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     public const double MaxBigZoomLevel = 24;
     public const double MaximumZoomLevel = MaxBigZoomLevel;
     public const double MediumDetailZoomThreshold = 2;
-    public const double HighDetailZoomThreshold = 8;
+    public const double HighDetailZoomThreshold = 6;
 
     private readonly EarthquakePageViewModel _page;
     private readonly OfflineMapGeometry _overviewGeometry;
@@ -67,6 +67,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     private bool _isLoadingDetail;
     private string? _detailLoadError;
     private MapDetailLevel? _detailLoadErrorLevel;
+    private MapGeometryBounds? _highLoadedViewportBounds;
     private bool _isDisposed;
 
     public EarthquakeMapViewModel(
@@ -290,7 +291,8 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
     public async Task EnsureDetailLevelForZoomAsync(
         CancellationToken cancellationToken = default,
-        bool preferMedium = false)
+        bool preferMedium = false,
+        MapGeometryBounds? viewportBounds = null)
     {
         ThrowIfDisposed();
         MapDetailLevel desiredLevel = ZoomLevel > HighDetailZoomThreshold
@@ -314,7 +316,18 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        if (_detailLevel == desiredLevel || _lodResourceProvider is null)
+        if (_detailLevel == desiredLevel)
+        {
+            if (desiredLevel != MapDetailLevel.High ||
+                viewportBounds is null ||
+                _highLoadedViewportBounds is null ||
+                Contains(_highLoadedViewportBounds.Value, viewportBounds.Value))
+            {
+                return;
+            }
+        }
+
+        if (_lodResourceProvider is null)
         {
             return;
         }
@@ -329,7 +342,9 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         {
             MapGeometrySet geometrySet = await Task.Run(
                 () => desiredLevel == MapDetailLevel.High
-                    ? _lodResourceProvider.LoadHigh(loadCancellation.Token)
+                    ? _lodResourceProvider.LoadHigh(
+                        loadCancellation.Token,
+                        viewportBounds)
                     : _lodResourceProvider.LoadMedium(loadCancellation.Token),
                 loadCancellation.Token);
             loadCancellation.Token.ThrowIfCancellationRequested();
@@ -338,7 +353,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 return;
             }
 
-            ApplyGeometrySet(geometrySet, desiredLevel);
+            ApplyGeometrySet(geometrySet, desiredLevel, viewportBounds);
         }
         catch (OperationCanceledException)
         {
@@ -486,7 +501,10 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private void ApplyGeometrySet(MapGeometrySet geometrySet, MapDetailLevel detailLevel)
+    private void ApplyGeometrySet(
+        MapGeometrySet geometrySet,
+        MapDetailLevel detailLevel,
+        MapGeometryBounds? highViewportBounds = null)
     {
         _geometry = geometrySet.Areas;
         _municipalityGeometry = geometrySet.Municipalities;
@@ -494,6 +512,9 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         _detailLevel = detailLevel;
         _detailLoadError = null;
         _detailLoadErrorLevel = null;
+        _highLoadedViewportBounds = detailLevel == MapDetailLevel.High
+            ? highViewportBounds
+            : null;
         OnPropertyChanged(nameof(DetailLevel));
         OnPropertyChanged(nameof(DetailLoadError));
         OnPropertyChanged(nameof(GeometrySource));
@@ -503,6 +524,16 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(InvalidGeometryCount));
         OnPropertyChanged(nameof(StatusText));
         RebuildLayers();
+    }
+
+    private static bool Contains(
+        MapGeometryBounds outer,
+        MapGeometryBounds inner)
+    {
+        return outer.MinLongitude <= inner.MinLongitude &&
+            outer.MaxLongitude >= inner.MaxLongitude &&
+            outer.MinLatitude <= inner.MinLatitude &&
+            outer.MaxLatitude >= inner.MaxLatitude;
     }
 
     private void RebuildLayers()

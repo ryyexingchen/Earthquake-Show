@@ -52,7 +52,9 @@ public sealed class MapLodResourceProvider
         return new MapGeometrySet(areas, municipalities, boundaries);
     }
 
-    public MapGeometrySet LoadHigh(CancellationToken cancellationToken = default)
+    public MapGeometrySet LoadHigh(
+        CancellationToken cancellationToken = default,
+        MapGeometryBounds? viewportBounds = null)
     {
         if (string.IsNullOrWhiteSpace(_highAreasPath) ||
             string.IsNullOrWhiteSpace(_highMunicipalitiesPath))
@@ -61,13 +63,17 @@ public sealed class MapLodResourceProvider
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        OfflineMapGeometry areas = OfflineMapGeometry.LoadFromFile(_highAreasPath);
+        OfflineMapGeometry areas = OfflineMapGeometry.LoadFromFile(
+            _highAreasPath,
+            viewportBounds);
         cancellationToken.ThrowIfCancellationRequested();
-        OfflineMapGeometry municipalities = OfflineMapGeometry.LoadFromFile(_highMunicipalitiesPath);
+        OfflineMapGeometry municipalities = OfflineMapGeometry.LoadFromFile(
+            _highMunicipalitiesPath,
+            viewportBounds);
         cancellationToken.ThrowIfCancellationRequested();
-        OfflineMapBoundaryGeometry? boundaries = string.IsNullOrWhiteSpace(_highBoundariesPath)
-            ? OfflineMapBoundaryGeometry.LoadFromFile(_boundariesPath)
-            : OfflineMapBoundaryGeometry.LoadFromFile(_highBoundariesPath);
+        OfflineMapBoundaryGeometry boundaries = string.IsNullOrWhiteSpace(_highBoundariesPath)
+            ? OfflineMapBoundaryGeometry.FromPolygons(areas)
+            : OfflineMapBoundaryGeometry.LoadFromFile(_highBoundariesPath, viewportBounds);
         return new MapGeometrySet(areas, municipalities, boundaries);
     }
 }

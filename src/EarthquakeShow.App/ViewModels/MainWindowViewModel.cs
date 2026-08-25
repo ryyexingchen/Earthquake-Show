@@ -134,8 +134,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
                 Path.Combine(mapRoot, "jma-earthquake-municipalities-medium.geojson"),
                 Path.Combine(mapRoot, "jma-earthquake-area-boundaries-medium.geojson"),
                 Path.Combine(mapRoot, "jma-earthquake-areas.geojson"),
-                Path.Combine(mapRoot, "jma-earthquake-municipalities.geojson"),
-                Path.Combine(mapRoot, "jma-earthquake-area-boundaries-medium.geojson")));
+                Path.Combine(mapRoot, "jma-earthquake-municipalities.geojson")));
         Details = new EarthquakeDetailsViewModel(EarthquakePage, Map);
         Layout = new WindowLayoutViewModel();
         UpdateClock();

@@ -53,11 +53,30 @@ public sealed class OfflineMapGeometry
 
     public MapGeometryBounds Bounds { get; }
 
-    public static OfflineMapGeometry LoadFromJson(string json)
+    public static OfflineMapGeometry LoadFromJson(
+        string json,
+        MapGeometryBounds? filterBounds = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
 
         using JsonDocument document = JsonDocument.Parse(json);
+        return LoadFromDocument(document, filterBounds);
+    }
+
+    public static OfflineMapGeometry LoadFromFile(
+        string path,
+        MapGeometryBounds? filterBounds = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        using FileStream stream = File.OpenRead(path);
+        using JsonDocument document = JsonDocument.Parse(stream);
+        return LoadFromDocument(document, filterBounds);
+    }
+
+    private static OfflineMapGeometry LoadFromDocument(
+        JsonDocument document,
+        MapGeometryBounds? filterBounds)
+    {
         JsonElement root = document.RootElement;
         if (!root.TryGetProperty("features", out JsonElement features) ||
             features.ValueKind != JsonValueKind.Array)
@@ -85,13 +104,25 @@ public sealed class OfflineMapGeometry
             switch (geometryType)
             {
                 case "Polygon":
-                    if (!AddPolygon(polygons, code, name, coordinates, officialBoundary))
+                    if (!AddPolygon(
+                            polygons,
+                            code,
+                            name,
+                            coordinates,
+                            officialBoundary,
+                            filterBounds))
                     {
                         invalidGeometryCount++;
                     }
                     break;
                 case "MultiPolygon":
-                    if (!AddMultiPolygon(polygons, code, name, coordinates, officialBoundary))
+                    if (!AddMultiPolygon(
+                            polygons,
+                            code,
+                            name,
+                            coordinates,
+                            officialBoundary,
+                            filterBounds))
                     {
                         invalidGeometryCount++;
                     }
@@ -101,7 +132,7 @@ public sealed class OfflineMapGeometry
             }
         }
 
-        if (polygons.Count == 0)
+        if (polygons.Count == 0 && filterBounds is null)
         {
             throw new FormatException("GeoJSON 没有可绘制的多边形。");
         }
@@ -110,8 +141,10 @@ public sealed class OfflineMapGeometry
             metadata.TryGetProperty("source", out JsonElement sourceElement)
             ? sourceElement.GetString() ?? "未注明来源"
             : "未注明来源";
-        bool allOfficial = polygons.All(item => item.IsOfficialBoundary);
-        MapGeometryBounds bounds = CalculateBounds(polygons);
+        bool allOfficial = polygons.Count > 0 && polygons.All(item => item.IsOfficialBoundary);
+        MapGeometryBounds bounds = polygons.Count > 0
+            ? CalculateBounds(polygons)
+            : filterBounds!.Value;
         return new OfflineMapGeometry(
             polygons.ToImmutable(),
             source,
@@ -120,18 +153,13 @@ public sealed class OfflineMapGeometry
             bounds);
     }
 
-    public static OfflineMapGeometry LoadFromFile(string path)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        return LoadFromJson(File.ReadAllText(path));
-    }
-
     private static bool AddPolygon(
         ImmutableArray<MapPolygonGeometry>.Builder polygons,
         string code,
         string name,
         JsonElement polygonCoordinates,
-        bool officialBoundary)
+        bool officialBoundary,
+        MapGeometryBounds? filterBounds)
     {
         if (polygonCoordinates.ValueKind != JsonValueKind.Array)
         {
@@ -140,7 +168,7 @@ public sealed class OfflineMapGeometry
 
         var rings = ImmutableArray.CreateBuilder<ImmutableArray<GeoCoordinate>>();
         ReadRings(polygonCoordinates, rings);
-        return AddRings(polygons, code, name, rings, officialBoundary);
+        return AddRings(polygons, code, name, rings, officialBoundary, filterBounds);
     }
 
     private static bool AddMultiPolygon(
@@ -148,7 +176,8 @@ public sealed class OfflineMapGeometry
         string code,
         string name,
         JsonElement multiPolygonCoordinates,
-        bool officialBoundary)
+        bool officialBoundary,
+        MapGeometryBounds? filterBounds)
     {
         if (multiPolygonCoordinates.ValueKind != JsonValueKind.Array)
         {
@@ -164,7 +193,7 @@ public sealed class OfflineMapGeometry
             }
         }
 
-        return AddRings(polygons, code, name, rings, officialBoundary);
+        return AddRings(polygons, code, name, rings, officialBoundary, filterBounds);
     }
 
     private static void ReadRings(
@@ -208,11 +237,18 @@ public sealed class OfflineMapGeometry
         string code,
         string name,
         ImmutableArray<ImmutableArray<GeoCoordinate>>.Builder rings,
-        bool officialBoundary)
+        bool officialBoundary,
+        MapGeometryBounds? filterBounds)
     {
         if (rings.Count == 0)
         {
             return false;
+        }
+
+        if (filterBounds is MapGeometryBounds bounds &&
+            !rings.Any(ring => Intersects(ring, bounds)))
+        {
+            return true;
         }
 
         ImmutableArray<GeoCoordinate> outerRing = rings[0];
@@ -240,6 +276,21 @@ public sealed class OfflineMapGeometry
             coordinates.Max(item => item.Longitude),
             coordinates.Min(item => item.Latitude),
             coordinates.Max(item => item.Latitude));
+    }
+
+    private static bool Intersects(
+        ImmutableArray<GeoCoordinate> ring,
+        MapGeometryBounds bounds)
+    {
+        if (ring.IsDefaultOrEmpty)
+        {
+            return false;
+        }
+
+        return ring.Min(item => item.Longitude) <= bounds.MaxLongitude &&
+            ring.Max(item => item.Longitude) >= bounds.MinLongitude &&
+            ring.Min(item => item.Latitude) <= bounds.MaxLatitude &&
+            ring.Max(item => item.Latitude) >= bounds.MinLatitude;
     }
 
     private static string? GetString(JsonElement element, string propertyName)
