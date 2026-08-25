@@ -48,9 +48,17 @@ public sealed class P2pQuakeEarthquakeSourceTests
         Assert.Equal(10, report.Hypocenter?.DepthKm);
         Assert.Equal(2.9, report.Magnitude?.Value);
         Assert.Equal(JmaIntensity.Four, report.MaxIntensity);
+        IntensityArea area = Assert.Single(report.IntensityAreas);
+        Assert.Equal("熊本県", area.Name);
+        Assert.Equal("p2p-pref:熊本県", area.PrefectureCode);
+        Assert.Equal(JmaIntensity.Three, area.MaxIntensity);
+        IntensityMunicipality municipality = Assert.Single(report.IntensityMunicipalities);
+        Assert.Equal("八代市", municipality.Name);
+        Assert.Equal(area.Code, municipality.AreaCode);
         IntensityStation station = Assert.Single(report.IntensityStations);
         Assert.Equal("八代市平山新町", station.Name);
         Assert.Equal(JmaIntensity.Three, station.Intensity);
+        Assert.Equal(municipality.Code, station.MunicipalityCode);
         Assert.StartsWith("p2p:熊本県:", station.Code, StringComparison.Ordinal);
         Assert.Contains("\"p2p-message-1\"", report.Source.SourcePayload);
     }
@@ -68,6 +76,36 @@ public sealed class P2pQuakeEarthquakeSourceTests
 
         Assert.Empty(result.Reports);
         Assert.Equal(SourceConnectionState.RateLimited, result.Status.State);
+    }
+
+    [Fact]
+    public async Task Fetch_ParsesTownMunicipalityPrefix()
+    {
+        const string payload = """
+            [{
+              "code": 551,
+              "id": "p2p-town-1",
+              "issue": { "time": "2026/08/20 12:08:07", "type": "DetailScale" },
+              "earthquake": {
+                "hypocenter": { "depth": 10, "latitude": 31.0, "longitude": 130.0, "magnitude": 2.0, "name": "鹿児島県" },
+                "maxScale": 30,
+                "time": "2026/08/20 12:04:00"
+              },
+              "points": [
+                { "addr": "鹿児島県屋久島町宮之浦", "pref": "鹿児島県", "scale": 30 }
+              ]
+            }]
+            """;
+        using var httpClient = new HttpClient(new ResponseHandler(
+            Response(HttpStatusCode.OK, payload)));
+        var source = new P2pQuakeEarthquakeSource(
+            httpClient,
+            "https://example.test/v2/jma/quake");
+
+        EarthquakeReport report = Assert.Single((await source.FetchAsync()).Reports);
+
+        Assert.Equal("屋久島町", Assert.Single(report.IntensityMunicipalities).Name);
+        Assert.Equal("屋久島町", Assert.Single(report.IntensityStations).MunicipalityCode.Split(':')[2]);
     }
 
     [Fact]

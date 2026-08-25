@@ -34,6 +34,11 @@ public partial class EarthquakeDetailsView : UserControl
         ViewModel?.ReturnToLatestReport();
     }
 
+    private void OnToggleSourceClick(object sender, RoutedEventArgs e)
+    {
+        ViewModel?.ToggleSource();
+    }
+
     private void OnFocusHypocenterClick(object sender, RoutedEventArgs e)
     {
         ViewModel?.FocusHypocenter();

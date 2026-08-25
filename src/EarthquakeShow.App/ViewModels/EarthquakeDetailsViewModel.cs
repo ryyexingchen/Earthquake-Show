@@ -193,6 +193,12 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
 
     public bool HasEventAssociations => EventAssociations.Count > 0;
 
+    public bool CanToggleSource => GetAvailableSourceIds().Count > 1;
+
+    public string SourceToggleText => CanToggleSource
+        ? $"切换到 {GetSourceDisplayName(GetOtherSourceId())}"
+        : "切换来源";
+
     public IReadOnlyList<EarthquakeObservationItemViewModel> Observations { get; private set; } = [];
 
     public IReadOnlyList<EarthquakeObservationTreeNode> ObservationTreeNodes { get; private set; } = [];
@@ -326,6 +332,35 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
     public void ReturnToLatestReport()
     {
         _page.ReturnToLatestReport();
+    }
+
+    public void ToggleSource()
+    {
+        EarthquakeEvent? selectedEvent = _page.State.SelectedEvent;
+        EarthquakeReport? viewedReport = _page.State.ViewedReport;
+        if (selectedEvent is null || viewedReport is null)
+        {
+            return;
+        }
+
+        string otherSourceId = GetOtherSourceId();
+        if (otherSourceId.Length == 0)
+        {
+            return;
+        }
+
+        EarthquakeReport? target = selectedEvent.Reports
+            .Where(report => string.Equals(
+                report.Source.SourceId,
+                otherSourceId,
+                StringComparison.Ordinal))
+            .OrderByDescending(report => report.IssuedAt)
+            .ThenByDescending(report => report.ReceivedAt)
+            .FirstOrDefault();
+        if (target is not null)
+        {
+            _page.SelectReport(target.Source.SourceId, target.Source.SourceMessageId);
+        }
     }
 
     public void FocusHypocenter()
@@ -682,6 +717,46 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             "jma-json" => "JMA JSON 摘要",
             "p2pquake" => "第三方补充",
             _ => "其他来源",
+        };
+    }
+
+    private IReadOnlyList<string> GetAvailableSourceIds()
+    {
+        return _page.State.SelectedEvent?.Reports
+            .Select(report => report.Source.SourceId)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(GetSourcePriority)
+            .ThenBy(sourceId => sourceId, StringComparer.Ordinal)
+            .ToArray() ?? [];
+    }
+
+    private string GetOtherSourceId()
+    {
+        string currentSourceId = _page.State.ViewedReport?.Source.SourceId ?? string.Empty;
+        return GetAvailableSourceIds()
+            .FirstOrDefault(sourceId => !string.Equals(
+                sourceId,
+                currentSourceId,
+                StringComparison.Ordinal)) ?? string.Empty;
+    }
+
+    private static int GetSourcePriority(string sourceId)
+    {
+        return sourceId switch
+        {
+            "p2pquake" => 5,
+            "jma-xml" => 20,
+            _ => 10,
+        };
+    }
+
+    private static string GetSourceDisplayName(string sourceId)
+    {
+        return sourceId switch
+        {
+            "jma-xml" => "JMA XML",
+            "p2pquake" => "P2PQuake",
+            _ => sourceId,
         };
     }
 
@@ -1277,6 +1352,8 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         OnPropertyChanged(nameof(HasSourceDifferences));
         OnPropertyChanged(nameof(EventAssociations));
         OnPropertyChanged(nameof(HasEventAssociations));
+        OnPropertyChanged(nameof(CanToggleSource));
+        OnPropertyChanged(nameof(SourceToggleText));
         OnPropertyChanged(nameof(Observations));
         OnPropertyChanged(nameof(ObservationTreeNodes));
         OnPropertyChanged(nameof(TimelineItems));

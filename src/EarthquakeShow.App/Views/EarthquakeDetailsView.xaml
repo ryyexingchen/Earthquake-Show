@@ -152,17 +152,31 @@
                             Background="{StaticResource AccentSoftBrush}"
                             BorderBrush="{StaticResource BorderBrush}"
                             BorderThickness="0,0,0,1">
-                        <StackPanel>
-                            <TextBlock FontSize="17"
-                                       FontWeight="SemiBold"
-                                       Text="{Binding Title}"
-                                       TextTrimming="CharacterEllipsis" />
-                            <TextBlock Margin="0,4,0,0"
-                                       Foreground="{StaticResource MutedTextBrush}"
-                                       FontSize="11"
-                                       Text="{Binding SnapshotText}"
-                                       TextWrapping="Wrap" />
-                        </StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock FontSize="17"
+                                           FontWeight="SemiBold"
+                                           Text="{Binding Title}"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Margin="0,4,0,0"
+                                           Foreground="{StaticResource MutedTextBrush}"
+                                           FontSize="11"
+                                           Text="{Binding SnapshotText}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Margin="10,0,0,0"
+                                    Padding="8,4"
+                                    AutomationProperties.Name="切换事件来源"
+                                    Click="OnToggleSourceClick"
+                                    Content="{Binding SourceToggleText}"
+                                    IsEnabled="{Binding CanToggleSource}"
+                                    ToolTip="在已合并的来源报文之间切换" />
+                        </Grid>
                     </Border>
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                         <StackPanel Margin="16,12,16,8">
@@ -325,39 +339,6 @@
                                                                TextTrimming="CharacterEllipsis" />
                                                     <TextBlock Margin="0,2,0,0"
                                                                Text="{Binding DifferenceText}"
-                                                               TextWrapping="Wrap" />
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </Border>
-                            <Border Margin="0,8,0,0"
-                                    Padding="10,8"
-                                    BorderBrush="{StaticResource BorderBrush}"
-                                    BorderThickness="1"
-                                    Visibility="{Binding HasEventAssociations, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <StackPanel>
-                                    <TextBlock FontWeight="SemiBold" Text="可能关联来源" />
-                                    <ItemsControl Margin="0,6,0,0" ItemsSource="{Binding EventAssociations}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <StackPanel Margin="0,0,0,8">
-                                                    <TextBlock FontWeight="SemiBold">
-                                                        <Run Text="{Binding SourceId}" />
-                                                        <Run Text=" · " />
-                                                        <Run Text="{Binding ConfidenceText}" />
-                                                    </TextBlock>
-                                                    <TextBlock Foreground="{StaticResource MutedTextBrush}"
-                                                               FontSize="11"
-                                                               Text="{Binding EventId}"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Foreground="{StaticResource MutedTextBrush}"
-                                                               FontSize="11"
-                                                               Text="{Binding SourceMessageId}"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Margin="0,2,0,0"
-                                                               Text="{Binding MatchText}"
                                                                TextWrapping="Wrap" />
                                                 </StackPanel>
                                             </DataTemplate>

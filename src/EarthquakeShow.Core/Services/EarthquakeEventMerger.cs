@@ -8,6 +8,9 @@ public static class EarthquakeEventMerger
 {
     private const double TemporaryEventIdDifferenceSeconds = 60;
     private const double TemporaryReportTimeDifferenceSeconds = 180;
+    private const double CrossSourceTimeDifferenceSeconds = 60;
+    private const double CrossSourceDistanceKm = 80;
+    private const double CrossSourceMagnitudeDifference = 0.5;
 
     public static ImmutableArray<EarthquakeEvent> Merge(IEnumerable<EarthquakeReport> reports)
     {
@@ -24,6 +27,7 @@ public static class EarthquakeEventMerger
             .Select(group => group.ToList())
             .ToList();
         MergeTemporaryJmaEvents(groups);
+        MergeCrossSourceEvents(groups);
 
         return groups
             .Select(group => new EarthquakeEvent
@@ -60,6 +64,108 @@ public static class EarthquakeEventMerger
         }
         while (merged);
     }
+
+    private static void MergeCrossSourceEvents(List<List<EarthquakeReport>> groups)
+    {
+        bool merged;
+        do
+        {
+            merged = false;
+            for (int leftIndex = 0; leftIndex < groups.Count && !merged; leftIndex++)
+            {
+                for (int rightIndex = leftIndex + 1; rightIndex < groups.Count; rightIndex++)
+                {
+                    if (!CanMergeCrossSourceEvents(groups[leftIndex], groups[rightIndex]))
+                    {
+                        continue;
+                    }
+
+                    groups[leftIndex].AddRange(groups[rightIndex]);
+                    groups.RemoveAt(rightIndex);
+                    merged = true;
+                    break;
+                }
+            }
+        }
+        while (merged);
+    }
+
+    private static bool CanMergeCrossSourceEvents(
+        IReadOnlyList<EarthquakeReport> left,
+        IReadOnlyList<EarthquakeReport> right)
+    {
+        string[] leftSources = left.Select(report => report.Source.SourceId)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        string[] rightSources = right.Select(report => report.Source.SourceId)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (leftSources.Length != 1 || rightSources.Length != 1 ||
+            !IsP2pAndJmaXml(leftSources[0], rightSources[0]))
+        {
+            return false;
+        }
+
+        EarthquakeReport? leftReport = GetAssociationReport(left);
+        EarthquakeReport? rightReport = GetAssociationReport(right);
+        if (leftReport?.OriginTime is not DateTimeOffset leftOrigin ||
+            rightReport?.OriginTime is not DateTimeOffset rightOrigin ||
+            leftReport.Hypocenter?.Coordinate is not GeoCoordinate leftCoordinate ||
+            rightReport.Hypocenter?.Coordinate is not GeoCoordinate rightCoordinate)
+        {
+            return false;
+        }
+
+        if (Math.Abs((leftOrigin - rightOrigin).TotalSeconds) > CrossSourceTimeDifferenceSeconds ||
+            CalculateDistanceKm(leftCoordinate, rightCoordinate) > CrossSourceDistanceKm)
+        {
+            return false;
+        }
+
+        if (leftReport.Magnitude?.Value is double leftMagnitude &&
+            rightReport.Magnitude?.Value is double rightMagnitude &&
+            Math.Abs(leftMagnitude - rightMagnitude) > CrossSourceMagnitudeDifference)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool IsP2pAndJmaXml(string left, string right)
+    {
+        return left is "p2pquake" && right is "jma-xml" ||
+            left is "jma-xml" && right is "p2pquake";
+    }
+
+    private static EarthquakeReport? GetAssociationReport(
+        IEnumerable<EarthquakeReport> reports)
+    {
+        return reports
+            .Where(report => report.Status is ReportStatus.Issued or ReportStatus.Correction)
+            .OrderByDescending(report => report.IssuedAt)
+            .ThenByDescending(report => report.ReceivedAt)
+            .FirstOrDefault(report =>
+                report.OriginTime is not null &&
+                report.Hypocenter?.Coordinate is not null);
+    }
+
+    private static double CalculateDistanceKm(
+        GeoCoordinate left,
+        GeoCoordinate right)
+    {
+        const double earthRadiusKm = 6371.0088;
+        double latitudeDelta = DegreesToRadians(right.Latitude - left.Latitude);
+        double longitudeDelta = DegreesToRadians(right.Longitude - left.Longitude);
+        double leftLatitude = DegreesToRadians(left.Latitude);
+        double rightLatitude = DegreesToRadians(right.Latitude);
+        double haversine = Math.Pow(Math.Sin(latitudeDelta / 2), 2) +
+            Math.Cos(leftLatitude) * Math.Cos(rightLatitude) *
+            Math.Pow(Math.Sin(longitudeDelta / 2), 2);
+        return earthRadiusKm * 2 * Math.Asin(Math.Sqrt(haversine));
+    }
+
+    private static double DegreesToRadians(double degrees) => degrees * Math.PI / 180;
 
     private static bool CanMergeTemporaryJmaEvents(
         IReadOnlyList<EarthquakeReport> left,
@@ -133,7 +239,8 @@ public static class EarthquakeEventMerger
     {
         return reports
             .Where(IsHypocenterReport)
-            .OrderByDescending(report => report.IssuedAt)
+            .OrderByDescending(report => report.Source.SourceId == "jma-xml")
+            .ThenByDescending(report => report.IssuedAt)
             .ThenByDescending(report => report.EventId, StringComparer.Ordinal)
             .Select(report => report.EventId)
             .FirstOrDefault() ?? reports[0].EventId;

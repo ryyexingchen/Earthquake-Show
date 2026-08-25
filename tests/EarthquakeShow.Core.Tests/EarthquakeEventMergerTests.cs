@@ -105,7 +105,7 @@ public sealed class EarthquakeEventMergerTests
             "JMA-JSON",
             "json-message",
             1,
-            sourceId: "jma-json");
+            sourceId: "other");
         EarthquakeReport xml = CreateReport(
             "VXSE53",
             "xml-message",
@@ -121,7 +121,7 @@ public sealed class EarthquakeEventMergerTests
             EarthquakeEventMerger.Merge([json, xml, p2p]));
 
         Assert.Equal(
-            ["p2pquake", "jma-json", "jma-xml"],
+            ["other", "p2pquake", "jma-xml"],
             earthquakeEvent.Reports.Select(report => report.Source.SourceId));
         Assert.Equal("jma-xml", earthquakeEvent.LatestReport?.Source.SourceId);
         Assert.Equal("VXSE53", earthquakeEvent.LatestReport?.ReportCode);
@@ -148,6 +148,53 @@ public sealed class EarthquakeEventMergerTests
         Assert.Equal("20260824040526", earthquakeEvent.EventId);
         Assert.Equal(["VXSE51", "VXSE52"],
             earthquakeEvent.Reports.Select(report => report.ReportCode));
+    }
+
+    [Fact]
+    public void Merge_P2pAndJmaXmlMatchingEvent_CreatesOneEvent()
+    {
+        EarthquakeReport jma = CreateReport(
+            "VXSE53",
+            "jma-message",
+            2,
+            eventId: "jma-event",
+            sourceId: "jma-xml");
+        EarthquakeReport p2p = CreateReport(
+            "P2P-551",
+            "p2p-message",
+            1,
+            eventId: "p2pquake:p2p-message",
+            sourceId: "p2pquake");
+
+        EarthquakeEvent earthquakeEvent = Assert.Single(
+            EarthquakeEventMerger.Merge([p2p, jma]));
+
+        Assert.Equal("jma-event", earthquakeEvent.EventId);
+        Assert.Equal(2, earthquakeEvent.Reports.Length);
+        Assert.Equal(["p2pquake", "jma-xml"],
+            earthquakeEvent.Reports.Select(report => report.Source.SourceId));
+    }
+
+    [Fact]
+    public void Merge_P2pAndJmaXmlDifferentOrigin_DoesNotMerge()
+    {
+        EarthquakeReport jma = CreateReport(
+            "VXSE53",
+            "jma-message",
+            2,
+            eventId: "jma-event",
+            sourceId: "jma-xml");
+        EarthquakeReport p2p = CreateReport(
+            "P2P-551",
+            "p2p-message",
+            1,
+            eventId: "p2pquake:p2p-message",
+            sourceId: "p2pquake") with
+        {
+            OriginTime = BaseTime.AddMinutes(2),
+        };
+
+        Assert.Equal(2, EarthquakeEventMerger.Merge([p2p, jma]).Length);
     }
 
     [Fact]

@@ -34,6 +34,64 @@ public sealed class SqliteEarthquakeEventRepositoryTests
     }
 
     [Fact]
+    public async Task Initialize_MigratesAndRemovesHistoricalJmaJsonReports()
+    {
+        using var database = new TemporaryDatabase();
+        var builder = new SqliteConnectionStringBuilder
+        {
+            DataSource = database.Path,
+            Mode = SqliteOpenMode.ReadWriteCreate,
+            Pooling = false,
+        };
+        await using (var connection = new SqliteConnection(builder.ConnectionString))
+        {
+            await connection.OpenAsync();
+            await using SqliteCommand command = connection.CreateCommand();
+            command.CommandText = """
+                CREATE TABLE schema_info (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+                INSERT INTO schema_info VALUES ('schema_version', '2');
+                CREATE TABLE earthquake_reports (
+                    event_id TEXT NOT NULL, source_id TEXT NOT NULL,
+                    source_message_id TEXT NOT NULL, report_code TEXT NOT NULL,
+                    issued_at TEXT NOT NULL, received_at TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    PRIMARY KEY (event_id, source_id, source_message_id));
+                CREATE TABLE earthquake_events (
+                    event_id TEXT PRIMARY KEY, updated_at TEXT NOT NULL,
+                    report_count INTEGER NOT NULL);
+                CREATE TABLE source_status (
+                    source_id TEXT PRIMARY KEY, state TEXT NOT NULL,
+                    checked_at TEXT NOT NULL, last_received_at TEXT NULL,
+                    detail TEXT NULL);
+                INSERT INTO earthquake_reports VALUES (
+                    'legacy-event', 'jma-json', 'legacy-message', 'JMA-JSON',
+                    '2026-08-20T00:00:00.0000000+09:00',
+                    '2026-08-20T00:00:01.0000000+09:00',
+                    '{"eventId":"legacy-event","reportCode":"JMA-JSON","reportType":"HypocenterAndIntensity","status":"Issued","context":"Normal","serial":1,"originTime":"2026-08-20T00:00:00.0000000+09:00","issuedAt":"2026-08-20T00:00:00.0000000+09:00","receivedAt":"2026-08-20T00:00:01.0000000+09:00","maxIntensity":"four","intensityAreas":[],"intensityMunicipalities":[],"intensityStations":[],"source":{"sourceId":"jma-json","sourceMessageId":"legacy-message"}}');
+                INSERT INTO source_status VALUES (
+                    'jma-json', 'Disabled',
+                    '2026-08-20T00:00:01.0000000+09:00', NULL, '旧来源');
+                """;
+            await command.ExecuteNonQueryAsync();
+        }
+
+        var repository = new SqliteEarthquakeEventRepository(database.Path);
+        await repository.InitializeAsync([]);
+
+        Assert.DoesNotContain(
+            repository.SourceStatuses,
+            status => status.SourceId == "jma-json");
+        Assert.DoesNotContain(
+            (await repository.ListEventsAsync()).SelectMany(item => item.Reports),
+            report => report.Source.SourceId == "jma-json");
+        await using var verify = new SqliteConnection(builder.ConnectionString);
+        await verify.OpenAsync();
+        await using SqliteCommand verifyCommand = verify.CreateCommand();
+        verifyCommand.CommandText = "SELECT COUNT(*) FROM earthquake_events WHERE event_id = 'legacy-event';";
+        Assert.Equal(0L, Convert.ToInt64(await verifyCommand.ExecuteScalarAsync()));
+    }
+
+    [Fact]
     public async Task Initialize_ExistingDatabase_AddsMissingSeedReportsWithoutDuplicates()
     {
         using var database = new TemporaryDatabase();
@@ -274,7 +332,7 @@ public sealed class SqliteEarthquakeEventRepositoryTests
         var source = new StubRealtimeSource(new EarthquakeSourceFetchResult(
             [onlineReport],
             new SourceStatus(
-                "jma-json",
+                "p2pquake",
                 SourceConnectionState.Online,
                 onlineReport.ReceivedAt,
                 onlineReport.ReceivedAt,
@@ -287,7 +345,7 @@ public sealed class SqliteEarthquakeEventRepositoryTests
         Assert.Equal(2, (await repository.ListEventsAsync()).Length);
         Assert.Equal(
             SourceConnectionState.Online,
-            Assert.Single(repository.SourceStatuses, status => status.SourceId == "jma-json").State);
+            Assert.Single(repository.SourceStatuses, status => status.SourceId == "p2pquake").State);
         Assert.Contains("实时源已更新 1 条报文", repository.CacheStatus);
 
         var reloaded = new SqliteEarthquakeEventRepository(database.Path);
@@ -325,7 +383,7 @@ public sealed class SqliteEarthquakeEventRepositoryTests
         var source = new StubRealtimeSource(new EarthquakeSourceFetchResult(
             [],
             new SourceStatus(
-                "jma-json",
+                "p2pquake",
                 SourceConnectionState.Disconnected,
                 DateTimeOffset.UtcNow,
                 Detail: "测试断开")));
@@ -339,7 +397,7 @@ public sealed class SqliteEarthquakeEventRepositoryTests
         Assert.Equal(before.Select(item => item.EventId), after.Select(item => item.EventId));
         Assert.Equal(
             SourceConnectionState.Disconnected,
-            Assert.Single(repository.SourceStatuses, status => status.SourceId == "jma-json").State);
+            Assert.Single(repository.SourceStatuses, status => status.SourceId == "p2pquake").State);
         Assert.Contains("保留已有数据", repository.CacheStatus);
     }
 
@@ -359,7 +417,7 @@ public sealed class SqliteEarthquakeEventRepositoryTests
         var httpSource = new StubRealtimeSource(new EarthquakeSourceFetchResult(
             [],
             new SourceStatus(
-                "jma-json",
+                "p2pquake",
                 SourceConnectionState.Online,
                 DateTimeOffset.UtcNow,
                 Detail: "HTTP 测试源在线")));
@@ -406,7 +464,7 @@ public sealed class SqliteEarthquakeEventRepositoryTests
             SourceConnectionState.Online,
             Assert.Single(
                 repository.SourceStatuses,
-                status => status.SourceId == "jma-json").State);
+                status => status.SourceId == "p2pquake").State);
 
         var reloaded = new SqliteEarthquakeEventRepository(database.Path);
         await reloaded.InitializeAsync([]);
@@ -421,7 +479,7 @@ public sealed class SqliteEarthquakeEventRepositoryTests
         return new EarthquakeReport
         {
             EventId = "20260820010000",
-            ReportCode = "JMA-JSON",
+            ReportCode = "P2P-551",
             ReportType = EarthquakeReportType.HypocenterAndIntensity,
             Status = ReportStatus.Issued,
             Context = ReportContext.Normal,
@@ -436,7 +494,7 @@ public sealed class SqliteEarthquakeEventRepositoryTests
             Magnitude = new Magnitude(4.2),
             MaxIntensity = JmaIntensity.Four,
             Source = new SourceReference(
-                "jma-json",
+                "p2pquake",
                 "20260820010100_0",
                 SourcePayload: "{\"eid\":\"20260820010000\"}"),
         };

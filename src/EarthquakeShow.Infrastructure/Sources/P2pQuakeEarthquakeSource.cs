@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using EarthquakeShow.Core.Models;
 
 namespace EarthquakeShow.Infrastructure.Sources;
@@ -20,6 +21,9 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
         "yyyy-MM-dd'T'HH:mm:ss",
     ];
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly Regex MunicipalityPattern = new(
+        "^(?<name>.+?(?:市|区|町|村))",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private readonly HttpClient _httpClient;
     private readonly Uri _endpoint;
@@ -170,7 +174,9 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
             ? new Magnitude(magnitudeValue)
             : null;
         JmaIntensity maxIntensity = ParseIntensity(item.Earthquake.MaxScale);
-        ImmutableArray<IntensityStation> stations = ParseStations(item.Points);
+        (ImmutableArray<IntensityArea> areas,
+            ImmutableArray<IntensityMunicipality> municipalities,
+            ImmutableArray<IntensityStation> stations) = ParseObservations(item.Points);
 
         return new EarthquakeReport
         {
@@ -185,6 +191,8 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
             Hypocenter = hypocenter,
             Magnitude = magnitude,
             MaxIntensity = maxIntensity,
+            IntensityAreas = areas,
+            IntensityMunicipalities = municipalities,
             IntensityStations = stations,
             TsunamiComment = BuildTsunamiComment(
                 item.Earthquake.DomesticTsunami,
@@ -197,14 +205,19 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
         };
     }
 
-    private static ImmutableArray<IntensityStation> ParseStations(
+    private static (
+        ImmutableArray<IntensityArea> Areas,
+        ImmutableArray<IntensityMunicipality> Municipalities,
+        ImmutableArray<IntensityStation> Stations) ParseObservations(
         P2pPoint[]? points)
     {
         if (points is null or { Length: 0 })
         {
-            return [];
+            return ([], [], []);
         }
 
+        var areas = new Dictionary<string, (string Name, JmaIntensity Intensity)>(StringComparer.Ordinal);
+        var municipalities = new Dictionary<string, (string Name, string AreaCode, JmaIntensity Intensity)>(StringComparer.Ordinal);
         var stations = ImmutableArray.CreateBuilder<IntensityStation>();
         foreach (P2pPoint point in points)
         {
@@ -215,16 +228,76 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
 
             string prefecture = NullIfUnknown(point.Prefecture) ?? "unknown";
             string address = point.Addr.Trim();
+            string municipalityName = ParseMunicipalityName(address, prefecture);
+            string areaCode = $"p2p-area:{prefecture}";
+            string municipalityCode = $"p2p-municipality:{prefecture}:{municipalityName}";
+            JmaIntensity intensity = ParseIntensity(point.Scale);
+            areas[areaCode] = UpdateIntensity(
+                areas.TryGetValue(areaCode, out (string Name, JmaIntensity Intensity) area)
+                    ? area
+                    : (prefecture, JmaIntensity.Unknown),
+                intensity);
+            municipalities[municipalityCode] = UpdateMunicipalityIntensity(
+                municipalities.TryGetValue(municipalityCode, out (string Name, string AreaCode, JmaIntensity Intensity) municipality)
+                    ? municipality
+                    : (municipalityName, areaCode, JmaIntensity.Unknown),
+                intensity);
             string key = $"p2p:{prefecture}:{address}";
             stations.Add(new IntensityStation(
                 key,
                 address,
-                $"p2p-pref:{prefecture}",
-                ParseIntensity(point.Scale),
+                municipalityCode,
+                intensity,
                 null));
         }
 
-        return stations.ToImmutable();
+        return (
+            areas.Select(item => new IntensityArea(
+                    item.Key,
+                    item.Value.Name,
+                    $"p2p-pref:{item.Value.Name}",
+                    item.Value.Name,
+                    item.Value.Intensity))
+                .OrderBy(item => item.Name, StringComparer.Ordinal)
+                .ToImmutableArray(),
+            municipalities.Select(item => new IntensityMunicipality(
+                    item.Key,
+                    item.Value.Name,
+                    item.Value.AreaCode,
+                    item.Value.Intensity))
+                .OrderBy(item => item.Name, StringComparer.Ordinal)
+                .ToImmutableArray(),
+            stations.ToImmutable());
+    }
+
+    private static string ParseMunicipalityName(string address, string prefecture)
+    {
+        string withoutPrefecture = address.StartsWith(prefecture, StringComparison.Ordinal)
+            ? address[prefecture.Length..]
+            : address;
+        Match match = MunicipalityPattern.Match(withoutPrefecture);
+        return match.Success ? match.Groups["name"].Value : "unknown";
+    }
+
+    private static (string Name, JmaIntensity Intensity) UpdateIntensity(
+        (string Name, JmaIntensity Intensity) current,
+        JmaIntensity value)
+    {
+        return (current.Name, MaxIntensity(current.Intensity, value));
+    }
+
+    private static (string Name, string AreaCode, JmaIntensity Intensity) UpdateMunicipalityIntensity(
+        (string Name, string AreaCode, JmaIntensity Intensity) current,
+        JmaIntensity value)
+    {
+        return (current.Name, current.AreaCode, MaxIntensity(current.Intensity, value));
+    }
+
+    private static JmaIntensity MaxIntensity(JmaIntensity left, JmaIntensity right)
+    {
+        return left == JmaIntensity.Unknown ? right :
+            right == JmaIntensity.Unknown ? left :
+            (JmaIntensity)Math.Max((int)left, (int)right);
     }
 
     private static JmaIntensity ParseIntensity(int scale)

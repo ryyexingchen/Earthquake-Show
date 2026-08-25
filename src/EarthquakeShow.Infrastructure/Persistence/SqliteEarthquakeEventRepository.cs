@@ -17,7 +17,8 @@ public sealed class SqliteEarthquakeEventRepository :
     IEarthquakeEventRepository,
     IEarthquakeSourceStatusProvider
 {
-    private const int CurrentSchemaVersion = 2;
+    private const int CurrentSchemaVersion = 3;
+    private const string SchemaKey = "earthquake_schema_version";
     private const string DefaultSourceId = "jma-xml";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -463,8 +464,6 @@ public sealed class SqliteEarthquakeEventRepository :
             );
             CREATE INDEX IF NOT EXISTS idx_tsunami_reports_event_issued
                 ON tsunami_reports(event_id, issued_at, received_at);
-            INSERT OR IGNORE INTO schema_info(key, value)
-            VALUES ('schema_version', '1');
             """;
         await using (SqliteCommand command = connection.CreateCommand())
         {
@@ -474,25 +473,61 @@ public sealed class SqliteEarthquakeEventRepository :
 
         await using (SqliteCommand command = connection.CreateCommand())
         {
-            command.CommandText = "SELECT value FROM schema_info WHERE key = 'schema_version';";
+            command.CommandText = """
+                SELECT COALESCE(
+                    (SELECT value FROM schema_info WHERE key = 'earthquake_schema_version'),
+                    (SELECT value FROM schema_info WHERE key = 'schema_version'),
+                    '1');
+                """;
             object? value = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
             if (!int.TryParse(value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int version))
             {
                 throw new InvalidDataException($"不支持的 SQLite schema 版本：{value ?? "缺失"}。");
             }
 
+            await using (SqliteCommand initializeVersion = connection.CreateCommand())
+            {
+                initializeVersion.CommandText = "INSERT OR IGNORE INTO schema_info(key, value) VALUES ($key, $value);";
+                initializeVersion.Parameters.AddWithValue("$key", SchemaKey);
+                initializeVersion.Parameters.AddWithValue("$value", version.ToString(CultureInfo.InvariantCulture));
+                await initializeVersion.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             if (version == 1)
             {
                 await using SqliteCommand migration = connection.CreateCommand();
-                migration.CommandText = "UPDATE schema_info SET value = '2' WHERE key = 'schema_version';";
+                migration.CommandText = "UPDATE schema_info SET value = '2' WHERE key = 'earthquake_schema_version';";
                 await migration.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                 version = 2;
+            }
+
+            if (version == 2)
+            {
+                await using SqliteCommand migration = connection.CreateCommand();
+                migration.CommandText = """
+                    DELETE FROM earthquake_reports WHERE source_id = 'jma-json';
+                    DELETE FROM earthquake_events
+                    WHERE event_id NOT IN (SELECT DISTINCT event_id FROM earthquake_reports);
+                    DELETE FROM source_status WHERE source_id = 'jma-json';
+                    UPDATE schema_info SET value = '3' WHERE key = 'earthquake_schema_version';
+                    """;
+                await migration.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+                version = 3;
             }
 
             if (version != CurrentSchemaVersion)
             {
                 throw new InvalidDataException($"不支持的 SQLite schema 版本：{value ?? "缺失"}。");
             }
+
+            await using SqliteCommand cleanup = connection.CreateCommand();
+            cleanup.CommandText = """
+                DELETE FROM earthquake_reports WHERE source_id = 'jma-json';
+                DELETE FROM earthquake_events
+                WHERE event_id NOT IN (SELECT DISTINCT event_id FROM earthquake_reports);
+                DELETE FROM source_status WHERE source_id = 'jma-json';
+                """;
+            await cleanup.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 

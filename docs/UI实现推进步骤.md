@@ -4,6 +4,8 @@
 
 ## 当前进度
 
+- `0.56.0` 已完成历史 `jma-json` SQLite 清理、JMA XML/P2PQuake 跨源事件合并、P2P 市町村观测树和详情来源切换；候选关联区块移除，并通过新增回归测试验证迁移和非误合并。
+
 - `0.1.0` Tauri/Vue 外壳已停止开发，相关工程文件和构建产物已于 2026-08-19 删除，历史信息只保留在文档中。
 - 本机已具备 `.NET SDK 8.0.412` 和 Windows Desktop Runtime，可直接开发 WPF。
 - `0.2.0` 已完成步骤 1：WPF 原生桌面外壳已建立，并通过 Release 构建、窗口交互、最小尺寸和进程退出验证。
@@ -605,7 +607,7 @@ SQLite 至少需要保存：
 当前启动顺序固定为：
 
 ```text
-创建 SQLite 仓储 → 初始化 schema v2（兼容 v1 迁移）→ 优先加载缓存
+创建 SQLite 仓储 → 初始化地震 schema v3（兼容 v1/v2 迁移并清理 jma-json）→ 优先加载缓存
 缓存为空时写入固定 seed → 设置离线来源状态 → 显示页面
 ```
 
@@ -634,7 +636,7 @@ SQLite 至少需要保存：
 
 `JmaXmlEarthquakeSource` 使用 `https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml` 的 Atom `entry/id` 和 `link[type=application/xml]`，默认最多下载 20 条 `VXSE51/52/53` 详情，并复用 `JmaXmlParser` 和随应用复制的 `JmaStations.csv`。Feed 或单条报文失败只更新 `jma-xml` 来源状态；成功报文与 JSON 摘要一起写入 SQLite，由 `EarthquakeEventMerger` 按来源优先级派生页面快照。
 
-`P2pQuakeEarthquakeSource` 使用 `https://api.p2pquake.net/v2/jma/quake` 的 JSON 列表，映射震源、震级、最大震度和观测点；由于没有 JMA `EventID`，报文以 `p2pquake:{id}` 独立事件身份保存，不做猜测式跨源合并。它是非官方补充/降级源，HTTP 429、网络错误和解析错误只更新 `p2pquake` 来源状态。
+`P2pQuakeEarthquakeSource` 使用 `https://api.p2pquake.net/v2/jma/quake` 的 JSON 列表，映射震源、震级、最大震度、都道府县、从地址前缀提取的市町村和观测点；原始报文以 `p2pquake:{id}` 保存，事件合并阶段按 60 秒/80 km/震级差 0.5 阈值与 JMA XML 合并。它是非官方补充/降级源，HTTP 429、网络错误和解析错误只更新 `p2pquake` 来源状态。
 
 验证：
 
@@ -646,10 +648,12 @@ SQLite 至少需要保存：
 - [x] XML Feed/详情失败不会清空已有内容；单条详情失败不阻止其他条目入库。
 - [ ] 来源冲突时显示 JMA 官方 XML 值，并逐字段保留差异。
 - [x] P2PQuake HTTP JSON 补充适配器失败不会清空 JMA/SQLite 内容。
+- [x] P2PQuake 观测点按都道府县 → 市町村 → 观测点生成详情树，市町村最大震度由观测点聚合。
+- [x] 满足时间、坐标和震级阈值的 XML/P2P 报文合并为单一事件，并通过详情来源切换按钮查看不同来源。
+- [x] SQLite schema v2→v3 删除历史 `jma-json` 报文和来源状态。
 - [x] 同一 `EarthquakeEvent` 内显示 JMA JSON/XML 的状态、震度、震级、震源、深度和观测点数量差异。
 - [x] 来源差异显示来源 ID、消息 ID和来源角色；P2PQuake 独立事件不参与猜测式比较。
-- [x] 对不同事件生成基于时间、坐标和震级阈值的候选关联，并显示中/高置信度及匹配依据。
-- [x] 候选关联不合并事件、不改变事件列表和报文时间线。
+- [x] 对不满足阈值的不同事件保持独立，不显示猜测式候选关联。
 - [x] 首次网络刷新后自动按 60 秒在线间隔检查所有 HTTP 来源。
 - [x] 普通失败和限流分别使用指数退避，最大等待 15 分钟；窗口关闭时取消刷新循环。
 - [x] 自动刷新和手动刷新使用异步互斥，避免并发写入缓存。

@@ -217,7 +217,7 @@ public sealed class EarthquakeDetailsViewModelTests
             magnitude: 3.7,
             intensity: JmaIntensity.Two,
             station: false,
-            sourceId: "jma-json");
+            sourceId: "p2pquake");
         EarthquakeReport xml = CreateReport(
             "xml-detail",
             BaseTime,
@@ -234,15 +234,15 @@ public sealed class EarthquakeDetailsViewModelTests
         using var details = new EarthquakeDetailsViewModel(page, map);
 
         EarthquakeSourceDifferenceItemViewModel difference = Assert.Single(details.SourceDifferences);
-        Assert.Equal("jma-json", difference.SourceId);
-        Assert.Equal("JMA JSON 摘要", difference.PriorityText);
+        Assert.Equal("p2pquake", difference.SourceId);
+        Assert.Equal("第三方补充", difference.PriorityText);
         Assert.Contains("震度 3 → 2", difference.DifferenceText);
         Assert.Contains("震级 M 3.8 → M 3.7", difference.DifferenceText);
         Assert.Contains("观测点 1 → 0", difference.DifferenceText);
     }
 
     [Fact]
-    public async Task Details_ShowsCandidateAssociationWithoutMergingEvents()
+    public async Task Details_MergesP2pAndJmaXmlAndAllowsSourceToggle()
     {
         EarthquakeReport jma = CreateReport(
             "jma-report",
@@ -263,19 +263,24 @@ public sealed class EarthquakeDetailsViewModelTests
         using var page = new EarthquakePageViewModel(
             new InMemoryEarthquakeEventRepository([jma, p2p]));
         await page.LoadAsync();
-        Assert.True(page.SelectEvent("jma-event"));
+        Assert.True(
+            page.SelectEvent("jma-event"),
+            string.Join(",", page.State.Events.Select(item =>
+                $"{item.EventId}:{string.Join('|', item.Reports.Select(report => report.ReportCode))}")));
         using var map = new EarthquakeMapViewModel(
             page,
             OfflineMapGeometry.LoadFromJson(GeometryJson));
         using var details = new EarthquakeDetailsViewModel(page, map);
 
-        EarthquakeEventAssociationItemViewModel association =
-            Assert.Single(details.EventAssociations);
-        Assert.Equal("p2pquake:p2p-report", association.EventId);
-        Assert.Equal("p2pquake", association.SourceId);
-        Assert.Equal("高置信度", association.ConfidenceText);
-        Assert.Contains("时间差 0 秒", association.MatchText);
-        Assert.Equal(2, page.State.Events.Length);
+        Assert.Single(page.State.Events);
+        Assert.False(details.HasEventAssociations);
+        Assert.True(details.CanToggleSource);
+        Assert.Equal("p2pquake", page.State.ViewedReport?.Source.SourceId);
+
+        details.ToggleSource();
+
+        Assert.Equal("jma-xml", page.State.ViewedReport?.Source.SourceId);
+        Assert.Equal("jma-report", page.State.ViewedReport?.Source.SourceMessageId);
     }
 
     [Fact]
