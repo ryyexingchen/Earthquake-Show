@@ -146,11 +146,11 @@ public sealed class JmaXmlEarthquakeSourceTests
         const string feed = """
             <feed xmlns="http://www.w3.org/2005/Atom">
               <entry>
-                <id>https://example.test/20260818221317_0_VXSE52_270000.xml</id>
+                <id>https://example.test/20260818131317_0_VXSE52_270000.xml</id>
                 <link type="application/xml" href="https://example.test/old.xml" />
               </entry>
               <entry>
-                <id>https://example.test/20260818221432_0_VXSE53_270000.xml</id>
+                <id>https://example.test/20260818131432_0_VXSE53_270000.xml</id>
                 <link type="application/xml" href="https://example.test/new.xml" />
               </entry>
             </feed>
@@ -158,11 +158,11 @@ public sealed class JmaXmlEarthquakeSourceTests
         const string longFeed = """
             <feed xmlns="http://www.w3.org/2005/Atom">
               <entry>
-                <id>https://example.test/20260818221317_0_VXSE52_270000.xml</id>
+                <id>https://example.test/20260818131317_0_VXSE52_270000.xml</id>
                 <link type="application/xml" href="https://example.test/old.xml" />
               </entry>
               <entry>
-                <id>https://example.test/20260818221432_0_VXSE53_270000.xml</id>
+                <id>https://example.test/20260818131432_0_VXSE53_270000.xml</id>
                 <link type="application/xml" href="https://example.test/new.xml" />
               </entry>
             </feed>
@@ -190,7 +190,7 @@ public sealed class JmaXmlEarthquakeSourceTests
             new DateTimeOffset(2026, 8, 18, 22, 14, 0, TimeSpan.FromHours(9)));
 
         EarthquakeReport report = Assert.Single(result.Reports);
-        Assert.Equal("20260818221432_0_VXSE53_270000.xml", report.Source.SourceMessageId);
+        Assert.Equal("20260818131432_0_VXSE53_270000.xml", report.Source.SourceMessageId);
         Assert.Contains("Feed 2 条，命中 1 条", result.Status.Detail);
 
         EarthquakeSourceFetchResult incomplete = await source.FetchSinceAsync(

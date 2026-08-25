@@ -322,7 +322,8 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncreme
             return null;
         }
 
-        return new DateTimeOffset(localTime, TimeSpan.FromHours(9));
+        // JMA XML 文件名的前 14 位使用 UTC，不能按 JST 解释。
+        return new DateTimeOffset(localTime, TimeSpan.Zero);
     }
 
     private static bool IsCoverageIncomplete(
