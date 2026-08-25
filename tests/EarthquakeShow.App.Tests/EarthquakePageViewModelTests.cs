@@ -31,6 +31,22 @@ public sealed class EarthquakePageViewModelTests
     }
 
     [Fact]
+    public async Task Load_SelectsXmlReportWhenP2pReportIsNewer()
+    {
+        EarthquakeReport xml = CreateReport("event", "xml", 1);
+        EarthquakeReport p2p = CreateReport("event", "p2p", 3) with
+        {
+            Source = new SourceReference("p2pquake", "p2p"),
+        };
+        using var viewModel = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([p2p, xml]));
+
+        await viewModel.LoadAsync();
+
+        Assert.Equal("xml", viewModel.State.ViewedReport?.Source.SourceMessageId);
+    }
+
+    [Fact]
     public async Task RepositoryUpdate_PreservesSelectedEventAndViewedReport()
     {
         EarthquakeReport historyFirst = CreateReport("history", "history-1", 1);

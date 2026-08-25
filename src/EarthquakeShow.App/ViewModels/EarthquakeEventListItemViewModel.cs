@@ -56,10 +56,10 @@ public sealed record EarthquakeEventListItemViewModel
                 "6-upper" => "6强",
                 string code => code,
             },
-            ReportText = GetReportText(earthquakeEvent.LatestReport),
-            TsunamiText = string.IsNullOrWhiteSpace(earthquakeEvent.LatestReport?.TsunamiComment)
-                ? "海啸：不明"
-                : $"海啸：{earthquakeEvent.LatestReport.TsunamiComment}",
+            ReportText = GetReportText(earthquakeEvent.PreferredReport),
+            TsunamiText = string.IsNullOrWhiteSpace(earthquakeEvent.PreferredReport?.TsunamiComment)
+                ? "不明"
+                : $"{earthquakeEvent.PreferredReport.TsunamiComment}",
             MaxIntensity = summary?.MaxIntensity ?? JmaIntensity.Unknown,
             IsNew = isNew,
         };

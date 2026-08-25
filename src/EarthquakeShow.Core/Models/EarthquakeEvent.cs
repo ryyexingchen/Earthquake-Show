@@ -11,6 +11,21 @@ public sealed record EarthquakeEvent
     public EarthquakeReport? LatestReport =>
         Reports.IsDefaultOrEmpty ? null : Reports[^1];
 
+    public EarthquakeReport? PreferredReport =>
+        Reports.IsDefaultOrEmpty
+            ? null
+            : Reports
+            .Where(report => string.Equals(report.Source.SourceId, "jma-xml", StringComparison.Ordinal))
+            .OrderBy(report => report.IssuedAt)
+            .ThenBy(report => report.ReceivedAt)
+            .LastOrDefault()
+        ?? Reports
+            .Where(report => string.Equals(report.Source.SourceId, "p2pquake", StringComparison.Ordinal))
+            .OrderBy(report => report.IssuedAt)
+            .ThenBy(report => report.ReceivedAt)
+            .LastOrDefault()
+        ?? LatestReport;
+
     public EarthquakeReport? LatestEffectiveReport =>
         Reports.IsDefaultOrEmpty ? null : Reports.LastOrDefault(IsEffectiveReport);
 
@@ -18,7 +33,7 @@ public sealed record EarthquakeEvent
     {
         get
         {
-            EarthquakeReport? latestReport = LatestReport;
+            EarthquakeReport? latestReport = PreferredReport;
             if (latestReport is null)
             {
                 return null;

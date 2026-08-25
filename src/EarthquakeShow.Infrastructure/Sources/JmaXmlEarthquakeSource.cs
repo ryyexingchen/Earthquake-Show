@@ -138,6 +138,11 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncreme
                     failures.Add($"JMA XML 长期 Feed：{exception.Message}");
                     hasDisconnected = true;
                 }
+                catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
+                {
+                    failures.Add($"JMA XML 长期 Feed 请求超时：{exception.Message}");
+                    hasDisconnected = true;
+                }
             }
 
             ImmutableArray<JmaXmlFeedEntry> entries = since is null
@@ -182,6 +187,11 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncreme
                     failures.Add($"{entry.SourceMessageId}: {exception.Message}");
                     hasDisconnected = true;
                 }
+                catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
+                {
+                    failures.Add($"{entry.SourceMessageId}: 请求超时：{exception.Message}");
+                    hasDisconnected = true;
+                }
                 catch (FormatException exception)
                 {
                     failures.Add($"{entry.SourceMessageId}: {exception.Message}");
@@ -212,7 +222,9 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncreme
                 ? $"Feed {allEntries.Length} 条"
                 : $"增量起点 {since:O}，{(usedLongFeed ? "长期 Feed 合并后 " : string.Empty)}Feed {allEntries.Length} 条，命中 {entries.Length} 条" +
                     (IsCoverageIncomplete(allEntries, since)
-                        ? $"；覆盖可能不足，Feed 最早条目 {GetOldestIssuedAt(allEntries):O}"
+                        ? GetOldestIssuedAt(allEntries) is DateTimeOffset oldest
+                            ? $"；覆盖可能不足，Feed 最早条目 {oldest:O}"
+                            : "；覆盖可能不足，Feed 无可用地震条目"
                         : "；覆盖起点正常");
             string detail = failures.Count == 0
                 ? $"JMA XML：成功 {reports.Count} 条；{coverage}"
@@ -224,6 +236,10 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncreme
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
+        }
+        catch (OperationCanceledException exception)
+        {
+            return Failure(SourceConnectionState.Disconnected, checkedAt, $"JMA XML 请求超时：{exception.Message}");
         }
         catch (System.Xml.XmlException exception)
         {
@@ -265,12 +281,14 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncreme
         string? id = entry.Element(AtomNamespace + "id")?.Value.Trim();
         string? href = entry
             .Elements(AtomNamespace + "link")
-            .Where(link => string.Equals(
+            .OrderBy(link => string.Equals(
                 (string?)link.Attribute("type"),
                 "application/xml",
-                StringComparison.OrdinalIgnoreCase))
+                StringComparison.OrdinalIgnoreCase) ? 0 : 1)
             .Select(link => (string?)link.Attribute("href"))
-            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value) &&
+                Uri.TryCreate(value, UriKind.Absolute, out Uri? uri) &&
+                uri.Scheme is "http" or "https");
         if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(href) ||
             !Uri.TryCreate(href, UriKind.Absolute, out Uri? reportUri))
         {
@@ -312,7 +330,7 @@ public sealed class JmaXmlEarthquakeSource : IRealtimeEarthquakeSource, IIncreme
         DateTimeOffset? since)
     {
         DateTimeOffset? oldest = GetOldestIssuedAt(entries);
-        return since is not null && oldest is not null && oldest > since.Value;
+        return since is not null && (oldest is null || oldest > since.Value);
     }
 
     private static DateTimeOffset? GetOldestIssuedAt(

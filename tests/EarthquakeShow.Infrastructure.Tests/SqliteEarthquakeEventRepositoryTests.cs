@@ -377,6 +377,75 @@ public sealed class SqliteEarthquakeEventRepositoryTests
     }
 
     [Fact]
+    public async Task Refresh_SourceTimeout_DoesNotPreventFollowingSource()
+    {
+        using var database = new TemporaryDatabase();
+        EarthquakeReport onlineReport = CreateOnlineReport();
+        var timedOutSource = new ThrowingRealtimeSource(
+            "jma-xml",
+            new TaskCanceledException("模拟请求超时"));
+        var followingSource = new RecordingRealtimeSource(
+            new EarthquakeSourceFetchResult(
+                [onlineReport],
+                new SourceStatus(
+                    "p2pquake",
+                    SourceConnectionState.Online,
+                    onlineReport.ReceivedAt,
+                    onlineReport.ReceivedAt,
+                    "测试在线源")));
+        var repository = new SqliteEarthquakeEventRepository(
+            database.Path,
+            [timedOutSource, followingSource]);
+        await repository.InitializeAsync(LoadReports());
+
+        await repository.RefreshAsync();
+
+        Assert.Equal(1, timedOutSource.FetchCount);
+        Assert.Equal(1, followingSource.FetchCount);
+        Assert.Contains(
+            await repository.ListEventsAsync(),
+            item => item.EventId == onlineReport.EventId);
+        Assert.Equal(
+            SourceConnectionState.Disconnected,
+            Assert.Single(repository.SourceStatuses, status => status.SourceId == "jma-xml").State);
+    }
+
+    [Fact]
+    public async Task Refresh_IncrementalSources_KeepSinceIndependentPerSource()
+    {
+        using var database = new TemporaryDatabase();
+        DateTimeOffset xmlIssuedAt = new(2026, 8, 20, 10, 0, 0, TimeSpan.FromHours(9));
+        DateTimeOffset p2pIssuedAt = xmlIssuedAt.AddHours(2);
+        EarthquakeReport xmlReport = CreateOnlineReport() with
+        {
+            EventId = "xml-event",
+            IssuedAt = xmlIssuedAt,
+            ReceivedAt = xmlIssuedAt.AddSeconds(1),
+            Source = new SourceReference("jma-xml", "xml-cached"),
+        };
+        EarthquakeReport p2pReport = CreateOnlineReport() with
+        {
+            EventId = "p2p-event",
+            IssuedAt = p2pIssuedAt,
+            ReceivedAt = p2pIssuedAt.AddSeconds(1),
+            Source = new SourceReference("p2pquake", "p2p-cached"),
+        };
+        var xmlSource = new StubIncrementalSource(new EarthquakeSourceFetchResult(
+            [],
+            new SourceStatus("jma-xml", SourceConnectionState.Online, xmlIssuedAt)));
+        var p2pSource = new StubIncrementalSource(new EarthquakeSourceFetchResult(
+            [],
+            new SourceStatus("p2pquake", SourceConnectionState.Online, p2pIssuedAt)));
+        var repository = new SqliteEarthquakeEventRepository(database.Path, [xmlSource, p2pSource]);
+        await repository.InitializeAsync([xmlReport, p2pReport]);
+
+        await repository.RefreshAsync();
+
+        Assert.Equal(xmlIssuedAt, xmlSource.LastSince);
+        Assert.Equal(p2pIssuedAt, p2pSource.LastSince);
+    }
+
+    [Fact]
     public async Task Refresh_FailedSource_KeepsCachedEventsAndUpdatesStatus()
     {
         using var database = new TemporaryDatabase();
@@ -566,6 +635,39 @@ public sealed class SqliteEarthquakeEventRepositoryTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult(result);
+        }
+    }
+
+    private sealed class RecordingRealtimeSource(
+        EarthquakeSourceFetchResult result) : IRealtimeEarthquakeSource
+    {
+        public string SourceId => result.Status.SourceId;
+
+        public int FetchCount { get; private set; }
+
+        public Task<EarthquakeSourceFetchResult> FetchAsync(
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            FetchCount++;
+            return Task.FromResult(result);
+        }
+    }
+
+    private sealed class ThrowingRealtimeSource(
+        string sourceId,
+        Exception exception) : IRealtimeEarthquakeSource
+    {
+        public string SourceId => sourceId;
+
+        public int FetchCount { get; private set; }
+
+        public Task<EarthquakeSourceFetchResult> FetchAsync(
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            FetchCount++;
+            return Task.FromException<EarthquakeSourceFetchResult>(exception);
         }
     }
 

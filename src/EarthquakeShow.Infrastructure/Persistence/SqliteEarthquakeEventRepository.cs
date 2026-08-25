@@ -250,6 +250,16 @@ public sealed class SqliteEarthquakeEventRepository :
             {
                 throw;
             }
+            catch (OperationCanceledException exception)
+            {
+                result = new EarthquakeSourceFetchResult(
+                    [],
+                    new SourceStatus(
+                        source.SourceId,
+                        SourceConnectionState.Disconnected,
+                        DateTimeOffset.UtcNow,
+                        Detail: $"数据源请求超时：{exception.Message}"));
+            }
             catch (HttpRequestException exception)
             {
                 result = new EarthquakeSourceFetchResult(

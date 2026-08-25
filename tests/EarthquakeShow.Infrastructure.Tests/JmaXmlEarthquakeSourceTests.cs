@@ -87,6 +87,51 @@ public sealed class JmaXmlEarthquakeSourceTests
     }
 
     [Fact]
+    public async Task Fetch_Timeout_ReturnsDisconnectedStatus()
+    {
+        using var httpClient = new HttpClient(new RoutingResponseHandler(_ =>
+            throw new TaskCanceledException("模拟请求超时")));
+        var source = new JmaXmlEarthquakeSource(
+            httpClient,
+            endpoint: "https://example.test/feed.xml");
+
+        EarthquakeSourceFetchResult result = await source.FetchAsync();
+
+        Assert.Empty(result.Reports);
+        Assert.Equal(SourceConnectionState.Disconnected, result.Status.State);
+        Assert.Contains("超时", result.Status.Detail);
+    }
+
+    [Fact]
+    public async Task Fetch_FeedLinkWithoutXmlType_StillParsesSupportedEntry()
+    {
+        const string reportUri = "https://example.test/20260818221432_0_VXSE53_270000.xml";
+        const string feed = $"""
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <entry>
+                <id>{reportUri}</id>
+                <link href="{reportUri}" />
+              </entry>
+            </feed>
+            """;
+        const string xml = """
+            <Report xmlns="http://xml.kishou.go.jp/jmaxml1/"><Control><DateTime>2026-08-18T22:14:32+09:00</DateTime><Status>通常</Status></Control><Head xmlns="http://xml.kishou.go.jp/jmaxml1/informationBasis1/"><ReportDateTime>2026-08-18T22:14:32+09:00</ReportDateTime><EventID>20260818221432</EventID><InfoType>発表</InfoType></Head><Body xmlns="http://xml.kishou.go.jp/jmaxml1/body/seismology1/"><Earthquake><OriginTime>2026-08-18T22:14:00+09:00</OriginTime><Hypocenter><Area><Name>相模湾</Name><Coordinate>35.0+139.0-10000/</Coordinate></Area></Hypocenter><Magnitude type="Mj">3.0</Magnitude></Earthquake></Body></Report>
+            """;
+        using var httpClient = new HttpClient(new RoutingResponseHandler(uri =>
+            uri.AbsoluteUri.EndsWith("feed.xml", StringComparison.Ordinal)
+                ? Response(HttpStatusCode.OK, feed)
+                : Response(HttpStatusCode.OK, xml)));
+        var source = new JmaXmlEarthquakeSource(
+            httpClient,
+            endpoint: "https://example.test/feed.xml");
+
+        EarthquakeSourceFetchResult result = await source.FetchAsync();
+
+        Assert.Single(result.Reports);
+        Assert.Equal(SourceConnectionState.Online, result.Status.State);
+    }
+
+    [Fact]
     public async Task FetchSince_FiltersFeedEntriesBeforeCachedIssuedAt()
     {
         string root = Path.Combine(
@@ -246,6 +291,46 @@ public sealed class JmaXmlEarthquakeSourceTests
         Assert.Equal(2, result.Reports.Length);
         Assert.Contains("长期 Feed", result.Status.Detail);
         Assert.Contains("覆盖可能不足", result.Status.Detail);
+    }
+
+    [Fact]
+    public async Task FetchSince_EmptyShortFeed_UsesLongFeed()
+    {
+        const string longFeed = """
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <entry>
+                <id>https://example.test/20260824120000_0_VXSE53_270000.xml</id>
+                <link type="application/xml" href="https://example.test/report.xml" />
+              </entry>
+            </feed>
+            """;
+        const string xml = """
+            <Report xmlns="http://xml.kishou.go.jp/jmaxml1/"><Control><DateTime>2026-08-24T12:00:00+09:00</DateTime><Status>通常</Status></Control><Head xmlns="http://xml.kishou.go.jp/jmaxml1/informationBasis1/"><ReportDateTime>2026-08-24T12:00:00+09:00</ReportDateTime><EventID>20260824115900</EventID><InfoType>発表</InfoType></Head><Body xmlns="http://xml.kishou.go.jp/jmaxml1/body/seismology1/"><Earthquake><OriginTime>2026-08-24T11:59:00+09:00</OriginTime><Hypocenter><Area><Name>相模湾</Name><Coordinate>35.0+139.0-10000/</Coordinate></Area></Hypocenter><Magnitude type="Mj">3.0</Magnitude></Earthquake></Body></Report>
+            """;
+        using var httpClient = new HttpClient(new RoutingResponseHandler(uri =>
+        {
+            if (uri.AbsoluteUri.EndsWith("long-feed.xml", StringComparison.Ordinal))
+            {
+                return Response(HttpStatusCode.OK, longFeed);
+            }
+
+            if (uri.AbsoluteUri.EndsWith("feed.xml", StringComparison.Ordinal))
+            {
+                return Response(HttpStatusCode.OK, "<feed xmlns=\"http://www.w3.org/2005/Atom\" />");
+            }
+
+            return Response(HttpStatusCode.OK, xml);
+        }));
+        var source = new JmaXmlEarthquakeSource(
+            httpClient,
+            endpoint: "https://example.test/feed.xml",
+            longEndpoint: "https://example.test/long-feed.xml");
+
+        EarthquakeSourceFetchResult result = await source.FetchSinceAsync(
+            new DateTimeOffset(2026, 8, 24, 0, 0, 0, TimeSpan.FromHours(9)));
+
+        Assert.Single(result.Reports);
+        Assert.Contains("长期 Feed", result.Status.Detail);
     }
 
     [Fact]

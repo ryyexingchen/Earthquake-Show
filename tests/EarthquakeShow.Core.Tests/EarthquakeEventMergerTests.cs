@@ -128,6 +128,27 @@ public sealed class EarthquakeEventMergerTests
     }
 
     [Fact]
+    public void Merge_PreferredReport_UsesXmlWhenP2pIsNewer()
+    {
+        EarthquakeReport xml = CreateReport(
+            "VXSE53",
+            "xml-message",
+            1,
+            sourceId: "jma-xml");
+        EarthquakeReport p2p = CreateReport(
+            "P2P-551",
+            "p2p-message",
+            3,
+            sourceId: "p2pquake");
+
+        EarthquakeEvent earthquakeEvent = Assert.Single(
+            EarthquakeEventMerger.Merge([xml, p2p]));
+
+        Assert.Equal("p2pquake", earthquakeEvent.LatestReport?.Source.SourceId);
+        Assert.Equal("jma-xml", earthquakeEvent.PreferredReport?.Source.SourceId);
+    }
+
+    [Fact]
     public void Merge_JmaTemporaryEventIds_Vxse51AndVxse52CreateOneEvent()
     {
         EarthquakeReport intensity = CreateReport(

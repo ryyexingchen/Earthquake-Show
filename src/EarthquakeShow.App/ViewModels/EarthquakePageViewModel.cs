@@ -137,7 +137,7 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
         State = State with
         {
             SelectedEvent = selectedEvent,
-            ViewedReport = selectedEvent.LatestReport,
+            ViewedReport = selectedEvent.PreferredReport,
         };
         return true;
     }
@@ -163,7 +163,7 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
     public void ReturnToLatestReport()
     {
         ThrowIfDisposed();
-        State = State with { ViewedReport = State.SelectedEvent?.LatestReport };
+        State = State with { ViewedReport = State.SelectedEvent?.PreferredReport };
     }
 
     public void SetSearchText(string? searchText)
@@ -360,7 +360,7 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
                     report.Source.SourceMessageId,
                     viewedSource?.SourceMessageId,
                     StringComparison.Ordinal))
-            ?? selectedEvent.LatestReport;
+            ?? selectedEvent.PreferredReport;
     }
 
     private void ThrowIfDisposed()

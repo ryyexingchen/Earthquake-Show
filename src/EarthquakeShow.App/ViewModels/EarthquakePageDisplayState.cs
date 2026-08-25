@@ -340,7 +340,7 @@ public sealed record EarthquakePageDisplayState
             return ("未选择事件", "从左侧事件列表选择一条地震情报");
         }
 
-        EarthquakeReport? report = selectedEvent.LatestReport;
+        EarthquakeReport? report = selectedEvent.PreferredReport;
         string title = selectedEvent.Summary?.Hypocenter?.Name ?? selectedEvent.EventId;
         string reportText = report is null
             ? "报文状态不明"

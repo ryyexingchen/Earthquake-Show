@@ -278,12 +278,12 @@ public sealed class EarthquakeDetailsViewModelTests
         Assert.Single(page.State.Events);
         Assert.False(details.HasEventAssociations);
         Assert.True(details.CanToggleSource);
-        Assert.Equal("p2pquake", page.State.ViewedReport?.Source.SourceId);
+        Assert.Equal("jma-xml", page.State.ViewedReport?.Source.SourceId);
 
         details.ToggleSource();
 
-        Assert.Equal("jma-xml", page.State.ViewedReport?.Source.SourceId);
-        Assert.Equal("jma-report", page.State.ViewedReport?.Source.SourceMessageId);
+        Assert.Equal("p2pquake", page.State.ViewedReport?.Source.SourceId);
+        Assert.Equal("p2p-report", page.State.ViewedReport?.Source.SourceMessageId);
     }
 
     [Fact]
