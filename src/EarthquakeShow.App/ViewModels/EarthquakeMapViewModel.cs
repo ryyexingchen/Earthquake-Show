@@ -141,6 +141,8 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
     public GeoCoordinate? FocusedCoordinate => _focusedCoordinate;
 
+    internal MapGeometryBounds OverviewBounds => _overviewGeometry.Bounds;
+
     public string? ViewedReportKey
     {
         get
@@ -310,11 +312,13 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         MapGeometryBounds? viewportBounds = null)
     {
         ThrowIfDisposed();
-        MapDetailLevel desiredLevel = ZoomLevel > HighDetailZoomThreshold
-            ? MapDetailLevel.High
-            : preferMedium || ZoomLevel > MediumDetailZoomThreshold
-                ? MapDetailLevel.Medium
-                : MapDetailLevel.Overview;
+        MapDetailLevel desiredLevel = preferMedium
+            ? MapDetailLevel.Medium
+            : ZoomLevel > HighDetailZoomThreshold
+                ? MapDetailLevel.High
+                : ZoomLevel > MediumDetailZoomThreshold
+                    ? MapDetailLevel.Medium
+                    : MapDetailLevel.Overview;
         if (desiredLevel == MapDetailLevel.Overview)
         {
             _detailLoadCancellation?.Cancel();
@@ -396,19 +400,22 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     public void ZoomIn()
     {
         ThrowIfDisposed();
-        ZoomLevel = Math.Min(MaxBigZoomLevel, ZoomLevel * 1.25);
+        ZoomLevel = Math.Min(MaxBigZoomLevel, ZoomLevel + 1);
     }
 
     public void ZoomOut()
     {
         ThrowIfDisposed();
-        ZoomLevel = Math.Max(MaxSmallZoomLevel, ZoomLevel / 1.25);
+        ZoomLevel = Math.Max(MaxSmallZoomLevel, ZoomLevel - 1);
     }
 
-    public void AutoScale()
+    public void AutoScale(double automaticZoomLevel = 1)
     {
         ThrowIfDisposed();
-        ZoomLevel = 1;
+        ZoomLevel = Math.Clamp(
+            automaticZoomLevel,
+            MaxSmallZoomLevel,
+            MaxBigZoomLevel);
         if (_focusedCoordinate is not null)
         {
             _focusedCoordinate = null;

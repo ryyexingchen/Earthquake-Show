@@ -458,7 +458,7 @@ public sealed class EarthquakeMapViewModelTests
         GeoCoordinate focus = new(32.75, 130.70);
         map.FocusLocation(focus);
 
-        for (int index = 0; index < 20; index++)
+        for (int index = 0; index < 30; index++)
         {
             map.ZoomIn();
         }
@@ -466,7 +466,7 @@ public sealed class EarthquakeMapViewModelTests
         Assert.Equal(EarthquakeMapViewModel.MaxBigZoomLevel, map.ZoomLevel);
         Assert.Equal(focus, map.FocusedCoordinate);
 
-        for (int index = 0; index < 20; index++)
+        for (int index = 0; index < 30; index++)
         {
             map.ZoomOut();
         }

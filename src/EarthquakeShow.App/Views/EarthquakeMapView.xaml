@@ -36,7 +36,7 @@
                 <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
                     <TextBlock Foreground="#667179"
                                FontSize="10"
-                               Text="ZoomLevel: " />
+                               Text="Global ZoomLevel: " />
                     <TextBlock Foreground="#667179"
                                FontSize="10"
                                Text="{Binding ZoomLevel, StringFormat={}{0:F2}}" />
