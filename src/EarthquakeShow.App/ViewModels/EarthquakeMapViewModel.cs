@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using EarthquakeShow.Core.Models;
 
@@ -41,6 +42,11 @@ public sealed record EarthquakeMapBoundaryLayer(
     JmaIntensity Intensity,
     ImmutableArray<EarthquakeMapBoundary> Boundaries);
 
+public sealed class MapGeometryChangingEventArgs(GeoCoordinate? preferredCenter) : EventArgs
+{
+    public GeoCoordinate? PreferredCenter { get; } = preferredCenter;
+}
+
 public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 {
     // max_small 和 max_big 分别限制手动、自动缩放的最小和最大倍率。
@@ -66,9 +72,15 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     private MapDetailLevel _detailLevel;
     private CancellationTokenSource? _detailLoadCancellation;
     private bool _isLoadingDetail;
+    private MapDetailLevel? _loadingDetailLevel;
     private string? _detailLoadError;
     private MapDetailLevel? _detailLoadErrorLevel;
     private MapGeometryBounds? _highLoadedViewportBounds;
+    private MapGeometrySet? _mediumGeometrySet;
+    private MapGeometrySet? _retainedHighGeometrySet;
+    private MapGeometryBounds? _retainedHighViewportBounds;
+    private long _detailLoadGeneration;
+    private bool _lastHighLoadUsedCache;
     private bool _isApplyingAutoScale;
     private bool _isDisposed;
 
@@ -93,7 +105,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public event EventHandler? GeometryChanging;
+    public event EventHandler<MapGeometryChangingEventArgs>? GeometryChanging;
 
     public ImmutableArray<MapPolygonGeometry> Outline => _geometry.Polygons;
 
@@ -109,6 +121,14 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
     public MapDetailLevel DetailLevel => _detailLevel;
 
+    internal MapGeometryBounds? HighLoadedViewportBounds =>
+        _highLoadedViewportBounds;
+
+    public bool IsLoadingHighDetail =>
+        _isLoadingDetail && _loadingDetailLevel == MapDetailLevel.High;
+
+    public bool LastHighLoadUsedCache => _lastHighLoadUsedCache;
+
     public bool IsLoadingDetail
     {
         get => _isLoadingDetail;
@@ -121,6 +141,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
             _isLoadingDetail = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(IsLoadingHighDetail));
             OnPropertyChanged(nameof(StatusText));
         }
     }
@@ -180,6 +201,9 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             : FocusMode;
 
     public bool HasSelectedEvent => _page.State.SelectedEvent is not null;
+
+    public bool IsDistantEvent =>
+        _page.State.ViewedReport?.ReportType == EarthquakeReportType.DistantEarthquake;
 
     public bool HasDrawableLayers =>
         Municipalities.Count > 0 || BoundaryLayers.Count > 0 || Markers.Count > 0;
@@ -286,7 +310,11 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
             if (IsLoadingDetail)
             {
-                return $"{baseText} · 正在加载中精度";
+                return IsLoadingHighDetail
+                    ? DetailLevel == MapDetailLevel.Medium
+                        ? $"{baseText} · 中精度兜底，正在加载高精度"
+                        : $"{baseText} · 正在加载高精度"
+                    : $"{baseText} · 正在加载中精度";
             }
 
             if (!string.IsNullOrWhiteSpace(DetailLoadError))
@@ -299,7 +327,9 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
             return DetailLevel switch
             {
-                MapDetailLevel.High => $"{baseText} · 高精度",
+                MapDetailLevel.High => LastHighLoadUsedCache
+                    ? $"{baseText} · 高精度 · 缓存"
+                    : $"{baseText} · 高精度",
                 MapDetailLevel.Medium => $"{baseText} · 中精度",
                 _ => baseText,
             };
@@ -309,19 +339,19 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     public async Task EnsureDetailLevelForZoomAsync(
         CancellationToken cancellationToken = default,
         bool preferMedium = false,
-        MapGeometryBounds? viewportBounds = null)
+        MapGeometryBounds? viewportBounds = null,
+        GeoCoordinate? viewportCenter = null)
     {
         ThrowIfDisposed();
-        MapDetailLevel desiredLevel = preferMedium
-            ? MapDetailLevel.Medium
-            : ZoomLevel > HighDetailZoomThreshold
-                ? MapDetailLevel.High
-                : ZoomLevel > MediumDetailZoomThreshold
-                    ? MapDetailLevel.Medium
-                    : MapDetailLevel.Overview;
+        MapDetailLevel desiredLevel = GetDesiredDetailLevel(preferMedium);
+        TraceDetail(
+            "EnsureStart",
+            $"generation={_detailLoadGeneration} desired={desiredLevel} current={_detailLevel} " +
+            $"viewport={FormatBounds(viewportBounds)} center={FormatCoordinate(viewportCenter)}");
         if (desiredLevel == MapDetailLevel.Overview)
         {
             _detailLoadCancellation?.Cancel();
+            _detailLoadGeneration++;
             if (_detailLevel != MapDetailLevel.Overview)
             {
                 ApplyGeometrySet(
@@ -329,21 +359,45 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                         _overviewGeometry,
                         _overviewMunicipalityGeometry,
                         _overviewBoundaryGeometry),
-                    MapDetailLevel.Overview);
+                    MapDetailLevel.Overview,
+                    preferredCenter: viewportCenter);
             }
+
+            _mediumGeometrySet = null;
+            _retainedHighGeometrySet = null;
+            _retainedHighViewportBounds = null;
 
             return;
         }
 
         if (_detailLevel == desiredLevel)
         {
-            if (desiredLevel != MapDetailLevel.High ||
-                viewportBounds is null ||
-                _highLoadedViewportBounds is null ||
-                Contains(_highLoadedViewportBounds.Value, viewportBounds.Value))
+            if (!NeedsHighDetailReload(
+                    desiredLevel,
+                    _highLoadedViewportBounds,
+                    viewportBounds))
             {
+                TraceDetail("EnsureReuseCurrent", $"detail={_detailLevel} viewport={FormatBounds(viewportBounds)}");
                 return;
             }
+        }
+
+        if (desiredLevel == MapDetailLevel.High &&
+            viewportBounds is MapGeometryBounds highBounds &&
+            _retainedHighGeometrySet is not null &&
+            _retainedHighViewportBounds is MapGeometryBounds retainedBounds &&
+            Contains(retainedBounds, highBounds))
+        {
+            TraceDetail("EnsureReuseRetained", $"viewport={FormatBounds(highBounds)} retained={FormatBounds(retainedBounds)}");
+            _lastHighLoadUsedCache = true;
+            ApplyGeometrySet(
+                _retainedHighGeometrySet,
+                MapDetailLevel.High,
+                retainedBounds,
+                viewportCenter);
+            _retainedHighGeometrySet = null;
+            _retainedHighViewportBounds = null;
+            return;
         }
 
         if (_lodResourceProvider is null)
@@ -353,12 +407,54 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
         _detailLoadCancellation?.Cancel();
         _detailLoadCancellation?.Dispose();
+        long loadGeneration = ++_detailLoadGeneration;
+        TraceDetail("LoadBegin", $"generation={loadGeneration} desired={desiredLevel}");
         CancellationTokenSource loadCancellation =
             CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _detailLoadCancellation = loadCancellation;
+        _detailLoadErrorLevel = desiredLevel;
+        _loadingDetailLevel = desiredLevel;
+        _lastHighLoadUsedCache = false;
         IsLoadingDetail = true;
         try
         {
+            if (desiredLevel == MapDetailLevel.High &&
+                _mediumGeometrySet is null)
+            {
+                MapGeometrySet mediumGeometrySet = await Task.Run(
+                    () => _lodResourceProvider.LoadMedium(loadCancellation.Token),
+                    loadCancellation.Token);
+                loadCancellation.Token.ThrowIfCancellationRequested();
+                if (loadGeneration != _detailLoadGeneration || _isDisposed)
+                {
+                    return;
+                }
+
+                _mediumGeometrySet = mediumGeometrySet;
+                TraceDetail("MediumLoaded", $"generation={loadGeneration}");
+            }
+
+            if (desiredLevel == MapDetailLevel.High &&
+                _detailLevel != MapDetailLevel.Medium)
+            {
+                await Task.Yield();
+                if (loadGeneration != _detailLoadGeneration ||
+                    loadCancellation.IsCancellationRequested ||
+                    _isDisposed)
+                {
+                    return;
+                }
+
+                ApplyMediumFallback(viewportCenter);
+                await Task.Yield();
+                if (loadGeneration != _detailLoadGeneration ||
+                    loadCancellation.IsCancellationRequested ||
+                    _isDisposed)
+                {
+                    return;
+                }
+            }
+
             MapGeometrySet geometrySet = await Task.Run(
                 () => desiredLevel == MapDetailLevel.High
                     ? _lodResourceProvider.LoadHigh(
@@ -367,19 +463,26 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                     : _lodResourceProvider.LoadMedium(loadCancellation.Token),
                 loadCancellation.Token);
             loadCancellation.Token.ThrowIfCancellationRequested();
-            if (_isDisposed)
+            if (_isDisposed || loadGeneration != _detailLoadGeneration)
             {
                 return;
             }
 
-            ApplyGeometrySet(geometrySet, desiredLevel, viewportBounds);
+            ApplyGeometrySet(
+                geometrySet,
+                desiredLevel,
+                viewportBounds,
+                viewportCenter);
+            TraceDetail("LoadApplied", $"generation={loadGeneration} detail={desiredLevel} center={FormatCoordinate(viewportCenter)}");
         }
         catch (OperationCanceledException)
         {
             // 缩放方向改变时取消旧级别加载，保留当前可见地图。
+            TraceDetail("LoadCancelled", $"generation={loadGeneration}");
         }
         catch (Exception exception)
         {
+            TraceDetail("LoadFailed", $"generation={loadGeneration} error={exception.Message}");
             _detailLoadError = exception.Message;
             _detailLoadErrorLevel = desiredLevel;
             OnPropertyChanged(nameof(DetailLoadError));
@@ -390,11 +493,24 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             if (ReferenceEquals(_detailLoadCancellation, loadCancellation))
             {
                 _detailLoadCancellation = null;
+                _loadingDetailLevel = null;
                 IsLoadingDetail = false;
             }
 
             loadCancellation.Dispose();
         }
+    }
+
+    internal bool WillChangeDetailLevel(
+        bool preferMedium,
+        MapGeometryBounds? viewportBounds)
+    {
+        MapDetailLevel desiredLevel = GetDesiredDetailLevel(preferMedium);
+        return desiredLevel != DetailLevel ||
+            NeedsHighDetailReload(
+                desiredLevel,
+                _highLoadedViewportBounds,
+                viewportBounds);
     }
 
     public void ZoomIn()
@@ -575,9 +691,26 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     private void ApplyGeometrySet(
         MapGeometrySet geometrySet,
         MapDetailLevel detailLevel,
-        MapGeometryBounds? highViewportBounds = null)
+        MapGeometryBounds? highViewportBounds = null,
+        GeoCoordinate? preferredCenter = null)
     {
-        GeometryChanging?.Invoke(this, EventArgs.Empty);
+        if (_detailLevel == MapDetailLevel.High &&
+            _highLoadedViewportBounds is MapGeometryBounds previousHighBounds)
+        {
+            _retainedHighGeometrySet = new MapGeometrySet(
+                _geometry,
+                _municipalityGeometry,
+                _boundaryGeometry);
+            _retainedHighViewportBounds = previousHighBounds;
+        }
+
+        GeometryChanging?.Invoke(
+            this,
+            new MapGeometryChangingEventArgs(preferredCenter));
+        TraceDetail(
+            "ApplyGeometry",
+            $"from={_detailLevel} to={detailLevel} center={FormatCoordinate(preferredCenter)} " +
+            $"viewport={FormatBounds(highViewportBounds)}");
         _geometry = geometrySet.Areas;
         _municipalityGeometry = geometrySet.Municipalities;
         _boundaryGeometry = geometrySet.Boundaries;
@@ -587,6 +720,10 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         _highLoadedViewportBounds = detailLevel == MapDetailLevel.High
             ? highViewportBounds
             : null;
+        if (detailLevel == MapDetailLevel.Medium)
+        {
+            _mediumGeometrySet = geometrySet;
+        }
         OnPropertyChanged(nameof(DetailLevel));
         OnPropertyChanged(nameof(DetailLoadError));
         OnPropertyChanged(nameof(GeometrySource));
@@ -598,6 +735,20 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         RebuildLayers();
     }
 
+    private void ApplyMediumFallback(GeoCoordinate? preferredCenter)
+    {
+        if (_mediumGeometrySet is null || _detailLevel == MapDetailLevel.Medium)
+        {
+            return;
+        }
+
+        ApplyGeometrySet(
+            _mediumGeometrySet,
+            MapDetailLevel.Medium,
+            preferredCenter: preferredCenter);
+        TraceDetail("MediumFallback", $"center={FormatCoordinate(preferredCenter)}");
+    }
+
     private static bool Contains(
         MapGeometryBounds outer,
         MapGeometryBounds inner)
@@ -606,6 +757,28 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             outer.MaxLongitude >= inner.MaxLongitude &&
             outer.MinLatitude <= inner.MinLatitude &&
             outer.MaxLatitude >= inner.MaxLatitude;
+    }
+
+    internal static bool NeedsHighDetailReload(
+        MapDetailLevel detailLevel,
+        MapGeometryBounds? loadedBounds,
+        MapGeometryBounds? requestedBounds)
+    {
+        return detailLevel == MapDetailLevel.High &&
+            requestedBounds is MapGeometryBounds requested &&
+            (loadedBounds is not MapGeometryBounds loaded ||
+                !Contains(loaded, requested));
+    }
+
+    private MapDetailLevel GetDesiredDetailLevel(bool preferMedium)
+    {
+        return preferMedium
+            ? MapDetailLevel.Medium
+            : ZoomLevel > HighDetailZoomThreshold
+                ? MapDetailLevel.High
+                : ZoomLevel > MediumDetailZoomThreshold
+                    ? MapDetailLevel.Medium
+                    : MapDetailLevel.Overview;
     }
 
     private void RebuildLayers()
@@ -638,6 +811,17 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         }
 
         report = GetMapReport(report);
+        bool isDistantEvent = report.ReportType == EarthquakeReportType.DistantEarthquake;
+        if (isDistantEvent)
+        {
+            report = report with
+            {
+                MaxIntensity = JmaIntensity.Unknown,
+                IntensityAreas = [],
+                IntensityMunicipalities = [],
+                IntensityStations = [],
+            };
+        }
         BoundaryLayers = BuildBoundaryLayers(report);
 
         var geometryByCode = Outline
@@ -843,6 +1027,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(FollowSelection));
         OnPropertyChanged(nameof(EffectiveFocusMode));
         OnPropertyChanged(nameof(HasSelectedEvent));
+        OnPropertyChanged(nameof(IsDistantEvent));
         OnPropertyChanged(nameof(HasDrawableLayers));
         OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(FocusedCoordinate));
@@ -870,6 +1055,23 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     {
         ObjectDisposedException.ThrowIf(_isDisposed, this);
     }
+
+    private static void TraceDetail(string action, string detail)
+    {
+        string message = $"[MapDebug] {DateTimeOffset.Now:HH:mm:ss.fff} LOD {action} {detail}";
+        Console.WriteLine(message);
+        Debug.WriteLine(message);
+    }
+
+    private static string FormatCoordinate(GeoCoordinate? coordinate) =>
+        coordinate is GeoCoordinate value
+            ? $"{value.Latitude:0.####},{value.Longitude:0.####}"
+            : "null";
+
+    private static string FormatBounds(MapGeometryBounds? bounds) =>
+        bounds is MapGeometryBounds value
+            ? $"[{value.MinLongitude:0.###},{value.MaxLongitude:0.###}]x[{value.MinLatitude:0.###},{value.MaxLatitude:0.###}]"
+            : "null";
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {

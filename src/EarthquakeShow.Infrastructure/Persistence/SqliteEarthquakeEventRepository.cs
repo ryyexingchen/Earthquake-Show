@@ -904,6 +904,7 @@ public sealed class SqliteEarthquakeEventRepository :
         public string EventId { get; set; } = string.Empty;
         public string ReportCode { get; set; } = string.Empty;
         public string ReportType { get; set; } = nameof(EarthquakeReportType.Unknown);
+        public string? DistantEarthquakeKind { get; set; }
         public string Status { get; set; } = nameof(ReportStatus.Unknown);
         public string Context { get; set; } = nameof(ReportContext.Unknown);
         public int? Serial { get; set; }
@@ -925,6 +926,7 @@ public sealed class SqliteEarthquakeEventRepository :
             EventId = report.EventId,
             ReportCode = report.ReportCode,
             ReportType = report.ReportType.ToString(),
+            DistantEarthquakeKind = report.DistantEarthquakeKind?.ToString(),
             Status = report.Status.ToString(),
             Context = report.Context.ToString(),
             Serial = report.Serial,
@@ -954,6 +956,9 @@ public sealed class SqliteEarthquakeEventRepository :
                 EventId = EventId,
                 ReportCode = ReportCode,
                 ReportType = ParseEnum<EarthquakeReportType>(ReportType),
+                DistantEarthquakeKind = DistantEarthquakeKind is null
+                    ? null
+                    : ParseEnum<DistantEarthquakeKind>(DistantEarthquakeKind),
                 Status = ParseEnum<ReportStatus>(Status),
                 Context = ParseEnum<ReportContext>(Context),
                 Serial = Serial,

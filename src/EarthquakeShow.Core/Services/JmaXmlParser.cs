@@ -62,6 +62,7 @@ public static class JmaXmlParser
             EventId = eventId,
             ReportCode = reportCode,
             ReportType = GetReportType(reportCode, root),
+            DistantEarthquakeKind = ParseDistantEarthquakeKind(root),
             Status = ParseReportStatus(FirstValue(root, "InfoType")),
             Context = ParseReportContext(FirstValue(root, "Status")),
             Serial = ParseOptionalInt(FirstValue(root, "Serial")),
@@ -337,6 +338,11 @@ public static class JmaXmlParser
 
     private static EarthquakeReportType GetReportType(string reportCode, XElement root)
     {
+        if (IsDistantEarthquake(root))
+        {
+            return EarthquakeReportType.DistantEarthquake;
+        }
+
         return reportCode switch
         {
             "VXSE51" => EarthquakeReportType.SeismicIntensity,
@@ -350,6 +356,28 @@ public static class JmaXmlParser
                 _ => EarthquakeReportType.Unknown,
             },
         };
+    }
+
+    private static DistantEarthquakeKind? ParseDistantEarthquakeKind(XElement root)
+    {
+        if (!IsDistantEarthquake(root))
+        {
+            return null;
+        }
+
+        string? comment = FirstValue(root, "FreeFormComment");
+        return comment?.Contains("噴火", StringComparison.Ordinal) == true
+            ? DistantEarthquakeKind.VolcanicEruption
+            : DistantEarthquakeKind.Earthquake;
+    }
+
+    private static bool IsDistantEarthquake(XElement root)
+    {
+        XElement? head = FirstDescendant(root, "Head");
+        return head is not null && string.Equals(
+            FirstChildValue(head, "Title"),
+            "遠地地震に関する情報",
+            StringComparison.Ordinal);
     }
 
     private static ReportStatus ParseReportStatus(string? value)

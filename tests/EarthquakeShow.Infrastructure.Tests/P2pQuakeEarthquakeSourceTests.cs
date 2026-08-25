@@ -106,6 +106,102 @@ public sealed class P2pQuakeEarthquakeSourceTests
     }
 
     [Fact]
+    public async Task Fetch_ForeignVolcanicEruption_NormalizesUnknownValues()
+    {
+        const string payload = """
+            [{
+              "code": 551,
+              "id": "foreign-volcano-1",
+              "comments": { "freeFormComment": "アンバエ火山で大規模な噴火が発生しました。" },
+              "issue": { "correct": "None", "source": "気象庁", "time": "2026/08/25 20:35:07", "type": "Foreign" },
+              "earthquake": {
+                "domesticTsunami": "Checking",
+                "foreignTsunami": "Unknown",
+                "hypocenter": { "depth": -1, "latitude": -15.4, "longitude": 167.8, "magnitude": -1, "name": "バヌアツ諸島" },
+                "maxScale": -1,
+                "time": "2026/08/25 18:40:00"
+              },
+              "points": [],
+              "time": "2026/08/25 20:35:08.253"
+            }]
+            """;
+        using var httpClient = new HttpClient(new ResponseHandler(
+            Response(HttpStatusCode.OK, payload)));
+        var source = new P2pQuakeEarthquakeSource(
+            httpClient,
+            "https://example.test/v2/jma/quake");
+
+        EarthquakeSourceFetchResult result = await source.FetchAsync();
+
+        EarthquakeReport report = Assert.Single(result.Reports);
+        Assert.Equal(SourceConnectionState.Online, result.Status.State);
+        Assert.Equal(EarthquakeReportType.DistantEarthquake, report.ReportType);
+        Assert.Equal(DistantEarthquakeKind.VolcanicEruption, report.DistantEarthquakeKind);
+        Assert.Equal(new GeoCoordinate(-15.4, 167.8), report.Hypocenter?.Coordinate);
+        Assert.Null(report.Hypocenter?.DepthKm);
+        Assert.Null(report.Magnitude);
+        Assert.Equal(JmaIntensity.Unknown, report.MaxIntensity);
+    }
+
+    [Fact]
+    public async Task Fetch_ForeignEarthquake_PreservesKnownMagnitudeAndUnknownDepth()
+    {
+        const string payload = """
+            [{
+              "code": 551,
+              "id": "foreign-earthquake-1",
+              "comments": { "freeFormComment": "南米西部で規模の大きな地震が発生しました。" },
+              "issue": { "correct": "None", "source": "気象庁", "time": "2026/08/25 21:00:00", "type": "Foreign" },
+              "earthquake": {
+                "hypocenter": { "depth": -1, "latitude": -12.3, "longitude": -77.1, "magnitude": 7.2, "name": "南米西部" },
+                "maxScale": -1,
+                "time": "2026/08/25 20:30:00"
+              },
+              "points": []
+            }]
+            """;
+        using var httpClient = new HttpClient(new ResponseHandler(
+            Response(HttpStatusCode.OK, payload)));
+        var source = new P2pQuakeEarthquakeSource(
+            httpClient,
+            "https://example.test/v2/jma/quake");
+
+        EarthquakeReport report = Assert.Single((await source.FetchAsync()).Reports);
+
+        Assert.Equal(EarthquakeReportType.DistantEarthquake, report.ReportType);
+        Assert.Equal(DistantEarthquakeKind.Earthquake, report.DistantEarthquakeKind);
+        Assert.Equal(new GeoCoordinate(-12.3, -77.1), report.Hypocenter?.Coordinate);
+        Assert.Null(report.Hypocenter?.DepthKm);
+        Assert.Equal(7.2, report.Magnitude?.Value);
+    }
+
+    [Fact]
+    public async Task Fetch_InvalidSentinelCoordinate_DoesNotRejectWholeBatch()
+    {
+        const string payload = """
+            [{
+              "code": 551, "id": "scale-prompt-1",
+              "issue": { "time": "2026/08/25 18:09:04", "type": "ScalePrompt" },
+              "earthquake": {
+                "hypocenter": { "depth": -1, "latitude": -200, "longitude": -200, "magnitude": -1, "name": "" },
+                "maxScale": 30, "time": "2026/08/25 18:07:00"
+              },
+              "points": [{ "addr": "釧路地方中南部", "isArea": true, "pref": "北海道", "scale": 30 }]
+            }]
+            """;
+        using var httpClient = new HttpClient(new ResponseHandler(
+            Response(HttpStatusCode.OK, payload)));
+        var source = new P2pQuakeEarthquakeSource(
+            httpClient,
+            "https://example.test/v2/jma/quake");
+
+        EarthquakeReport report = Assert.Single((await source.FetchAsync()).Reports);
+
+        Assert.Null(report.Hypocenter);
+        Assert.Null(report.Magnitude);
+    }
+
+    [Fact]
     public async Task Fetch_RateLimited_ReturnsRateLimitedStatus()
     {
         using var httpClient = new HttpClient(new ResponseHandler(

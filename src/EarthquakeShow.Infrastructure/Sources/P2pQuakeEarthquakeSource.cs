@@ -176,19 +176,17 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
         DateTimeOffset issuedAt = ParseRequiredTime(item.Issue.Time, "issue.time");
         DateTimeOffset reportReceivedAt = ParseOptionalTime(item.Time) ?? receivedAt;
         P2pHypocenter sourceHypocenter = item.Earthquake.Hypocenter;
-        if (sourceHypocenter.Latitude is not double latitude ||
-            sourceHypocenter.Longitude is not double longitude)
-        {
-            throw new FormatException("P2PQuake earthquake.hypocenter 缺少有效坐标。");
-        }
-
-        GeoCoordinate coordinate = new(latitude, longitude);
-        Hypocenter hypocenter = new(
-            NullIfUnknown(sourceHypocenter.Name),
-            null,
-            coordinate,
-            sourceHypocenter.Depth);
-        Magnitude? magnitude = sourceHypocenter.Magnitude is double magnitudeValue
+        GeoCoordinate? coordinate = TryCreateCoordinate(
+            sourceHypocenter.Latitude,
+            sourceHypocenter.Longitude);
+        int? depthKm = sourceHypocenter.Depth is >= 0
+            ? sourceHypocenter.Depth
+            : null;
+        string? hypocenterName = NullIfUnknown(sourceHypocenter.Name);
+        Hypocenter? hypocenter = coordinate is null && depthKm is null && hypocenterName is null
+            ? null
+            : new Hypocenter(hypocenterName, null, coordinate, depthKm);
+        Magnitude? magnitude = sourceHypocenter.Magnitude is double magnitudeValue && magnitudeValue >= 0
             ? new Magnitude(magnitudeValue)
             : null;
         JmaIntensity maxIntensity = ParseIntensity(item.Earthquake.MaxScale);
@@ -204,6 +202,9 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
             EventId = $"p2pquake:{item.Id}",
             ReportCode = $"P2P-{item.Code}",
             ReportType = ParseReportType(item.Issue.Type),
+            DistantEarthquakeKind = ParseDistantEarthquakeKind(
+                item.Issue.Type,
+                item.Comments?.FreeFormComment),
             Status = ParseReportStatus(item.Issue.Correct),
             Context = ReportContext.Normal,
             OriginTime = ParseOptionalTime(item.Earthquake.Time),
@@ -391,8 +392,33 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
             "DetailScale" => EarthquakeReportType.HypocenterAndIntensity,
             "ScalePrompt" => EarthquakeReportType.SeismicIntensity,
             "Destination" => EarthquakeReportType.Hypocenter,
+            "Foreign" => EarthquakeReportType.DistantEarthquake,
             _ => EarthquakeReportType.Unknown,
         };
+    }
+
+    private static DistantEarthquakeKind? ParseDistantEarthquakeKind(
+        string? issueType,
+        string? freeFormComment)
+    {
+        if (!string.Equals(issueType, "Foreign", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return freeFormComment?.Contains("噴火", StringComparison.Ordinal) == true
+            ? DistantEarthquakeKind.VolcanicEruption
+            : DistantEarthquakeKind.Earthquake;
+    }
+
+    private static GeoCoordinate? TryCreateCoordinate(
+        double? latitude,
+        double? longitude)
+    {
+        return latitude is >= -90 and <= 90 &&
+            longitude is >= -180 and <= 180
+                ? new GeoCoordinate(latitude.Value, longitude.Value)
+                : null;
     }
 
     private static ReportStatus ParseReportStatus(string? value)
@@ -471,10 +497,14 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
     private sealed record P2pQuakeItem(
         [property: JsonPropertyName("code")] int Code,
         [property: JsonPropertyName("id")] string? Id,
+        [property: JsonPropertyName("comments")] P2pComments? Comments,
         [property: JsonPropertyName("issue")] P2pIssue? Issue,
         [property: JsonPropertyName("earthquake")] P2pEarthquake? Earthquake,
         [property: JsonPropertyName("points")] P2pPoint[]? Points,
         [property: JsonPropertyName("time")] string? Time);
+
+    private sealed record P2pComments(
+        [property: JsonPropertyName("freeFormComment")] string? FreeFormComment);
 
     private sealed record P2pIssue(
         [property: JsonPropertyName("correct")] string? Correct,

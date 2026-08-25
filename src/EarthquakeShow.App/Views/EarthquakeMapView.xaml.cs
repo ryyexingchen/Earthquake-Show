@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -17,8 +18,9 @@ public partial class EarthquakeMapView : UserControl
     private bool _isPanning;
     private Point _lastPanPoint;
     private Vector _panOffset;
-    private GeoCoordinate? _pendingViewportCenter;
+    private GeoCoordinate? _viewportCenter;
     private GeoCoordinate? _lastFocusedCoordinate;
+    private long _lastPanTraceAt;
 
     public EarthquakeMapView()
     {
@@ -40,7 +42,7 @@ public partial class EarthquakeMapView : UserControl
         }
 
         _panOffset = default;
-        _pendingViewportCenter = null;
+        _viewportCenter = null;
         _lastFocusedCoordinate = ViewModel?.FocusedCoordinate;
         RenderMap();
         await EnsureMapDetailLevelAsync(
@@ -51,7 +53,7 @@ public partial class EarthquakeMapView : UserControl
     {
         StopPanning();
         _panOffset = default;
-        _pendingViewportCenter = null;
+        _viewportCenter = null;
         if (ViewModel is not null)
         {
             ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
@@ -84,8 +86,8 @@ public partial class EarthquakeMapView : UserControl
 
         if (e.PropertyName == nameof(EarthquakeMapViewModel.ViewedReportKey))
         {
-            _pendingViewportCenter = null;
             _panOffset = default;
+            _viewportCenter = null;
             ViewModel?.AutoScale(GetAutomaticZoomLevel());
             RequestRender();
             _ = EnsureMapDetailLevelAsync(
@@ -178,12 +180,14 @@ public partial class EarthquakeMapView : UserControl
     private void OnResetViewClick(object sender, RoutedEventArgs e)
     {
         _panOffset = default;
+        _viewportCenter = null;
         ViewModel?.ResetView();
     }
 
     private async void OnFocusSelectedClick(object sender, RoutedEventArgs e)
     {
         _panOffset = default;
+        _viewportCenter = null;
         ViewModel?.FocusSelectedEvent();
         ViewModel?.AutoScale(GetAutomaticZoomLevel());
         await EnsureMapDetailLevelAsync(preferMedium: true);
@@ -199,6 +203,7 @@ public partial class EarthquakeMapView : UserControl
         ViewModel.BeginManualInteraction();
         _isPanning = true;
         _lastPanPoint = e.GetPosition(MapCanvas);
+        TraceMap("MouseDown", GetViewportCenter());
         MapCanvas.CaptureMouse();
         Cursor = Cursors.SizeAll;
         e.Handled = true;
@@ -217,6 +222,11 @@ public partial class EarthquakeMapView : UserControl
         {
             _panOffset += delta;
             _lastPanPoint = currentPoint;
+            if (Environment.TickCount64 - _lastPanTraceAt >= 100)
+            {
+                _lastPanTraceAt = Environment.TickCount64;
+                TraceMap("MouseMove", GetViewportCenter(), $"delta={FormatVector(delta)}");
+            }
             RequestRender();
         }
 
@@ -230,6 +240,7 @@ public partial class EarthquakeMapView : UserControl
             return;
         }
 
+        CommitViewportCenter("MouseUp");
         StopPanning();
         await EnsureMapDetailLevelAsync();
         e.Handled = true;
@@ -238,6 +249,10 @@ public partial class EarthquakeMapView : UserControl
     private void OnMapLostMouseCapture(object sender, MouseEventArgs e)
     {
         bool wasPanning = _isPanning;
+        if (wasPanning)
+        {
+            CommitViewportCenter("LostMouseCapture");
+        }
         StopPanning();
         if (wasPanning)
         {
@@ -273,7 +288,7 @@ public partial class EarthquakeMapView : UserControl
             _panOffset += new Vector(
                 anchor.X - projectedAnchor.X,
                 anchor.Y - projectedAnchor.Y);
-            RequestRender();
+            CommitViewportCenter("MouseWheel");
         }
 
         await EnsureMapDetailLevelAsync();
@@ -288,16 +303,42 @@ public partial class EarthquakeMapView : UserControl
             return;
         }
 
+        MapGeometryBounds? viewportBounds = GetDetailViewportBounds();
+        GeoCoordinate? viewportCenter = null;
+        if (ViewModel.WillChangeDetailLevel(preferMedium, viewportBounds) &&
+            GetViewportCenter() is GeoCoordinate currentCenter)
+        {
+            viewportCenter = currentCenter;
+            _viewportCenter = currentCenter;
+        }
+
+        TraceMap(
+            "EnsureDetail",
+            GetViewportCenter(),
+            $"preferMedium={preferMedium}, willChange={viewportCenter is not null}, bounds={FormatBounds(viewportBounds)}");
+
         try
         {
             await ViewModel.EnsureDetailLevelForZoomAsync(
                 preferMedium: preferMedium,
-                viewportBounds: GetDetailViewportBounds());
+                viewportBounds: viewportBounds,
+                viewportCenter: viewportCenter);
         }
         catch (ObjectDisposedException)
         {
             // 控件卸载期间忽略异步加载竞态。
         }
+    }
+
+    private GeoCoordinate? GetViewportCenter()
+    {
+        if (MapCanvas.ActualWidth < 10 || MapCanvas.ActualHeight < 10)
+        {
+            return null;
+        }
+
+        return CreateProjection().Unproject(
+            new Point(MapCanvas.ActualWidth / 2, MapCanvas.ActualHeight / 2));
     }
 
     private MapGeometryBounds? GetDetailViewportBounds()
@@ -324,7 +365,17 @@ public partial class EarthquakeMapView : UserControl
 
     private double GetAutomaticZoomLevel()
     {
-        if (ViewModel is null ||
+        if (ViewModel is null)
+        {
+            return 1;
+        }
+
+        if (ViewModel.IsDistantEvent)
+        {
+            return EarthquakeMapViewModel.MaxSmallZoomLevel;
+        }
+
+        if (
             MapCanvas.ActualWidth < 10 ||
             MapCanvas.ActualHeight < 10 ||
             !ViewModel.TryGetSelectedEventBounds(out MapGeometryBounds eventBounds))
@@ -354,28 +405,39 @@ public partial class EarthquakeMapView : UserControl
         return MapProjection.ZoomLevelForScale(eventScale / overviewScale);
     }
 
-    private void OnGeometryChanging(object? sender, EventArgs e)
+    private void OnGeometryChanging(
+        object? sender,
+        MapGeometryChangingEventArgs e)
     {
         if (ViewModel is null || MapCanvas.ActualWidth < 10 || MapCanvas.ActualHeight < 10)
         {
             return;
         }
 
-        MapProjection currentProjection = CreateProjection();
-        GeoCoordinate currentCenter = currentProjection.Unproject(
+        GeoCoordinate? previousCommittedCenter = _viewportCenter;
+        GeoCoordinate projectedCenter = CreateProjection().Unproject(
             new Point(MapCanvas.ActualWidth / 2, MapCanvas.ActualHeight / 2));
-        // 一次渲染完成前只保存第一次中心，避免连续 LOD 通知覆盖手动平移位置。
-        _pendingViewportCenter = PreservePendingViewportCenter(
-            _pendingViewportCenter,
-            currentCenter);
+        // 几何替换前的画布中心代表用户此刻实际看到的位置；异步请求携带的中心可能已经过期。
+        _viewportCenter = projectedCenter;
         _panOffset = default;
+        TraceMap(
+            "GeometryChanging",
+            projectedCenter,
+            $"previousCommitted={FormatCoordinate(previousCommittedCenter)}, " +
+            $"preferred={FormatCoordinate(e.PreferredCenter)}, projected={FormatCoordinate(projectedCenter)}");
     }
 
-    internal static GeoCoordinate PreservePendingViewportCenter(
-        GeoCoordinate? pendingCenter,
-        GeoCoordinate currentCenter)
+    private void CommitViewportCenter(string reason)
     {
-        return pendingCenter ?? currentCenter;
+        GeoCoordinate? center = GetViewportCenter();
+        if (center is not null)
+        {
+            _viewportCenter = center;
+        }
+
+        _panOffset = default;
+        TraceMap(reason, center);
+        RequestRender();
     }
 
     private void StopPanning()
@@ -413,8 +475,11 @@ public partial class EarthquakeMapView : UserControl
         MapProjection projection = CreateProjection(
             selectedEventFocusCoordinate,
             selectedEventBounds,
-            _pendingViewportCenter);
-        _pendingViewportCenter = null;
+            _viewportCenter);
+        TraceMap(
+            "Render",
+            projection.Unproject(new Point(MapCanvas.ActualWidth / 2, MapCanvas.ActualHeight / 2)),
+            $"committed={FormatCoordinate(_viewportCenter)}, focus={FormatCoordinate(ViewModel.FocusedCoordinate)}");
         bool drawBaseOutlineStroke = ViewModel.BoundaryLayers.Count == 0;
 
         foreach (MapPolygonGeometry polygon in ViewModel.Outline)
@@ -505,6 +570,8 @@ public partial class EarthquakeMapView : UserControl
             selectedEventBounds = eventBounds;
         }
 
+        preferredCenter ??= _viewportCenter;
+
         return MapProjection.Create(
             viewModel.Outline,
             viewModel.Municipalities,
@@ -521,6 +588,34 @@ public partial class EarthquakeMapView : UserControl
             _panOffset.Y,
             globalReferenceBounds: viewModel.OverviewBounds);
     }
+
+    private void TraceMap(
+        string action,
+        GeoCoordinate? center,
+        string? detail = null)
+    {
+        string message =
+            $"[MapDebug] {DateTimeOffset.Now:HH:mm:ss.fff} {action} " +
+            $"zoom={ViewModel?.ZoomLevel:0.###} detail={ViewModel?.DetailLevel} " +
+            $"center={FormatCoordinate(center)} committed={FormatCoordinate(_viewportCenter)} " +
+            $"pan={FormatVector(_panOffset)} panning={_isPanning} follow={ViewModel?.FollowSelection}" +
+            (string.IsNullOrWhiteSpace(detail) ? string.Empty : $" {detail}");
+        Console.WriteLine(message);
+        Debug.WriteLine(message);
+    }
+
+    private static string FormatCoordinate(GeoCoordinate? coordinate) =>
+        coordinate is GeoCoordinate value
+            ? $"{value.Latitude:0.####},{value.Longitude:0.####}"
+            : "null";
+
+    private static string FormatVector(Vector vector) =>
+        $"{vector.X:0.##},{vector.Y:0.##}";
+
+    private static string FormatBounds(MapGeometryBounds? bounds) =>
+        bounds is MapGeometryBounds value
+            ? $"[{value.MinLongitude:0.###},{value.MaxLongitude:0.###}]x[{value.MinLatitude:0.###},{value.MaxLatitude:0.###}]"
+            : "null";
 
     private static IReadOnlyList<ImmutableArray<GeoCoordinate>> GetRings(
         IReadOnlyList<ImmutableArray<GeoCoordinate>> rings,

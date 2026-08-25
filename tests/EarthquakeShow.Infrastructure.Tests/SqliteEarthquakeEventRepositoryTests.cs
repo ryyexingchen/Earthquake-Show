@@ -478,6 +478,8 @@ public sealed class SqliteEarthquakeEventRepositoryTests
         {
             EventId = "p2pquake:stream-message-1",
             ReportCode = "P2P-551",
+            ReportType = EarthquakeReportType.DistantEarthquake,
+            DistantEarthquakeKind = DistantEarthquakeKind.VolcanicEruption,
             Source = new SourceReference(
                 "p2pquake",
                 "stream-message-1",
@@ -537,9 +539,12 @@ public sealed class SqliteEarthquakeEventRepositoryTests
 
         var reloaded = new SqliteEarthquakeEventRepository(database.Path);
         await reloaded.InitializeAsync([]);
-        Assert.Contains(
-            await reloaded.ListEventsAsync(),
-            item => item.EventId == streamingReport.EventId);
+        EarthquakeReport reloadedReport = Assert.Single(
+            Assert.Single(
+                await reloaded.ListEventsAsync(),
+                item => item.EventId == streamingReport.EventId).Reports);
+        Assert.Equal(EarthquakeReportType.DistantEarthquake, reloadedReport.ReportType);
+        Assert.Equal(DistantEarthquakeKind.VolcanicEruption, reloadedReport.DistantEarthquakeKind);
     }
 
     private static EarthquakeReport CreateOnlineReport()

@@ -144,6 +144,34 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public async Task DistantEvent_DrawsOnlyHypocenterMarker()
+    {
+        EarthquakeReport report = CreateReport() with
+        {
+            ReportType = EarthquakeReportType.DistantEarthquake,
+            DistantEarthquakeKind = DistantEarthquakeKind.Earthquake,
+            Hypocenter = new Hypocenter(
+                "南太平洋",
+                "950",
+                new GeoCoordinate(-15.4, 167.8),
+                null),
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+
+        Assert.Empty(map.Areas);
+        Assert.Empty(map.Municipalities);
+        Assert.Empty(map.BoundaryLayers);
+        EarthquakeMapMarker marker = Assert.Single(map.Markers);
+        Assert.Equal(EarthquakeMapMarkerKind.Hypocenter, marker.Kind);
+        Assert.True(map.IsDistantEvent);
+    }
+
+    [Fact]
     public async Task SelectedEvent_DrawsHigherIntensityStationsAfterLowerIntensityStations()
     {
         EarthquakeReport report = CreateReport() with
@@ -583,7 +611,7 @@ public sealed class EarthquakeMapViewModelTests
                     highAreasPath,
                     highMunicipalitiesPath));
             string? sourceBeforeGeometryChange = null;
-            map.GeometryChanging += (_, _) => sourceBeforeGeometryChange = map.GeometrySource;
+            map.GeometryChanging += (_, _) => sourceBeforeGeometryChange ??= map.GeometrySource;
 
             for (int index = 0; index < 12; index++)
             {
@@ -600,6 +628,72 @@ public sealed class EarthquakeMapViewModelTests
             await map.EnsureDetailLevelForZoomAsync(preferMedium: true);
 
             Assert.Equal(MapDetailLevel.Medium, map.DetailLevel);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task HighDetailReloadRetainsPreviousViewportForReturnNavigation()
+    {
+        var report = CreateReport();
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+
+        string directory = Path.Combine(
+            Path.GetTempPath(),
+            "EarthquakeShowTests",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string mediumAreasPath = Path.Combine(directory, "areas-medium.geojson");
+            string mediumMunicipalitiesPath = Path.Combine(directory, "municipalities-medium.geojson");
+            string mediumBoundariesPath = Path.Combine(directory, "boundaries-medium.geojson");
+            string highAreasPath = Path.Combine(directory, "areas-high.geojson");
+            string highMunicipalitiesPath = Path.Combine(directory, "municipalities-high.geojson");
+            await File.WriteAllTextAsync(mediumAreasPath, GeometryJson);
+            await File.WriteAllTextAsync(mediumMunicipalitiesPath, MunicipalityGeometryJson);
+            await File.WriteAllTextAsync(mediumBoundariesPath, BoundaryGeometryJson);
+            await File.WriteAllTextAsync(highAreasPath, GeometryJson.Replace("测试离线轮廓", "高精度区域"));
+            await File.WriteAllTextAsync(highMunicipalitiesPath, MunicipalityGeometryJson);
+
+            using var map = new EarthquakeMapViewModel(
+                page,
+                OfflineMapGeometry.LoadFromJson(GeometryJson),
+                OfflineMapGeometry.LoadFromJson(MunicipalityGeometryJson),
+                OfflineMapBoundaryGeometry.LoadFromJson(BoundaryGeometryJson),
+                new MapLodResourceProvider(
+                    mediumAreasPath,
+                    mediumMunicipalitiesPath,
+                    mediumBoundariesPath,
+                    highAreasPath,
+                    highMunicipalitiesPath));
+            map.AutoScale(13);
+            List<MapDetailLevel> detailLevelsBeforeChange = [];
+            map.GeometryChanging += (_, _) => detailLevelsBeforeChange.Add(map.DetailLevel);
+            MapGeometryBounds firstBounds = new(129, 132, 31, 35);
+            MapGeometryBounds secondBounds = new(140, 143, 35, 39);
+
+            await map.EnsureDetailLevelForZoomAsync(viewportBounds: firstBounds);
+            Assert.Equal(firstBounds, map.HighLoadedViewportBounds);
+            Assert.False(map.LastHighLoadUsedCache);
+
+            detailLevelsBeforeChange.Clear();
+            await map.EnsureDetailLevelForZoomAsync(viewportBounds: secondBounds);
+            Assert.Equal(MapDetailLevel.High, map.DetailLevel);
+            Assert.Equal(secondBounds, map.HighLoadedViewportBounds);
+            Assert.Contains(MapDetailLevel.High, detailLevelsBeforeChange);
+            Assert.Contains(MapDetailLevel.Medium, detailLevelsBeforeChange);
+            Assert.False(map.LastHighLoadUsedCache);
+
+            await map.EnsureDetailLevelForZoomAsync(viewportBounds: firstBounds);
+            Assert.Equal(MapDetailLevel.High, map.DetailLevel);
+            Assert.Equal(firstBounds, map.HighLoadedViewportBounds);
+            Assert.True(map.LastHighLoadUsedCache);
         }
         finally
         {

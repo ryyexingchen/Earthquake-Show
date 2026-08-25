@@ -8,6 +8,13 @@ public enum EarthquakeReportType
     SeismicIntensity,
     Hypocenter,
     HypocenterAndIntensity,
+    DistantEarthquake,
+}
+
+public enum DistantEarthquakeKind
+{
+    Earthquake,
+    VolcanicEruption,
 }
 
 public enum ReportStatus
@@ -44,6 +51,8 @@ public sealed record EarthquakeReport
     public required string ReportCode { get; init; }
 
     public EarthquakeReportType ReportType { get; init; }
+
+    public DistantEarthquakeKind? DistantEarthquakeKind { get; init; }
 
     public ReportStatus Status { get; init; }
 

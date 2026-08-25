@@ -92,6 +92,67 @@ public sealed class JmaXmlParserTests
         Assert.Null(station.Coordinate);
     }
 
+    [Fact]
+    public void Parse_DistantVolcanicEruption_MapsUnknownMagnitudeAndDepth()
+    {
+        const string xml = """
+            <Report xmlns="http://xml.kishou.go.jp/jmaxml1/">
+              <Control><DateTime>2026-08-25T11:35:07Z</DateTime><Status>通常</Status></Control>
+              <Head xmlns="http://xml.kishou.go.jp/jmaxml1/informationBasis1/">
+                <Title>遠地地震に関する情報</Title><ReportDateTime>2026-08-25T20:35:00+09:00</ReportDateTime>
+                <EventID>20260825184000</EventID><InfoType>発表</InfoType><Serial>1</Serial><InfoKind>地震情報</InfoKind>
+              </Head>
+              <Body xmlns="http://xml.kishou.go.jp/jmaxml1/body/seismology1/" xmlns:jmx_eb="http://xml.kishou.go.jp/jmaxml1/elementBasis1/">
+                <Earthquake><OriginTime>2026-08-25T18:40:00+09:00</OriginTime><Hypocenter><Area>
+                  <Name>南太平洋</Name><Code>950</Code><jmx_eb:Coordinate>-15.4+167.8/</jmx_eb:Coordinate>
+                </Area></Hypocenter><jmx_eb:Magnitude type="Mj" condition="不明">NaN</jmx_eb:Magnitude></Earthquake>
+                <Comments><FreeFormComment>アンバエ火山で大規模な噴火が発生しました。</FreeFormComment></Comments>
+              </Body>
+            </Report>
+            """;
+
+        EarthquakeReport report = JmaXmlParser.Parse(
+            xml,
+            new JmaXmlParseOptions("VXSE53", new SourceReference("jma-xml", "distant-volcano")));
+
+        Assert.Equal(EarthquakeReportType.DistantEarthquake, report.ReportType);
+        Assert.Equal(DistantEarthquakeKind.VolcanicEruption, report.DistantEarthquakeKind);
+        Assert.Equal(new GeoCoordinate(-15.4, 167.8), report.Hypocenter?.Coordinate);
+        Assert.Null(report.Hypocenter?.DepthKm);
+        Assert.Null(report.Magnitude?.Value);
+        Assert.Equal("不明", report.Magnitude?.Condition);
+    }
+
+    [Fact]
+    public void Parse_DistantEarthquake_PreservesKnownMagnitudeAndUnknownDepth()
+    {
+        const string xml = """
+            <Report xmlns="http://xml.kishou.go.jp/jmaxml1/">
+              <Control><DateTime>2026-08-25T12:00:00Z</DateTime><Status>通常</Status></Control>
+              <Head xmlns="http://xml.kishou.go.jp/jmaxml1/informationBasis1/">
+                <Title>遠地地震に関する情報</Title><ReportDateTime>2026-08-25T21:00:00+09:00</ReportDateTime>
+                <EventID>20260825203000</EventID><InfoType>発表</InfoType><Serial>1</Serial><InfoKind>地震情報</InfoKind>
+              </Head>
+              <Body xmlns="http://xml.kishou.go.jp/jmaxml1/body/seismology1/" xmlns:jmx_eb="http://xml.kishou.go.jp/jmaxml1/elementBasis1/">
+                <Earthquake><OriginTime>2026-08-25T20:30:00+09:00</OriginTime><Hypocenter><Area>
+                  <Name>南米西部</Name><Code>970</Code><jmx_eb:Coordinate>-12.3-77.1/</jmx_eb:Coordinate>
+                </Area></Hypocenter><jmx_eb:Magnitude type="M">7.2</jmx_eb:Magnitude></Earthquake>
+                <Comments><FreeFormComment>南米西部で規模の大きな地震が発生しました。</FreeFormComment></Comments>
+              </Body>
+            </Report>
+            """;
+
+        EarthquakeReport report = JmaXmlParser.Parse(
+            xml,
+            new JmaXmlParseOptions("VXSE53", new SourceReference("jma-xml", "distant-earthquake")));
+
+        Assert.Equal(EarthquakeReportType.DistantEarthquake, report.ReportType);
+        Assert.Equal(DistantEarthquakeKind.Earthquake, report.DistantEarthquakeKind);
+        Assert.Equal(new GeoCoordinate(-12.3, -77.1), report.Hypocenter?.Coordinate);
+        Assert.Null(report.Hypocenter?.DepthKm);
+        Assert.Equal(7.2, report.Magnitude?.Value);
+    }
+
     [Theory]
     [InlineData("5-", JmaIntensity.FiveLower)]
     [InlineData("5+", JmaIntensity.FiveUpper)]

@@ -1,8 +1,8 @@
 <Project>
   <PropertyGroup>
-    <Version>0.62.1</Version>
-    <AssemblyVersion>0.62.1.0</AssemblyVersion>
-    <FileVersion>0.62.1.0</FileVersion>
+    <Version>0.63.0</Version>
+    <AssemblyVersion>0.63.0.0</AssemblyVersion>
+    <FileVersion>0.63.0.0</FileVersion>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

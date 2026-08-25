@@ -129,6 +129,26 @@ public sealed class EarthquakeEventListViewModelTests
     }
 
     [Fact]
+    public async Task DistantVolcanicEruption_IsShownWithUnknownMagnitude()
+    {
+        EarthquakeReport report = CreateReport(
+            "distant-volcano",
+            1,
+            originTime: BaseTime,
+            hypocenter: new Hypocenter("南太平洋", "950", new GeoCoordinate(-15.4, 167.8), null)) with
+        {
+            ReportType = EarthquakeReportType.DistantEarthquake,
+            DistantEarthquakeKind = DistantEarthquakeKind.VolcanicEruption,
+        };
+        using EarthquakePageViewModel page = await CreatePageAsync([report]);
+        using var list = new EarthquakeEventListViewModel(page, () => BaseTime);
+
+        EarthquakeEventListItemViewModel item = Assert.Single(list.Items);
+        Assert.Equal("远地火山喷发 · 发布", item.ReportText);
+        Assert.Equal("M 不明", item.MagnitudeText);
+    }
+
+    [Fact]
     public async Task RegionFilter_MatchesLatestEffectiveObservationArea()
     {
         using EarthquakePageViewModel page = await CreatePageAsync([

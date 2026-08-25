@@ -69,22 +69,6 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Fact]
-    public void PendingViewportCenterIsNotOverwrittenByConsecutiveGeometryChanges()
-    {
-        GeoCoordinate firstCenter = new(35.25, 139.75);
-        GeoCoordinate laterCenter = new(36.5, 140.5);
-
-        GeoCoordinate preserved = EarthquakeMapView.PreservePendingViewportCenter(
-            firstCenter,
-            laterCenter);
-
-        Assert.Equal(firstCenter, preserved);
-        Assert.Equal(
-            laterCenter,
-            EarthquakeMapView.PreservePendingViewportCenter(null, laterCenter));
-    }
-
-    [Fact]
     public void RepeatedFocusNotificationDoesNotResetPan()
     {
         GeoCoordinate coordinate = new(35.25, 139.75);
@@ -100,6 +84,25 @@ public sealed class EarthquakeMapProjectionTests
             nameof(EarthquakeMapViewModel.EffectiveFocusMode)));
         Assert.False(EarthquakeMapView.ShouldResetPanForFollowState(
             nameof(EarthquakeMapViewModel.ZoomLevel)));
+    }
+
+    [Fact]
+    public void HighDetailReloadStartsOnlyOutsideLoadedViewport()
+    {
+        MapGeometryBounds loaded = new(129, 132, 31, 35);
+
+        Assert.False(EarthquakeMapViewModel.NeedsHighDetailReload(
+            MapDetailLevel.High,
+            loaded,
+            new MapGeometryBounds(130, 131, 32, 34)));
+        Assert.True(EarthquakeMapViewModel.NeedsHighDetailReload(
+            MapDetailLevel.High,
+            loaded,
+            new MapGeometryBounds(132, 135, 32, 35)));
+        Assert.False(EarthquakeMapViewModel.NeedsHighDetailReload(
+            MapDetailLevel.Medium,
+            loaded,
+            new MapGeometryBounds(132, 135, 32, 35)));
     }
 
     [Fact]

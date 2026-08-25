@@ -1310,6 +1310,10 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             EarthquakeReportType.SeismicIntensity => "震度速報",
             EarthquakeReportType.Hypocenter => "震源情报",
             EarthquakeReportType.HypocenterAndIntensity => "震源・震度情报",
+            EarthquakeReportType.DistantEarthquake => report.DistantEarthquakeKind ==
+                DistantEarthquakeKind.VolcanicEruption
+                    ? "远地火山喷发"
+                    : "远地地震情报",
             _ => report.ReportCode,
         };
     }

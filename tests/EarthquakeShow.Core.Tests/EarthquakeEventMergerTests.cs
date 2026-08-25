@@ -197,6 +197,44 @@ public sealed class EarthquakeEventMergerTests
     }
 
     [Fact]
+    public void Merge_DistantP2pAndJmaXmlMatchingEvent_CreatesOneEvent()
+    {
+        GeoCoordinate coordinate = new(-15.4, 167.8);
+        EarthquakeReport jma = CreateReport(
+            "VXSE53",
+            "jma-foreign",
+            2,
+            eventId: "20260825184000",
+            sourceId: "jma-xml",
+            magnitude: null,
+            intensity: JmaIntensity.Unknown) with
+        {
+            ReportType = EarthquakeReportType.DistantEarthquake,
+            DistantEarthquakeKind = DistantEarthquakeKind.VolcanicEruption,
+            Hypocenter = new Hypocenter("南太平洋", "950", coordinate, null),
+        };
+        EarthquakeReport p2p = CreateReport(
+            "P2P-551",
+            "p2p-foreign",
+            1,
+            eventId: "p2pquake:p2p-foreign",
+            sourceId: "p2pquake",
+            magnitude: null,
+            intensity: JmaIntensity.Unknown) with
+        {
+            ReportType = EarthquakeReportType.DistantEarthquake,
+            DistantEarthquakeKind = DistantEarthquakeKind.VolcanicEruption,
+            Hypocenter = new Hypocenter("バヌアツ諸島", null, coordinate, null),
+        };
+
+        EarthquakeEvent earthquakeEvent = Assert.Single(
+            EarthquakeEventMerger.Merge([p2p, jma]));
+
+        Assert.Equal("20260825184000", earthquakeEvent.EventId);
+        Assert.Equal("jma-xml", earthquakeEvent.PreferredReport?.Source.SourceId);
+    }
+
+    [Fact]
     public void Merge_P2pAndJmaXmlDifferentOrigin_DoesNotMerge()
     {
         EarthquakeReport jma = CreateReport(
