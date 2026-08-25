@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using EarthquakeShow.Core.Models;
+using EarthquakeShow.Core.Services;
 
 namespace EarthquakeShow.Infrastructure.Sources;
 
@@ -17,30 +18,35 @@ public sealed class P2pQuakeWebSocketSource : IStreamingEarthquakeSource
     private readonly Uri _endpoint;
     private readonly TimeSpan _keepAliveInterval;
     private readonly Action<string>? _rawMessageObserver;
+    private readonly JmaStationCoordinateCatalog? _stationCatalog;
 
     public P2pQuakeWebSocketSource(
         string endpoint = DefaultEndpoint,
         TimeSpan? keepAliveInterval = null,
-        Action<string>? rawMessageObserver = null)
+        Action<string>? rawMessageObserver = null,
+        JmaStationCoordinateCatalog? stationCatalog = null)
     {
         _connectionFactory = () => new ClientWebSocketConnection(_keepAliveInterval);
         _endpoint = ParseEndpoint(endpoint);
         _keepAliveInterval = ValidateKeepAliveInterval(
             keepAliveInterval ?? KeepAliveInterval);
         _rawMessageObserver = rawMessageObserver;
+        _stationCatalog = stationCatalog;
     }
 
     public P2pQuakeWebSocketSource(
         Func<IWebSocketConnection> connectionFactory,
         string endpoint = DefaultEndpoint,
         TimeSpan? keepAliveInterval = null,
-        Action<string>? rawMessageObserver = null)
+        Action<string>? rawMessageObserver = null,
+        JmaStationCoordinateCatalog? stationCatalog = null)
     {
         _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
         _endpoint = ParseEndpoint(endpoint);
         _keepAliveInterval = ValidateKeepAliveInterval(
             keepAliveInterval ?? KeepAliveInterval);
         _rawMessageObserver = rawMessageObserver;
+        _stationCatalog = stationCatalog;
     }
 
     public string SourceId => SourceName;
@@ -177,7 +183,8 @@ public sealed class P2pQuakeWebSocketSource : IStreamingEarthquakeSource
                     EarthquakeReport report = P2pQuakeEarthquakeSource.ParseReport(
                         document.RootElement,
                         receivedAt,
-                        _endpoint);
+                        _endpoint,
+                        stationCatalog: _stationCatalog);
                     result = new EarthquakeSourceFetchResult(
                         ImmutableArray.Create(report),
                         new SourceStatus(

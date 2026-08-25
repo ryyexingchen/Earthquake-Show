@@ -36,7 +36,9 @@ public partial class EarthquakeMapView : UserControl
         }
 
         RenderMap();
-        await EnsureMapDetailLevelAsync();
+        await EnsureMapDetailLevelAsync(
+            preferMedium: ViewModel?.HasSelectedEvent == true &&
+                ViewModel.EffectiveFocusMode == EarthquakeMapFocusMode.SelectedEvent);
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -86,6 +88,13 @@ public partial class EarthquakeMapView : UserControl
         {
             _ = EnsureMapDetailLevelAsync();
         }
+        else if (e.PropertyName is nameof(EarthquakeMapViewModel.EffectiveFocusMode)
+            or nameof(EarthquakeMapViewModel.HasSelectedEvent))
+        {
+            _ = EnsureMapDetailLevelAsync(
+                preferMedium: ViewModel?.HasSelectedEvent == true &&
+                    ViewModel.EffectiveFocusMode == EarthquakeMapFocusMode.SelectedEvent);
+        }
     }
 
     private void RequestRender()
@@ -125,20 +134,7 @@ public partial class EarthquakeMapView : UserControl
     {
         _panOffset = default;
         ViewModel?.FocusSelectedEvent();
-        await EnsureMapDetailLevelAsync();
-    }
-
-    private void OnFollowSelectionClick(object sender, RoutedEventArgs e)
-    {
-        if (ViewModel is not null && sender is CheckBox checkBox)
-        {
-            if (checkBox.IsChecked == true)
-            {
-                _panOffset = default;
-            }
-
-            ViewModel.SetFollowSelection(checkBox.IsChecked == true);
-        }
+        await EnsureMapDetailLevelAsync(preferMedium: true);
     }
 
     private void OnMapMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -227,7 +223,7 @@ public partial class EarthquakeMapView : UserControl
         e.Handled = true;
     }
 
-    private async Task EnsureMapDetailLevelAsync()
+    private async Task EnsureMapDetailLevelAsync(bool preferMedium = false)
     {
         if (ViewModel is null || !IsLoaded)
         {
@@ -236,7 +232,8 @@ public partial class EarthquakeMapView : UserControl
 
         try
         {
-            await ViewModel.EnsureDetailLevelForZoomAsync();
+            await ViewModel.EnsureDetailLevelForZoomAsync(
+                preferMedium: preferMedium);
         }
         catch (ObjectDisposedException)
         {
@@ -272,7 +269,13 @@ public partial class EarthquakeMapView : UserControl
             ViewModel.TryGetSelectedEventFocusCoordinate(out GeoCoordinate eventFocus)
                 ? eventFocus
                 : null;
-        MapProjection projection = CreateProjection(selectedEventFocusCoordinate);
+        MapGeometryBounds? selectedEventBounds =
+            ViewModel.TryGetSelectedEventBounds(out MapGeometryBounds eventBounds)
+                ? eventBounds
+                : null;
+        MapProjection projection = CreateProjection(
+            selectedEventFocusCoordinate,
+            selectedEventBounds);
         bool drawBaseOutlineStroke = ViewModel.BoundaryLayers.Count == 0;
 
         foreach (MapPolygonGeometry polygon in ViewModel.Outline)
@@ -345,13 +348,21 @@ public partial class EarthquakeMapView : UserControl
         }
     }
 
-    private MapProjection CreateProjection(GeoCoordinate? selectedEventFocusCoordinate = null)
+    private MapProjection CreateProjection(
+        GeoCoordinate? selectedEventFocusCoordinate = null,
+        MapGeometryBounds? selectedEventBounds = null)
     {
         EarthquakeMapViewModel viewModel = ViewModel!;
         if (selectedEventFocusCoordinate is null &&
             viewModel.TryGetSelectedEventFocusCoordinate(out GeoCoordinate eventFocus))
         {
             selectedEventFocusCoordinate = eventFocus;
+        }
+
+        if (selectedEventBounds is null &&
+            viewModel.TryGetSelectedEventBounds(out MapGeometryBounds eventBounds))
+        {
+            selectedEventBounds = eventBounds;
         }
 
         return MapProjection.Create(
@@ -361,6 +372,7 @@ public partial class EarthquakeMapView : UserControl
             viewModel.EffectiveFocusMode,
             viewModel.FocusedCoordinate,
             selectedEventFocusCoordinate,
+            selectedEventBounds,
             viewModel.ZoomLevel,
             MapCanvas.ActualWidth,
             MapCanvas.ActualHeight,
@@ -545,13 +557,18 @@ public partial class EarthquakeMapView : UserControl
             EarthquakeMapFocusMode focusMode,
             GeoCoordinate? focusedCoordinate,
             GeoCoordinate? selectedEventFocusCoordinate,
+            MapGeometryBounds? selectedEventBounds,
             double zoomLevel,
             double width,
             double height,
             double panX,
             double panY)
         {
-            MapGeometryBounds bounds = GetBounds(outline, municipalities, markers);
+            bool isEventView = focusMode == EarthquakeMapFocusMode.SelectedEvent &&
+                selectedEventBounds is MapGeometryBounds;
+            MapGeometryBounds bounds = isEventView
+                ? NormalizeEventBounds(selectedEventBounds!.Value)
+                : GetBounds(outline, municipalities, markers);
             double centerLongitude = (bounds.MinLongitude + bounds.MaxLongitude) / 2;
             double centerLatitude = (bounds.MinLatitude + bounds.MaxLatitude) / 2;
             if (focusedCoordinate is GeoCoordinate location)
@@ -566,12 +583,21 @@ public partial class EarthquakeMapView : UserControl
                 centerLatitude = eventFocus.Latitude;
             }
 
+            if (isEventView)
+            {
+                bounds = EarthquakeMapViewModel.CenterEventBounds(
+                    bounds,
+                    new GeoCoordinate(centerLatitude, centerLongitude));
+            }
+
             double longitudeScaleFactor = Math.Max(
                 0.2,
                 Math.Cos(centerLatitude * Math.PI / 180));
+            double horizontalPadding = width * 0.06;
+            double verticalPadding = height * 0.06;
             double scale = Math.Min(
-                (width - 48) / (bounds.LongitudeSpan * longitudeScaleFactor),
-                (height - 48) / bounds.LatitudeSpan);
+                (width - horizontalPadding * 2) / (bounds.LongitudeSpan * longitudeScaleFactor),
+                (height - verticalPadding * 2) / bounds.LatitudeSpan);
             return new MapProjection(
                 scale * Math.Max(1, zoomLevel),
                 longitudeScaleFactor,
@@ -608,6 +634,20 @@ public partial class EarthquakeMapView : UserControl
                 coordinates.Max(item => item.Longitude),
                 coordinates.Min(item => item.Latitude),
                 coordinates.Max(item => item.Latitude));
+        }
+
+        private static MapGeometryBounds NormalizeEventBounds(MapGeometryBounds bounds)
+        {
+            const double minimumSpan = 0.25;
+            double centerLongitude = (bounds.MinLongitude + bounds.MaxLongitude) / 2;
+            double centerLatitude = (bounds.MinLatitude + bounds.MaxLatitude) / 2;
+            double longitudeHalfSpan = Math.Max(minimumSpan / 2, bounds.LongitudeSpan / 2);
+            double latitudeHalfSpan = Math.Max(minimumSpan / 2, bounds.LatitudeSpan / 2);
+            return new MapGeometryBounds(
+                centerLongitude - longitudeHalfSpan,
+                centerLongitude + longitudeHalfSpan,
+                centerLatitude - latitudeHalfSpan,
+                centerLatitude + latitudeHalfSpan);
         }
 
         public Point Project(GeoCoordinate coordinate)

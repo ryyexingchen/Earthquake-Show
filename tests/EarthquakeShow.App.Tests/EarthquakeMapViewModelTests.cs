@@ -303,6 +303,48 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public async Task SelectedEventFocus_PrefersHypocenterOverEventBoundsCenter()
+    {
+        EarthquakeReport report = CreateReport() with
+        {
+            Hypocenter = new Hypocenter(
+                "熊本県熊本",
+                "741",
+                new GeoCoordinate(32.95, 130.95),
+                20),
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+
+        Assert.True(map.TryGetSelectedEventFocusCoordinate(out GeoCoordinate coordinate));
+        Assert.Equal(32.95, coordinate.Latitude, precision: 3);
+        Assert.Equal(130.95, coordinate.Longitude, precision: 3);
+        Assert.True(map.TryGetSelectedEventBounds(out MapGeometryBounds bounds));
+        Assert.True(bounds.LongitudeSpan >= 0.5);
+        Assert.True(bounds.LatitudeSpan >= 0.5);
+    }
+
+    [Fact]
+    public void CenterEventBounds_ContainsAllEventGeometryAroundHypocenter()
+    {
+        MapGeometryBounds eventBounds = new(130.4, 131.0, 32.4, 33.1);
+        MapGeometryBounds centered = EarthquakeMapViewModel.CenterEventBounds(
+            eventBounds,
+            new GeoCoordinate(32.95, 130.95));
+
+        Assert.True(centered.MinLongitude <= eventBounds.MinLongitude);
+        Assert.True(centered.MaxLongitude >= eventBounds.MaxLongitude);
+        Assert.True(centered.MinLatitude <= eventBounds.MinLatitude);
+        Assert.True(centered.MaxLatitude >= eventBounds.MaxLatitude);
+        Assert.Equal(130.95, (centered.MinLongitude + centered.MaxLongitude) / 2, precision: 6);
+        Assert.Equal(32.95, (centered.MinLatitude + centered.MaxLatitude) / 2, precision: 6);
+    }
+
+    [Fact]
     public async Task MapCommands_UpdateZoomAndPageMapState()
     {
         var report = CreateReport();
@@ -400,6 +442,13 @@ public sealed class EarthquakeMapViewModelTests
                 OfflineMapGeometry.LoadFromJson(MunicipalityGeometryJson),
                 OfflineMapBoundaryGeometry.LoadFromJson(BoundaryGeometryJson),
                 new MapLodResourceProvider(areasPath, municipalitiesPath, boundariesPath));
+
+            await map.EnsureDetailLevelForZoomAsync(preferMedium: true);
+
+            Assert.Equal(MapDetailLevel.Medium, map.DetailLevel);
+            map.ResetView();
+            await map.EnsureDetailLevelForZoomAsync();
+            Assert.Equal(MapDetailLevel.Overview, map.DetailLevel);
 
             for (int index = 0; index < 5; index++)
             {

@@ -27,6 +27,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
     private readonly SqliteEarthquakeEventRepository _repository;
     private readonly SqliteTsunamiReportRepository _tsunamiRepository;
     private readonly IReadOnlyList<EarthquakeReport> _seedReports;
+    private readonly JmaStationCoordinateCatalog _stationCatalog;
     private readonly HttpClient? _httpClient;
     private readonly IRealtimeTsunamiSource? _tsunamiSource;
     private readonly IReadOnlyList<IRealtimeEarthquakeSource> _realtimeSources = [];
@@ -62,6 +63,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         _applicationSettings = settingsLoad.Settings;
         Settings = new(settingsLoad, ApplyWebSocketSettingsAsync);
         JmaStationCoordinateCatalog stationCatalog = FixedJmaXmlDataLoader.LoadStationCatalog();
+        _stationCatalog = stationCatalog;
         _seedReports = FixedJmaXmlDataLoader.LoadReports(stationCatalog);
         JmaIntensityRegionCatalog? regionCatalog = LoadRegionCatalog();
         if (enableNetwork)
@@ -77,7 +79,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
                 regionCatalog: regionCatalog);
             P2pQuakeEarthquakeSource p2pQuakeSource = new(
                 _httpClient,
-                regionCatalog: regionCatalog);
+                regionCatalog: regionCatalog,
+                stationCatalog: stationCatalog);
             _realtimeSources = [xmlSource, p2pQuakeSource];
             _tsunamiSource = tsunamiSource ?? new JmaTsunamiXmlSource(_httpClient);
             _streamingSourceFactory = streamingSource is null
@@ -563,11 +566,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         }
     }
 
-    private static IStreamingEarthquakeSource CreateStreamingSource(
+    private IStreamingEarthquakeSource CreateStreamingSource(
         WebSocketConnectionSettings settings) =>
         new ReconnectingEarthquakeSource(
             new P2pQuakeWebSocketSource(
-                keepAliveInterval: settings.KeepAliveInterval),
+                keepAliveInterval: settings.KeepAliveInterval,
+                stationCatalog: _stationCatalog),
             new StreamingReconnectPolicy(
                 maxConnectionDuration: settings.MaxConnectionDuration));
 

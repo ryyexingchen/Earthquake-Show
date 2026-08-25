@@ -56,25 +56,13 @@
                     ToolTip="恢复日本全图">
                 <TextBlock FontSize="16" Text="⌂" />
             </Button>
-            <Button AutomationProperties.Name="定位所选事件"
+            <Button AutomationProperties.Name="跟随所选事件"
                     Click="OnFocusSelectedClick"
                     IsEnabled="{Binding HasSelectedEvent}"
                     Style="{StaticResource MapToolButtonStyle}"
-                    ToolTip="定位所选事件">
+                    ToolTip="以震源为中心显示所选事件">
                 <TextBlock FontSize="15" Text="⌖" />
             </Button>
-            <CheckBox Margin="0,3,5,0"
-                      HorizontalAlignment="Right"
-                      AutomationProperties.Name="跟随事件选择"
-                      Click="OnFollowSelectionClick"
-                      IsChecked="{Binding FollowSelection, Mode=OneWay}"
-                      ToolTip="选中事件时自动定位地图">
-                <TextBlock Margin="4,0,0,0"
-                           Background="#F4F7F8"
-                           Foreground="#667179"
-                           FontSize="10"
-                           Text="跟随" />
-            </CheckBox>
         </StackPanel>
 
         <Border Margin="12"

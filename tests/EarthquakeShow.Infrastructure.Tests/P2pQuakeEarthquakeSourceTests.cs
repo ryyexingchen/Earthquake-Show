@@ -20,6 +20,12 @@ public sealed class P2pQuakeEarthquakeSourceTests
               "municipalities": [{ "code": "4320200", "name": "八代市", "prefectureCode": "43", "prefectureName": "熊本県", "areaCode": "741", "areaName": "熊本県熊本", "aliases": ["八代市"] }]
             }
             """;
+        const string stationCatalogJson = """
+            {
+              "schemaVersion": 1,
+              "stations": [{ "name": "八代市平山新町", "latitude": 32.48, "longitude": 130.61 }]
+            }
+            """;
         const string payload = """
             [{
               "code": 551, "id": "catalog-p2p", "issue": { "correct": "None", "time": "2026/08/20 12:08:07", "type": "DetailScale" },
@@ -31,7 +37,8 @@ public sealed class P2pQuakeEarthquakeSourceTests
         var source = new P2pQuakeEarthquakeSource(
             httpClient,
             "https://example.test/v2/jma/quake",
-            JmaIntensityRegionCatalog.Load(catalogJson));
+            JmaIntensityRegionCatalog.Load(catalogJson),
+            JmaStationCoordinateCatalog.LoadJson(stationCatalogJson));
 
         EarthquakeReport report = Assert.Single((await source.FetchAsync()).Reports);
 
@@ -41,6 +48,7 @@ public sealed class P2pQuakeEarthquakeSourceTests
         Assert.Equal("741", area.Code);
         Assert.Equal("4320200", municipality.Code);
         Assert.Equal(municipality.Code, station.MunicipalityCode);
+        Assert.Equal(new GeoCoordinate(32.48, 130.61), station.Coordinate);
     }
 
     [Fact]

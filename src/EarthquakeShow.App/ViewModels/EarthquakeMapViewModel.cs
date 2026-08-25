@@ -207,12 +207,40 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
     public bool TryGetSelectedEventFocusCoordinate(out GeoCoordinate coordinate)
     {
+        EarthquakeReport? report = _page.State.ViewedReport;
+        if (report?.Hypocenter?.Coordinate is GeoCoordinate hypocenter)
+        {
+            coordinate = hypocenter;
+            return true;
+        }
+
         IReadOnlyList<GeoCoordinate> points = Markers
             .Select(marker => marker.Coordinate)
             .Concat(Areas.SelectMany(area => area.Rings.SelectMany(ring => ring)))
             .Concat(Municipalities.SelectMany(item => item.Rings.SelectMany(ring => ring)))
             .ToArray();
         return TryGetBoundsCenter(points, out coordinate);
+    }
+
+    public bool TryGetSelectedEventBounds(out MapGeometryBounds bounds)
+    {
+        IReadOnlyList<GeoCoordinate> points = Markers
+            .Select(marker => marker.Coordinate)
+            .Concat(Areas.SelectMany(area => area.Rings.SelectMany(ring => ring)))
+            .Concat(Municipalities.SelectMany(item => item.Rings.SelectMany(ring => ring)))
+            .ToArray();
+        if (points.Count == 0)
+        {
+            bounds = default;
+            return false;
+        }
+
+        bounds = new MapGeometryBounds(
+            points.Min(item => item.Longitude),
+            points.Max(item => item.Longitude),
+            points.Min(item => item.Latitude),
+            points.Max(item => item.Latitude));
+        return true;
     }
 
     public string StatusText
@@ -248,10 +276,11 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     }
 
     public async Task EnsureDetailLevelForZoomAsync(
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool preferMedium = false)
     {
         ThrowIfDisposed();
-        MapDetailLevel desiredLevel = ZoomLevel > 2
+        MapDetailLevel desiredLevel = preferMedium || ZoomLevel > 2
             ? MapDetailLevel.Medium
             : MapDetailLevel.Overview;
         if (desiredLevel == MapDetailLevel.Overview)
@@ -352,7 +381,10 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         _page.SetMapViewState(_page.State.Map with
         {
             FocusMode = EarthquakeMapFocusMode.SelectedEvent,
+            FollowSelection = true,
         });
+        OnPropertyChanged(nameof(FollowSelection));
+        OnPropertyChanged(nameof(EffectiveFocusMode));
     }
 
     public void FocusLocation(GeoCoordinate coordinate)
@@ -390,6 +422,28 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     public void BeginManualInteraction()
     {
         SetFollowSelection(false);
+    }
+
+    internal static MapGeometryBounds CenterEventBounds(
+        MapGeometryBounds bounds,
+        GeoCoordinate center)
+    {
+        const double minimumSpan = 0.25;
+        double longitudeHalfSpan = Math.Max(
+            minimumSpan / 2,
+            Math.Max(
+                center.Longitude - bounds.MinLongitude,
+                bounds.MaxLongitude - center.Longitude));
+        double latitudeHalfSpan = Math.Max(
+            minimumSpan / 2,
+            Math.Max(
+                center.Latitude - bounds.MinLatitude,
+                bounds.MaxLatitude - center.Latitude));
+        return new MapGeometryBounds(
+            center.Longitude - longitudeHalfSpan,
+            center.Longitude + longitudeHalfSpan,
+            center.Latitude - latitudeHalfSpan,
+            center.Latitude + latitudeHalfSpan);
     }
 
     public void Dispose()
