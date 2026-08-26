@@ -95,6 +95,52 @@ public sealed class EarthquakePageDisplayStateTests
     }
 
     [Fact]
+    public void Create_XmlCoverageDelay_ShowsCoverageDiagnostic()
+    {
+        var state = new EarthquakePageState
+        {
+            SourceStatuses =
+            [
+                new SourceStatus(
+                    "jma-xml",
+                    SourceConnectionState.Delayed,
+                    BaseTime,
+                    Detail: "覆盖可能不足"),
+                new SourceStatus(
+                    "p2pquake",
+                    SourceConnectionState.Online,
+                    BaseTime),
+            ],
+            LoadState = EarthquakePageLoadState.Ready,
+        };
+
+        EarthquakePageDisplayState display = EarthquakePageDisplayState.Create(state);
+
+        Assert.Equal("网络：XML覆盖延迟", display.NetworkStatusText);
+        Assert.Equal("部分可用", display.DataStatusText);
+    }
+
+    [Fact]
+    public void Create_SourceErrors_UseSpecificNetworkDiagnostic()
+    {
+        var state = new EarthquakePageState
+        {
+            SourceStatuses =
+            [
+                new SourceStatus(
+                    "jma-xml",
+                    SourceConnectionState.ParseFailed,
+                    BaseTime),
+            ],
+            LoadState = EarthquakePageLoadState.Ready,
+        };
+
+        EarthquakePageDisplayState display = EarthquakePageDisplayState.Create(state);
+
+        Assert.Equal("网络：来源解析失败", display.NetworkStatusText);
+    }
+
+    [Fact]
     public void Create_LateArrivingOldReport_UsesLatestReceivedTime()
     {
         EarthquakeReport lateOldReport = CreateReport() with

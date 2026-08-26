@@ -134,6 +134,25 @@ public sealed record EarthquakePageDisplayState
             return "网络：未配置";
         }
 
+        if (state.SourceStatuses.Any(status =>
+                status.SourceId == "jma-xml" &&
+                status.State == SourceConnectionState.Delayed))
+        {
+            return "网络：XML覆盖延迟";
+        }
+
+        if (state.SourceStatuses.Any(status =>
+                status.State == SourceConnectionState.RateLimited))
+        {
+            return "网络：来源限流";
+        }
+
+        if (state.SourceStatuses.Any(status =>
+                status.State == SourceConnectionState.ParseFailed))
+        {
+            return "网络：来源解析失败";
+        }
+
         return hasOnlineSource ? "网络：已连接" : "网络：不可用";
     }
 
