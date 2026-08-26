@@ -325,14 +325,17 @@ public sealed class EarthquakeDetailsViewModelTests
         using var details = new EarthquakeDetailsViewModel(page, map);
 
         Assert.Equal("jma-latest", page.State.ViewedReport?.Source.SourceMessageId);
+        Assert.StartsWith("第 2 / 2 报", details.SnapshotText, StringComparison.Ordinal);
         Assert.Equal(2, details.TimelineItems.Count);
         details.GoPreviousReport();
         Assert.Equal("jma-first", page.State.ViewedReport?.Source.SourceMessageId);
+        Assert.StartsWith("第 1 / 2 报", details.SnapshotText, StringComparison.Ordinal);
         details.ReturnToLatestReport();
         Assert.Equal("jma-latest", page.State.ViewedReport?.Source.SourceMessageId);
 
         details.ToggleSource();
         Assert.Equal("p2p-latest", page.State.ViewedReport?.Source.SourceMessageId);
+        Assert.StartsWith("第 2 / 2 报", details.SnapshotText, StringComparison.Ordinal);
         Assert.Equal(2, details.TimelineItems.Count);
         details.GoPreviousReport();
         Assert.Equal("p2p-first", page.State.ViewedReport?.Source.SourceMessageId);

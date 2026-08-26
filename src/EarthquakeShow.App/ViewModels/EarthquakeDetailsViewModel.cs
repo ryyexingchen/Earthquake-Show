@@ -438,10 +438,12 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         }
 
         int viewedIndex = GetViewedReportIndex();
+        EarthquakeReport[] viewedSourceReports = GetViewedSourceReports();
+        int viewedSourceIndex = GetViewedSourceReportIndex(viewedSourceReports);
         ReportDisplaySnapshot displaySnapshot = BuildDisplaySnapshot(
             earthquakeEvent.Reports.Take(viewedIndex + 1));
         Title = displaySnapshot.Hypocenter?.Name ?? earthquakeEvent.EventId;
-        SnapshotText = $"第 {viewedIndex + 1} / {earthquakeEvent.Reports.Length} 报 · " +
+        SnapshotText = $"第 {viewedSourceIndex + 1} / {viewedSourceReports.Length} 报 · " +
             $"{GetReportTypeText(report)} · {GetStatusText(report.Status)}";
         SummaryFields = BuildSummaryFields(earthquakeEvent.EventId, report, displaySnapshot);
         TsunamiStatus = BuildTsunamiStatus(

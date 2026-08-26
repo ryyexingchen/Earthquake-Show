@@ -521,6 +521,11 @@ public partial class EarthquakeMapView : UserControl
         {
             foreach (EarthquakeMapArea area in ViewModel.Areas)
             {
+                if (!ShouldDrawIntensityArea(ViewModel.ViewedReportType, area.Intensity))
+                {
+                    continue;
+                }
+
                 var shape = new Path
                 {
                     Data = ToPathGeometry(GetRings(area.Rings, area.Coordinates), projection),
@@ -564,7 +569,8 @@ public partial class EarthquakeMapView : UserControl
 
         foreach (EarthquakeMapBoundaryLayer layer in ViewModel.BoundaryLayers)
         {
-            if (layer.Boundaries.Length == 0)
+            if (layer.Boundaries.Length == 0 ||
+                !ShouldDrawIntensityBoundary(ViewModel.ViewedReportType, layer.Intensity))
             {
                 continue;
             }
@@ -658,6 +664,20 @@ public partial class EarthquakeMapView : UserControl
     {
         return reportType is EarthquakeReportType.SeismicIntensity or
             EarthquakeReportType.Hypocenter;
+    }
+
+    internal static bool ShouldDrawIntensityArea(
+        EarthquakeReportType reportType,
+        JmaIntensity intensity)
+    {
+        return ShouldFillIntensityAreas(reportType) && IsKnownIntensity(intensity);
+    }
+
+    internal static bool ShouldDrawIntensityBoundary(
+        EarthquakeReportType reportType,
+        JmaIntensity intensity)
+    {
+        return !ShouldFillIntensityAreas(reportType) || IsKnownIntensity(intensity);
     }
 
     private MapProjection CreateProjection(

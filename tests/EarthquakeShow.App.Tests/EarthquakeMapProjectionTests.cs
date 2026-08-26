@@ -147,6 +147,26 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Fact]
+    public void AreaFill_HidesUnknownAreasAndBoundaries()
+    {
+        Assert.False(EarthquakeMapView.ShouldDrawIntensityArea(
+            EarthquakeReportType.SeismicIntensity,
+            JmaIntensity.Unknown));
+        Assert.False(EarthquakeMapView.ShouldDrawIntensityBoundary(
+            EarthquakeReportType.SeismicIntensity,
+            JmaIntensity.Unknown));
+        Assert.False(EarthquakeMapView.ShouldDrawIntensityBoundary(
+            EarthquakeReportType.Hypocenter,
+            JmaIntensity.Unknown));
+        Assert.True(EarthquakeMapView.ShouldDrawIntensityArea(
+            EarthquakeReportType.SeismicIntensity,
+            JmaIntensity.Three));
+        Assert.True(EarthquakeMapView.ShouldDrawIntensityBoundary(
+            EarthquakeReportType.HypocenterAndIntensity,
+            JmaIntensity.Unknown));
+    }
+
+    [Fact]
     public void HighDetailReloadStartsOnlyOutsideLoadedViewport()
     {
         MapGeometryBounds loaded = new(129, 132, 31, 35);
