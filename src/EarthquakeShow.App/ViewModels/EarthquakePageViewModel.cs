@@ -103,7 +103,7 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
             await _repository.RefreshAsync(cancellationToken);
             ImmutableArray<EarthquakeEvent> events =
                 await _repository.ListEventsAsync(cancellationToken);
-            ApplyEvents(events);
+            ApplyEvents(events, navigateToNewest: true);
             ApplyRepositorySourceState();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -302,14 +302,23 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
 
     private void ApplyRepositorySnapshot(ImmutableArray<EarthquakeEvent> events)
     {
-        ApplyEvents(events);
+        ApplyEvents(events, navigateToNewest: true);
         ApplyRepositorySourceState();
     }
 
-    private void ApplyEvents(ImmutableArray<EarthquakeEvent> events)
+    private void ApplyEvents(
+        ImmutableArray<EarthquakeEvent> events,
+        bool navigateToNewest = false)
     {
         EarthquakeEvent? selectedEvent = FindSelectedEvent(events);
         EarthquakeReport? viewedReport = FindViewedReport(selectedEvent);
+        if (navigateToNewest &&
+            TryFindNewestIncomingReport(events, State.Events, out EarthquakeEvent? incomingEvent,
+                out EarthquakeReport? incomingReport))
+        {
+            selectedEvent = incomingEvent;
+            viewedReport = incomingReport;
+        }
 
         State = State with
         {
@@ -319,6 +328,50 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
             LoadState = EarthquakePageLoadState.Ready,
             ErrorMessage = null,
         };
+    }
+
+    private static bool TryFindNewestIncomingReport(
+        ImmutableArray<EarthquakeEvent> events,
+        ImmutableArray<EarthquakeEvent> previousEvents,
+        out EarthquakeEvent? eventResult,
+        out EarthquakeReport? reportResult)
+    {
+        HashSet<string> previousReportKeys = previousEvents
+            .SelectMany(item => item.Reports.Select(report =>
+                GetReportKey(item.EventId, report)))
+            .ToHashSet(StringComparer.Ordinal);
+        (EarthquakeEvent Event, EarthquakeReport Report)? newest = events
+            .SelectMany(item => item.Reports.Select(report => (Event: item, Report: report)))
+            .Where(item => !previousReportKeys.Contains(
+                GetReportKey(item.Event.EventId, item.Report)))
+            .OrderByDescending(item => item.Report.IssuedAt)
+            .ThenByDescending(item => item.Report.ReceivedAt)
+            .ThenByDescending(item => string.Equals(
+                item.Report.Source.SourceId,
+                "jma-xml",
+                StringComparison.Ordinal))
+            .ThenBy(item => item.Event.EventId, StringComparer.Ordinal)
+            .Select(item => ((EarthquakeEvent Event, EarthquakeReport Report)?)item)
+            .FirstOrDefault();
+        if (newest is null)
+        {
+            eventResult = null;
+            reportResult = null;
+            return false;
+        }
+
+        eventResult = newest.Value.Event;
+        reportResult = newest.Value.Report;
+        return true;
+    }
+
+    private static string GetReportKey(string eventId, EarthquakeReport report)
+    {
+        return string.Join(
+            '\u001f',
+            eventId,
+            report.Source.SourceId,
+            report.Source.SourceMessageId);
     }
 
     private void ApplyRepositorySourceState()

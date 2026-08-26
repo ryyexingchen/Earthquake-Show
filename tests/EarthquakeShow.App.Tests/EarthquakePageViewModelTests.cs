@@ -47,7 +47,7 @@ public sealed class EarthquakePageViewModelTests
     }
 
     [Fact]
-    public async Task RepositoryUpdate_PreservesSelectedEventAndViewedReport()
+    public async Task RepositoryUpdate_NavigatesToNewestIncomingReport()
     {
         EarthquakeReport historyFirst = CreateReport("history", "history-1", 1);
         EarthquakeReport historyLatest = CreateReport("history", "history-2", 2);
@@ -62,10 +62,26 @@ public sealed class EarthquakePageViewModelTests
         repository.ApplyReports([
             CreateReport("history", "history-3", 4),
             CreateReport("new-event", "new-event-1", 5),
+            CreateReport("newest-event", "newest-event-1", 6),
         ]);
 
-        Assert.Equal("history", viewModel.State.SelectedEvent?.EventId);
-        Assert.Equal("history-1", viewModel.State.ViewedReport?.Source.SourceMessageId);
+        Assert.Equal("newest-event", viewModel.State.SelectedEvent?.EventId);
+        Assert.Equal("newest-event-1", viewModel.State.ViewedReport?.Source.SourceMessageId);
+    }
+
+    [Fact]
+    public async Task RepositoryUpdateWithoutNewReports_PreservesManualReportSelection()
+    {
+        EarthquakeReport first = CreateReport("event", "event-1", 1);
+        EarthquakeReport second = CreateReport("event", "event-2", 2);
+        var repository = new InMemoryEarthquakeEventRepository([first, second]);
+        using var viewModel = new EarthquakePageViewModel(repository);
+        await viewModel.LoadAsync();
+        Assert.True(viewModel.SelectReport("jma-xml", "event-1"));
+
+        repository.ApplyReports([first, second]);
+
+        Assert.Equal("event-1", viewModel.State.ViewedReport?.Source.SourceMessageId);
     }
 
     [Fact]

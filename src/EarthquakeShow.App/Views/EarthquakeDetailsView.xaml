@@ -463,7 +463,6 @@
                           AutomationProperties.Name="区域、市町村与观测点"
                           HorizontalContentAlignment="Stretch"
                           ItemsSource="{Binding ObservationTreeNodes}"
-                          PreviewMouseLeftButtonDown="OnObservationTreePreviewMouseLeftButtonDown"
                           SelectedItemChanged="OnObservationTreeSelectedItemChanged"
                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                           VirtualizingPanel.IsVirtualizing="True"
@@ -472,6 +471,8 @@
                         <Style TargetType="TreeViewItem">
                             <Setter Property="IsExpanded" Value="True" />
                             <Setter Property="Padding" Value="2" />
+                            <EventSetter Event="PreviewMouseLeftButtonDown"
+                                         Handler="OnObservationTreeItemPreviewMouseLeftButtonDown" />
                         </Style>
                     </TreeView.ItemContainerStyle>
                     <TreeView.ItemTemplate>

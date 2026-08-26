@@ -250,7 +250,7 @@ public sealed class EarthquakeEventListViewModelTests
     }
 
     [Fact]
-    public async Task RepositoryUpdate_PreservesSelectionAndMarksOnlyNewEvent()
+    public async Task RepositoryUpdate_SelectsNewestEventAndMarksOnlyNewEvent()
     {
         var repository = new InMemoryEarthquakeEventRepository([
             CreateReport("history", 1),
@@ -266,8 +266,8 @@ public sealed class EarthquakeEventListViewModelTests
 
         repository.ApplyReports([CreateReport("new-event", 3)]);
 
-        Assert.Equal("history", page.State.SelectedEvent?.EventId);
-        Assert.Equal("history", list.SelectedItem?.EventId);
+        Assert.Equal("new-event", page.State.SelectedEvent?.EventId);
+        Assert.Equal("new-event", list.SelectedItem?.EventId);
         Assert.Same(originalItems, list.Items);
         Assert.Same(currentItem, list.Items.Single(item => item.EventId == "current"));
         Assert.True(list.Items.Single(item => item.EventId == "new-event").IsNew);
