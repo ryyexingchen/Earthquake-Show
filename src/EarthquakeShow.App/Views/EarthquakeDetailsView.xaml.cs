@@ -54,6 +54,38 @@ public partial class EarthquakeDetailsView : UserControl
         }
     }
 
+    private void OnObservationTreePreviewMouseLeftButtonDown(
+        object sender,
+        System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (ViewModel is null ||
+            FindTreeViewItem(e.OriginalSource as DependencyObject) is not TreeViewItem item ||
+            item.DataContext is not EarthquakeObservationTreeNode node ||
+            !ViewModel.IsObservationNodeSelected(node))
+        {
+            return;
+        }
+
+        ViewModel.ToggleObservationNode(node);
+        item.IsSelected = false;
+        e.Handled = true;
+    }
+
+    private static TreeViewItem? FindTreeViewItem(DependencyObject? source)
+    {
+        while (source is not null)
+        {
+            if (source is TreeViewItem item)
+            {
+                return item;
+            }
+
+            source = System.Windows.Media.VisualTreeHelper.GetParent(source);
+        }
+
+        return null;
+    }
+
     private void OnExpandObservationTreeClick(object sender, RoutedEventArgs e)
     {
         SetObservationTreeExpanded(true);

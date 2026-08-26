@@ -256,6 +256,63 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         SelectObservation(null, null, null);
     }
 
+    public bool TryGetSelectedObservationView(
+        out GeoCoordinate center,
+        out MapGeometryBounds bounds)
+    {
+        IEnumerable<GeoCoordinate> points = _selectedMapSelection?.Kind switch
+        {
+            EarthquakeMapSelectionKind.Station when SelectedStationHighlight is EarthquakeMapMarker marker =>
+                [marker.Coordinate],
+            EarthquakeMapSelectionKind.Municipality => SelectedMunicipalityHighlights
+                .SelectMany(item => item.Rings)
+                .SelectMany(ring => ring),
+            EarthquakeMapSelectionKind.Prefecture or EarthquakeMapSelectionKind.Area =>
+                SelectedAreaHighlights
+                    .SelectMany(item => item.Rings)
+                    .SelectMany(ring => ring),
+            _ => [],
+        };
+        GeoCoordinate[] materialized = points.ToArray();
+        if (materialized.Length == 0 && _selectedMapSelection?.Coordinate is GeoCoordinate coordinate)
+        {
+            materialized = [coordinate];
+        }
+
+        if (!TryGetBoundsCenter(materialized, out center))
+        {
+            bounds = default;
+            return false;
+        }
+
+        bounds = new MapGeometryBounds(
+            materialized.Min(item => item.Longitude),
+            materialized.Max(item => item.Longitude),
+            materialized.Min(item => item.Latitude),
+            materialized.Max(item => item.Latitude));
+        return true;
+    }
+
+    public void FocusSelectedObservation()
+    {
+        ThrowIfDisposed();
+        if (TryGetSelectedObservationView(
+                out GeoCoordinate center,
+                out _))
+        {
+            FocusLocation(center);
+        }
+    }
+
+    public void AutoScalePreservingFocus(double automaticZoomLevel)
+    {
+        ThrowIfDisposed();
+        ZoomLevel = Math.Clamp(
+            automaticZoomLevel,
+            MaxSmallZoomLevel,
+            MaxBigZoomLevel);
+    }
+
     internal MapGeometryBounds OverviewBounds => _overviewGeometry.Bounds;
 
     public string? ViewedReportKey

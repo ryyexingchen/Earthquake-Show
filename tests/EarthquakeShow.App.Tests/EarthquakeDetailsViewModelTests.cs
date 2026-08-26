@@ -230,6 +230,13 @@ public sealed class EarthquakeDetailsViewModelTests
         details.SelectObservationNode(area);
         Assert.Equal(EarthquakeMapSelectionKind.Area, map.SelectedMapSelection?.Kind);
         Assert.Single(map.SelectedAreaHighlights);
+        Assert.True(map.TryGetSelectedObservationView(
+            out GeoCoordinate areaCenter,
+            out MapGeometryBounds areaBounds));
+        Assert.Equal(32.75, areaCenter.Latitude, precision: 2);
+        Assert.Equal(130.70, areaCenter.Longitude, precision: 2);
+        Assert.Equal(130.4, areaBounds.MinLongitude, precision: 3);
+        Assert.Equal(131.0, areaBounds.MaxLongitude, precision: 3);
 
         EarthquakeObservationTreeNode municipality = Assert.Single(
             area.Children,
@@ -244,6 +251,10 @@ public sealed class EarthquakeDetailsViewModelTests
         details.SelectObservationNode(station);
         Assert.Equal(EarthquakeMapSelectionKind.Station, map.SelectedMapSelection?.Kind);
         Assert.Equal("KMM001", map.SelectedStationHighlight?.Code);
+        Assert.Equal(station.Coordinate, map.SelectedMapSelection?.Coordinate);
+
+        details.ToggleObservationNode(station);
+        Assert.Null(map.SelectedMapSelection);
     }
 
     [Fact]

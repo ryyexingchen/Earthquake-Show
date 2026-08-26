@@ -458,6 +458,7 @@
                           Grid.Row="2"
                           AutomationProperties.Name="区域、市町村与观测点"
                           ItemsSource="{Binding ObservationTreeNodes}"
+                          PreviewMouseLeftButtonDown="OnObservationTreePreviewMouseLeftButtonDown"
                           SelectedItemChanged="OnObservationTreeSelectedItemChanged"
                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                           VirtualizingPanel.IsVirtualizing="True"

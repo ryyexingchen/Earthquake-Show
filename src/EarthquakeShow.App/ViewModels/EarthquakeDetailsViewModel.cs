@@ -285,6 +285,18 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         SelectedObservationNode = node;
     }
 
+    public bool IsObservationNodeSelected(EarthquakeObservationTreeNode node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        return Equals(SelectedObservationNode, node);
+    }
+
+    public void ToggleObservationNode(EarthquakeObservationTreeNode node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        SelectObservationNode(IsObservationNodeSelected(node) ? null : node);
+    }
+
     public EarthquakeTimelineItemViewModel? SelectedTimelineItem
     {
         get => _selectedTimelineItem;

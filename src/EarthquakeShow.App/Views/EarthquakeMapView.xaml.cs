@@ -14,8 +14,6 @@ public partial class EarthquakeMapView : UserControl
 {
     private static readonly Color OutlineFill = Color.FromRgb(243, 239, 228);
     private static readonly Color OutlineStroke = Color.FromRgb(121, 143, 153);
-    private static readonly Color SelectionGlow = Color.FromArgb(155, 255, 226, 82);
-    private static readonly Color SelectionStroke = Color.FromRgb(255, 209, 48);
     private bool _renderPending;
     private bool _isPanning;
     private Point _lastPanPoint;
@@ -100,6 +98,19 @@ public partial class EarthquakeMapView : UserControl
             _ = EnsureMapDetailLevelAsync();
         }
 
+        if (e.PropertyName == nameof(EarthquakeMapViewModel.SelectedMapSelection) &&
+            ViewModel?.SelectedMapSelection is not null &&
+            ViewModel.TryGetSelectedObservationView(
+                out GeoCoordinate selectedCenter,
+                out MapGeometryBounds selectedBounds))
+        {
+            _viewportCenter = null;
+            _panOffset = default;
+            ViewModel.FocusSelectedObservation();
+            ViewModel.AutoScalePreservingFocus(
+                GetAutomaticZoomLevel(selectedBounds, selectedCenter));
+        }
+
         if (ViewModel?.FollowSelection == true &&
             ShouldResetPanForFollowState(e.PropertyName))
         {
@@ -114,7 +125,8 @@ public partial class EarthquakeMapView : UserControl
             or nameof(EarthquakeMapViewModel.FocusedCoordinate)
             or nameof(EarthquakeMapViewModel.FollowSelection)
             or nameof(EarthquakeMapViewModel.EffectiveFocusMode)
-            or nameof(EarthquakeMapViewModel.HasSelectedEvent))
+            or nameof(EarthquakeMapViewModel.HasSelectedEvent)
+            or nameof(EarthquakeMapViewModel.SelectedMapSelection))
         {
             RequestRender();
         }
@@ -403,6 +415,24 @@ public partial class EarthquakeMapView : UserControl
         return MapProjection.ZoomLevelForScale(eventScale / overviewScale);
     }
 
+    private double GetAutomaticZoomLevel(
+        MapGeometryBounds selectedBounds,
+        GeoCoordinate selectedCenter)
+    {
+        MapGeometryBounds centeredBounds = EarthquakeMapViewModel.CenterEventBounds(
+            selectedBounds,
+            selectedCenter);
+        double overviewScale = MapProjection.CalculateFitScale(
+            ViewModel!.OverviewBounds,
+            MapCanvas.ActualWidth,
+            MapCanvas.ActualHeight);
+        double selectedScale = MapProjection.CalculateFitScale(
+            centeredBounds,
+            MapCanvas.ActualWidth,
+            MapCanvas.ActualHeight);
+        return MapProjection.ZoomLevelForScale(selectedScale / overviewScale);
+    }
+
     private void OnGeometryChanging(
         object? sender,
         MapGeometryChangingEventArgs e)
@@ -584,7 +614,8 @@ public partial class EarthquakeMapView : UserControl
             DrawSelectionGlow(
                 GetRings(area.Rings, area.Coordinates),
                 projection,
-                area.Name);
+                area.Name,
+                area.Intensity);
         }
 
         foreach (EarthquakeMapMunicipality municipality in ViewModel.SelectedMunicipalityHighlights)
@@ -592,7 +623,8 @@ public partial class EarthquakeMapView : UserControl
             DrawSelectionGlow(
                 GetRings(municipality.Rings, municipality.Coordinates),
                 projection,
-                municipality.Name);
+                municipality.Name,
+                municipality.Intensity);
         }
 
         if (ViewModel.SelectedStationHighlight is EarthquakeMapMarker selectedStation)
@@ -868,14 +900,26 @@ public partial class EarthquakeMapView : UserControl
     private void DrawSelectionGlow(
         IReadOnlyList<ImmutableArray<GeoCoordinate>> rings,
         MapProjection projection,
-        string name)
+        string name,
+        JmaIntensity? intensity)
     {
         StreamGeometry geometry = ToPathGeometry(rings, projection);
+        (Color outerColor, Color innerColor) = GetSelectionColors(intensity);
+        var fill = new Path
+        {
+            Data = geometry,
+            Fill = intensity is JmaIntensity known && IsKnownIntensity(known)
+                ? new SolidColorBrush(GetIntensityColor(known, 150))
+                : null,
+            IsHitTestVisible = false,
+        };
+        MapContentCanvas.Children.Add(fill);
+
         var outer = new Path
         {
             Data = geometry,
             Fill = null,
-            Stroke = new SolidColorBrush(SelectionGlow),
+            Stroke = new SolidColorBrush(outerColor),
             StrokeThickness = 8,
             StrokeLineJoin = PenLineJoin.Round,
             StrokeStartLineCap = PenLineCap.Round,
@@ -889,7 +933,7 @@ public partial class EarthquakeMapView : UserControl
         {
             Data = geometry,
             Fill = null,
-            Stroke = new SolidColorBrush(SelectionStroke),
+            Stroke = new SolidColorBrush(innerColor),
             StrokeThickness = 2.4,
             StrokeLineJoin = PenLineJoin.Round,
             StrokeStartLineCap = PenLineCap.Round,
@@ -899,17 +943,33 @@ public partial class EarthquakeMapView : UserControl
         MapContentCanvas.Children.Add(inner);
     }
 
+    private static (Color Outer, Color Inner) GetSelectionColors(JmaIntensity? intensity)
+    {
+        if (intensity is JmaIntensity known && IsKnownIntensity(known))
+        {
+            Color baseColor = GetIntensityColor(known, 255);
+            double luminance =
+                (0.299 * baseColor.R + 0.587 * baseColor.G + 0.114 * baseColor.B) / 255;
+            return luminance > 0.58
+                ? (Color.FromArgb(225, 16, 34, 48), Color.FromRgb(0, 206, 255))
+                : (Color.FromArgb(225, 246, 250, 252), Color.FromRgb(0, 206, 255));
+        }
+
+        return (Color.FromArgb(225, 16, 34, 48), Color.FromRgb(0, 206, 255));
+    }
+
     private void DrawSelectedMarkerGlow(
         EarthquakeMapMarker marker,
         MapProjection projection)
     {
         Point point = projection.Project(marker.Coordinate);
+        (Color outerColor, Color innerColor) = GetSelectionColors(marker.Intensity);
         var outer = new Ellipse
         {
             Width = 24,
             Height = 24,
             Fill = null,
-            Stroke = new SolidColorBrush(SelectionGlow),
+            Stroke = new SolidColorBrush(outerColor),
             StrokeThickness = 5,
             IsHitTestVisible = false,
         };
@@ -922,7 +982,7 @@ public partial class EarthquakeMapView : UserControl
             Width = 13,
             Height = 13,
             Fill = null,
-            Stroke = new SolidColorBrush(SelectionStroke),
+            Stroke = new SolidColorBrush(innerColor),
             StrokeThickness = 2,
             IsHitTestVisible = false,
         };
