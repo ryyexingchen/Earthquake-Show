@@ -814,6 +814,13 @@ public partial class EarthquakeMapView : UserControl
         return rings.Count > 0 ? rings : [coordinates];
     }
 
+    internal static bool IsRenderableRing(IReadOnlyList<GeoCoordinate> ring)
+    {
+        return ring.Count >= 3 && ring.All(coordinate =>
+            double.IsFinite(coordinate.Latitude) &&
+            double.IsFinite(coordinate.Longitude));
+    }
+
     private static StreamGeometry ToPathGeometry(
         IReadOnlyList<ImmutableArray<GeoCoordinate>> rings,
         MapProjection projection)
@@ -826,7 +833,7 @@ public partial class EarthquakeMapView : UserControl
         {
             foreach (IReadOnlyList<GeoCoordinate> ring in rings)
             {
-                if (ring.Count < 3)
+                if (!IsRenderableRing(ring))
                 {
                     continue;
                 }
@@ -852,7 +859,10 @@ public partial class EarthquakeMapView : UserControl
         {
             foreach (EarthquakeMapBoundary boundary in boundaries)
             {
-                if (boundary.Coordinates.Length < 2)
+                if (boundary.Coordinates.Length < 2 ||
+                    boundary.Coordinates.Any(coordinate =>
+                        !double.IsFinite(coordinate.Latitude) ||
+                        !double.IsFinite(coordinate.Longitude)))
                 {
                     continue;
                 }
@@ -903,7 +913,15 @@ public partial class EarthquakeMapView : UserControl
         string name,
         JmaIntensity? intensity)
     {
-        StreamGeometry geometry = ToPathGeometry(rings, projection);
+        ImmutableArray<ImmutableArray<GeoCoordinate>> renderableRings = rings
+            .Where(ring => IsRenderableRing(ring))
+            .ToImmutableArray();
+        if (renderableRings.IsDefaultOrEmpty)
+        {
+            return;
+        }
+
+        StreamGeometry geometry = ToPathGeometry(renderableRings, projection);
         (Color outerColor, Color innerColor) = GetSelectionColors(intensity);
         var fill = new Path
         {
@@ -951,8 +969,8 @@ public partial class EarthquakeMapView : UserControl
             double luminance =
                 (0.299 * baseColor.R + 0.587 * baseColor.G + 0.114 * baseColor.B) / 255;
             return luminance > 0.58
-                ? (Color.FromArgb(225, 16, 34, 48), Color.FromRgb(0, 206, 255))
-                : (Color.FromArgb(225, 246, 250, 252), Color.FromRgb(0, 206, 255));
+                ? (Color.FromArgb(225, 16, 34, 48), baseColor)
+                : (Color.FromArgb(225, 246, 250, 252), baseColor);
         }
 
         return (Color.FromArgb(225, 16, 34, 48), Color.FromRgb(0, 206, 255));

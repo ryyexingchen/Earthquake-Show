@@ -117,6 +117,20 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Fact]
+    public void SelectionGlow_IgnoresEmptyOrIncompleteRings()
+    {
+        Assert.False(EarthquakeMapView.IsRenderableRing([]));
+        Assert.False(EarthquakeMapView.IsRenderableRing(
+            [new GeoCoordinate(35, 139), new GeoCoordinate(35.1, 139.1)]));
+        Assert.True(EarthquakeMapView.IsRenderableRing(
+            [
+                new GeoCoordinate(35, 139),
+                new GeoCoordinate(35.1, 139),
+                new GeoCoordinate(35, 139.1),
+            ]));
+    }
+
+    [Fact]
     public void LegendIntensities_UsesContinuousKnownRangeWithoutUnknown()
     {
         Assert.Equal(
