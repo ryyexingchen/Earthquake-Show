@@ -1237,6 +1237,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         EarthquakeReport? municipalityReport = reports.LastOrDefault(item => !item.IntensityMunicipalities.IsDefaultOrEmpty);
         EarthquakeReport? stationReport = reports.LastOrDefault(item => !item.IntensityStations.IsDefaultOrEmpty);
         EarthquakeReport? intensityReport = reports.LastOrDefault(item => item.MaxIntensity != JmaIntensity.Unknown);
+        EarthquakeReport? hypocenterReport = reports.LastOrDefault(item => item.Hypocenter is not null);
 
         return report with
         {
@@ -1252,6 +1253,10 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             IntensityStations = report.IntensityStations.IsDefaultOrEmpty
                 ? stationReport?.IntensityStations ?? []
                 : report.IntensityStations,
+            Hypocenter = report.Hypocenter ??
+                (report.ReportType == EarthquakeReportType.SeismicIntensity
+                    ? hypocenterReport?.Hypocenter
+                    : null),
         };
     }
 

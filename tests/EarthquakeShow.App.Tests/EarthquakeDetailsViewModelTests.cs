@@ -471,6 +471,9 @@ public sealed class EarthquakeDetailsViewModelTests
             OfflineMapGeometry.LoadFromJson(GeometryJson));
         using var details = new EarthquakeDetailsViewModel(page, map);
 
+        Assert.True(details.CanLocateHypocenter);
+        details.FocusHypocenter();
+        Assert.Equal(new GeoCoordinate(32.8, 130.7), map.FocusedCoordinate);
         Assert.Contains("最大震度：3", details.TimelineItems[0].ChangeSummary);
         Assert.Contains("震源・规模：调查中", details.TimelineItems[0].ChangeSummary);
         Assert.Contains("海啸：津波 调查中", details.TimelineItems[0].ChangeSummary);

@@ -338,7 +338,7 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
     public bool CanReturnToLatest => CanGoNext;
 
     public bool CanLocateHypocenter =>
-        _page.State.ViewedReport?.Hypocenter?.Coordinate is not null;
+        GetViewedHypocenter()?.Coordinate is not null;
 
     public void GoPreviousReport()
     {
@@ -390,10 +390,40 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
 
     public void FocusHypocenter()
     {
-        if (_page.State.ViewedReport?.Hypocenter?.Coordinate is GeoCoordinate coordinate)
+        if (GetViewedHypocenter()?.Coordinate is GeoCoordinate coordinate)
         {
             _map.FocusLocation(coordinate);
         }
+    }
+
+    private Hypocenter? GetViewedHypocenter()
+    {
+        EarthquakeReport? report = _page.State.ViewedReport;
+        if (report is null)
+        {
+            return null;
+        }
+
+        if (report.Hypocenter is Hypocenter hypocenter)
+        {
+            return hypocenter;
+        }
+
+        if (report.ReportType != EarthquakeReportType.SeismicIntensity)
+        {
+            return null;
+        }
+
+        int viewedIndex = GetViewedReportIndex();
+        if (viewedIndex < 0 || _page.State.SelectedEvent is not EarthquakeEvent selectedEvent)
+        {
+            return null;
+        }
+
+        return selectedEvent.Reports
+            .Take(viewedIndex + 1)
+            .LastOrDefault(item => item.Hypocenter is not null)
+            ?.Hypocenter;
     }
 
     public void Dispose()

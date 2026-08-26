@@ -187,6 +187,43 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public async Task SeismicIntensityAfterHypocenter_InheritsHypocenterMarker()
+    {
+        EarthquakeReport hypocenter = CreateReport() with
+        {
+            ReportType = EarthquakeReportType.Hypocenter,
+            ReportCode = "VXSE52",
+            IssuedAt = BaseTime,
+            ReceivedAt = BaseTime.AddSeconds(1),
+            IntensityAreas = [],
+            IntensityMunicipalities = [],
+            IntensityStations = [],
+            Source = new SourceReference("jma-xml", "hypocenter-before-intensity"),
+        };
+        EarthquakeReport intensity = CreateReport() with
+        {
+            ReportType = EarthquakeReportType.SeismicIntensity,
+            ReportCode = "VXSE51",
+            IssuedAt = BaseTime.AddMinutes(1),
+            ReceivedAt = BaseTime.AddMinutes(1).AddSeconds(1),
+            Hypocenter = null,
+            Source = new SourceReference("jma-xml", "intensity-after-hypocenter"),
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([hypocenter, intensity]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+
+        Assert.Equal("intensity-after-hypocenter", page.State.ViewedReport?.Source.SourceMessageId);
+        EarthquakeMapMarker marker = Assert.Single(
+            map.Markers,
+            item => item.Kind == EarthquakeMapMarkerKind.Hypocenter);
+        Assert.Equal(new GeoCoordinate(32.8, 130.7), marker.Coordinate);
+    }
+
+    [Fact]
     public async Task HypocenterReportAfterDetailedObservations_UsesDetailedIntensityOutline()
     {
         EarthquakeReport intensity = CreateReport() with
