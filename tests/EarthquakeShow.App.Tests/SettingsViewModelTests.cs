@@ -76,7 +76,16 @@ public sealed class SettingsViewModelTests
                     ImmutableArray<EarthquakeReport>.Empty,
                     ["ignored.xml"],
                     [new JmaXmlLocalFileImportFailure("broken.xml", "格式错误")],
-                    2));
+                    2,
+                    new JmaXmlLocalFileImportHistory(
+                        "batch",
+                        path,
+                        DateTimeOffset.UtcNow,
+                        2,
+                        [
+                            new("ignored.xml", true, null),
+                            new("broken.xml", false, "格式错误"),
+                        ])));
             });
 
         await viewModel.ImportLocalXmlAsync("E:\\history");
@@ -85,5 +94,27 @@ public sealed class SettingsViewModelTests
         Assert.False(viewModel.IsImporting);
         Assert.True(viewModel.CanImportLocalXml);
         Assert.Equal("本地 XML 导入完成：写入/更新 2 条，跳过 1 个，失败 1 个", viewModel.StatusText);
+        Assert.Contains("跳过：ignored.xml", viewModel.LatestImportDetails);
+        Assert.Contains(viewModel.LatestImportDetails, item => item.StartsWith("失败：broken.xml", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void SetLatestImport_ProjectsSummaryAndDetails()
+    {
+        var viewModel = new SettingsViewModel(
+            new ApplicationSettingsLoadResult(ApplicationSettings.Default, null),
+            _ => Task.CompletedTask);
+        viewModel.SetLatestImport(new JmaXmlLocalFileImportHistory(
+            "batch",
+            "E:\\history",
+            DateTimeOffset.Parse("2026-08-26T12:00:00+09:00"),
+            3,
+            [
+                new("ignored.xml", true, null),
+                new("broken.xml", false, "XML 格式错误"),
+            ]));
+
+        Assert.Contains("写入/更新 3 条", viewModel.LatestImportSummary);
+        Assert.Equal(2, viewModel.LatestImportDetails.Count);
     }
 }

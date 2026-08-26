@@ -16,6 +16,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     private bool _isImporting;
     private bool _isVisible;
     private string _statusText = string.Empty;
+    private JmaXmlLocalFileImportHistory? _latestImport;
 
     public SettingsViewModel(
         ApplicationSettingsLoadResult loadResult,
@@ -139,6 +140,26 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         }
     }
 
+    public string LatestImportSummary => _latestImport is null
+        ? "尚未导入本地 XML"
+        : $"最近导入：{_latestImport.CompletedAt.ToLocalTime():yyyy-MM-dd HH:mm:ss} · 写入/更新 {_latestImport.SavedReportCount} 条 · 跳过 {_latestImport.Items.Count(item => item.IsSkipped)} 个 · 失败 {_latestImport.Items.Count(item => !item.IsSkipped)} 个";
+
+    public IReadOnlyList<string> LatestImportDetails => _latestImport is null
+        ? []
+        : _latestImport.Items
+            .Take(100)
+            .Select(item => item.IsSkipped
+                ? $"跳过：{item.FilePath}"
+                : $"失败：{item.FilePath}（{item.Error ?? "未知错误"}）")
+            .ToArray();
+
+    public void SetLatestImport(JmaXmlLocalFileImportHistory? history)
+    {
+        _latestImport = history;
+        OnPropertyChanged(nameof(LatestImportSummary));
+        OnPropertyChanged(nameof(LatestImportDetails));
+    }
+
     public void RestoreDefaults()
     {
         WebSocketConnectionSettings defaults = WebSocketConnectionSettings.Default;
@@ -169,6 +190,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
             JmaXmlLocalFileImportResult result = await _importLocalXml(
                 directoryPath,
                 cancellationToken).ConfigureAwait(true);
+            SetLatestImport(result.History);
             StatusText = $"本地 XML 导入完成：写入/更新 {result.SavedReportCount} 条，跳过 {result.SkippedFiles.Length} 个，失败 {result.Failures.Length} 个";
         }
         finally

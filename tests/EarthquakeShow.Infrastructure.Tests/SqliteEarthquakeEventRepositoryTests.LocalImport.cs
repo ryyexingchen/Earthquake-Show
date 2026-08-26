@@ -70,6 +70,31 @@ public sealed partial class SqliteEarthquakeEventRepositoryTests
         Assert.Single((await repository.ListEventsAsync()).SelectMany(item => item.Reports));
     }
 
+    [Fact]
+    public async Task ImportLocalXmlAsync_ReloadsLatestBatchDetailsFromDatabase()
+    {
+        using var database = new TemporaryDatabase();
+        using TemporaryDirectory directory = TemporaryDirectory.Create();
+        string sourcePath = OfficialFixture("20260818221432_0_VXSE53_270000.xml");
+        File.Copy(sourcePath, Path.Combine(directory.Path, Path.GetFileName(sourcePath)));
+        await File.WriteAllTextAsync(
+            Path.Combine(directory.Path, "ignored.xml"),
+            "not a JMA earthquake report");
+
+        var writer = new SqliteEarthquakeEventRepository(database.Path);
+        await writer.InitializeAsync([]);
+        await writer.ImportLocalXmlAsync(new JmaXmlLocalFileImporter(), directory.Path);
+
+        var reader = new SqliteEarthquakeEventRepository(database.Path);
+        await reader.InitializeAsync([]);
+        JmaXmlLocalFileImportHistory? history = await reader.GetLatestLocalXmlImportAsync();
+        Assert.NotNull(history);
+
+        Assert.Equal(Path.GetFullPath(directory.Path), history.DirectoryPath);
+        Assert.Equal(1, history.SavedReportCount);
+        Assert.Contains(history.Items, item => item.IsSkipped && item.FilePath.EndsWith("ignored.xml", StringComparison.Ordinal));
+    }
+
     private static string OfficialFixture(string fileName) => Path.Combine(
         AppContext.BaseDirectory,
         "..", "..", "..", "..", "..", "tests", "TestData", "JmaXml", "Official", fileName);

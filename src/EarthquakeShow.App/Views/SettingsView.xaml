@@ -150,6 +150,21 @@
                                 <TextBlock Text="选择目录并导入" />
                             </StackPanel>
                         </Button>
+                        <TextBlock Margin="0,14,0,0"
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   Text="{Binding LatestImportSummary}"
+                                   TextWrapping="Wrap" />
+                        <ItemsControl Margin="0,8,0,0"
+                                      ItemsSource="{Binding LatestImportDetails}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Margin="0,2,0,0"
+                                               Foreground="{StaticResource MutedTextBrush}"
+                                               Text="{Binding}"
+                                               TextWrapping="Wrap" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
                 </Border>
 

@@ -97,4 +97,17 @@ public sealed record JmaXmlLocalFileImportResult(
     ImmutableArray<EarthquakeReport> Reports,
     ImmutableArray<string> SkippedFiles,
     ImmutableArray<JmaXmlLocalFileImportFailure> Failures,
-    int SavedReportCount = 0);
+    int SavedReportCount = 0,
+    JmaXmlLocalFileImportHistory? History = null);
+
+public sealed record JmaXmlLocalFileImportHistory(
+    string BatchId,
+    string DirectoryPath,
+    DateTimeOffset CompletedAt,
+    int SavedReportCount,
+    ImmutableArray<JmaXmlLocalFileImportHistoryItem> Items);
+
+public sealed record JmaXmlLocalFileImportHistoryItem(
+    string FilePath,
+    bool IsSkipped,
+    string? Error);

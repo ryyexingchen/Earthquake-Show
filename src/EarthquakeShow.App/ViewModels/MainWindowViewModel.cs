@@ -241,8 +241,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
                 _lifetimeCancellation.Token)
             : null;
         CancellationToken token = linkedCancellation?.Token ?? _lifetimeCancellation.Token;
-        await _repository.InitializeAsync(_seedReports, token);
-        CacheStatus = _repository.CacheStatus;
+            await _repository.InitializeAsync(_seedReports, token);
+            CacheStatus = _repository.CacheStatus;
+            Settings.SetLatestImport(
+                await _repository.GetLatestLocalXmlImportAsync(token));
         await _tsunamiRepository.InitializeAsync(token);
         UpdateTsunamiSourceStatuses();
         await TsunamiPage.LoadAsync(token);
