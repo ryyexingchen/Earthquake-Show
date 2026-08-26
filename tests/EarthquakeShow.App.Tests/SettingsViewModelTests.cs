@@ -1,5 +1,8 @@
+using System.Collections.Immutable;
 using EarthquakeShow.App.Services;
 using EarthquakeShow.App.ViewModels;
+using EarthquakeShow.Infrastructure.Sources;
+using EarthquakeShow.Core.Models;
 using Xunit;
 
 namespace EarthquakeShow.App.Tests;
@@ -57,5 +60,30 @@ public sealed class SettingsViewModelTests
         Assert.Equal(111, viewModel.KeepAliveOptions.Count);
         Assert.Contains(15, viewModel.KeepAliveOptions);
         Assert.Contains(120, viewModel.KeepAliveOptions);
+    }
+
+    [Fact]
+    public async Task ImportLocalXmlAsync_ReportsPersistedAndSkippedCounts()
+    {
+        string? importedPath = null;
+        var viewModel = new SettingsViewModel(
+            new ApplicationSettingsLoadResult(ApplicationSettings.Default, null),
+            _ => Task.CompletedTask,
+            (path, _) =>
+            {
+                importedPath = path;
+                return Task.FromResult(new JmaXmlLocalFileImportResult(
+                    ImmutableArray<EarthquakeReport>.Empty,
+                    ["ignored.xml"],
+                    [new JmaXmlLocalFileImportFailure("broken.xml", "格式错误")],
+                    2));
+            });
+
+        await viewModel.ImportLocalXmlAsync("E:\\history");
+
+        Assert.Equal("E:\\history", importedPath);
+        Assert.False(viewModel.IsImporting);
+        Assert.True(viewModel.CanImportLocalXml);
+        Assert.Equal("本地 XML 导入完成：写入/更新 2 条，跳过 1 个，失败 1 个", viewModel.StatusText);
     }
 }

@@ -126,6 +126,33 @@
                     </StackPanel>
                 </Border>
 
+                <Border Margin="0,24,0,0"
+                        Padding="0,0,0,24"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="0,0,0,1">
+                    <StackPanel>
+                        <TextBlock FontSize="15"
+                                   FontWeight="SemiBold"
+                                   Text="历史报文导入" />
+                        <TextBlock Margin="0,6,0,16"
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   Text="选择包含 JMA VXSE51、VXSE52 或 VXSE53 XML 文件的目录，导入后会自动刷新事件列表。"
+                                   TextWrapping="Wrap" />
+                        <Button AutomationProperties.Name="导入本地JMA XML"
+                                Click="OnImportLocalXmlClick"
+                                IsEnabled="{Binding CanImportLocalXml}"
+                                Padding="14,7"
+                                HorizontalAlignment="Left">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Margin="0,0,8,0"
+                                           FontFamily="Segoe Fluent Icons"
+                                           Text="&#xE8B7;" />
+                                <TextBlock Text="选择目录并导入" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+
                 <StackPanel Margin="0,20,0,0"
                             Orientation="Horizontal">
                     <Button AutomationProperties.Name="恢复连接策略默认值"

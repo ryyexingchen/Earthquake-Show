@@ -1,25 +1,30 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using EarthquakeShow.App.Services;
+using EarthquakeShow.Infrastructure.Sources;
 
 namespace EarthquakeShow.App.ViewModels;
 
 public sealed class SettingsViewModel : INotifyPropertyChanged
 {
     private readonly Func<WebSocketConnectionSettings, Task> _applySettings;
+    private readonly Func<string, CancellationToken, Task<JmaXmlLocalFileImportResult>>? _importLocalXml;
     private int _keepAliveSeconds;
     private int _maxConnectionDurationMinutes;
     private WebSocketConnectionSettings _savedSettings;
     private bool _isApplying;
+    private bool _isImporting;
     private bool _isVisible;
     private string _statusText = string.Empty;
 
     public SettingsViewModel(
         ApplicationSettingsLoadResult loadResult,
-        Func<WebSocketConnectionSettings, Task> applySettings)
+        Func<WebSocketConnectionSettings, Task> applySettings,
+        Func<string, CancellationToken, Task<JmaXmlLocalFileImportResult>>? importLocalXml = null)
     {
         ArgumentNullException.ThrowIfNull(loadResult);
         _applySettings = applySettings ?? throw new ArgumentNullException(nameof(applySettings));
+        _importLocalXml = importLocalXml;
         _savedSettings = loadResult.Settings.WebSocketSettings;
         _keepAliveSeconds = _savedSettings.KeepAliveSeconds;
         _maxConnectionDurationMinutes = _savedSettings.MaxConnectionDurationMinutes;
@@ -82,6 +87,25 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
 
             _isApplying = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(CanImportLocalXml));
+        }
+    }
+
+    public bool CanImportLocalXml => _importLocalXml is not null && !IsApplying && !IsImporting;
+
+    public bool IsImporting
+    {
+        get => _isImporting;
+        private set
+        {
+            if (_isImporting == value)
+            {
+                return;
+            }
+
+            _isImporting = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanImportLocalXml));
         }
     }
 
@@ -126,6 +150,31 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     public void ShowError(string message)
     {
         StatusText = message;
+    }
+
+    public async Task ImportLocalXmlAsync(
+        string directoryPath,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(directoryPath);
+        if (_importLocalXml is null)
+        {
+            throw new InvalidOperationException("当前宿主未配置本地 XML 导入功能。");
+        }
+
+        IsImporting = true;
+        StatusText = "正在导入本地 JMA XML…";
+        try
+        {
+            JmaXmlLocalFileImportResult result = await _importLocalXml(
+                directoryPath,
+                cancellationToken).ConfigureAwait(true);
+            StatusText = $"本地 XML 导入完成：写入/更新 {result.SavedReportCount} 条，跳过 {result.SkippedFiles.Length} 个，失败 {result.Failures.Length} 个";
+        }
+        finally
+        {
+            IsImporting = false;
+        }
     }
 
     public async Task ApplyAsync(CancellationToken cancellationToken = default)

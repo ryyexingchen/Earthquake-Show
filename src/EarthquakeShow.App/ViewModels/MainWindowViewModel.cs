@@ -28,6 +28,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
     private readonly SqliteTsunamiReportRepository _tsunamiRepository;
     private readonly IReadOnlyList<EarthquakeReport> _seedReports;
     private readonly JmaStationCoordinateCatalog _stationCatalog;
+    private readonly JmaIntensityRegionCatalog? _regionCatalog;
     private readonly HttpClient? _httpClient;
     private readonly IRealtimeTsunamiSource? _tsunamiSource;
     private readonly IReadOnlyList<IRealtimeEarthquakeSource> _realtimeSources = [];
@@ -61,11 +62,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         _settingsStore = new(settingsPath ?? GetDefaultSettingsPath());
         ApplicationSettingsLoadResult settingsLoad = _settingsStore.Load();
         _applicationSettings = settingsLoad.Settings;
-        Settings = new(settingsLoad, ApplyWebSocketSettingsAsync);
+        Settings = new(settingsLoad, ApplyWebSocketSettingsAsync, ImportLocalXmlAsync);
         JmaStationCoordinateCatalog stationCatalog = FixedJmaXmlDataLoader.LoadStationCatalog();
         _stationCatalog = stationCatalog;
         _seedReports = FixedJmaXmlDataLoader.LoadReports(stationCatalog);
         JmaIntensityRegionCatalog? regionCatalog = LoadRegionCatalog();
+        _regionCatalog = regionCatalog;
         if (enableNetwork)
         {
             _httpClient = new HttpClient
@@ -354,6 +356,25 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
     public void OpenSettings() => Settings.IsVisible = true;
 
     public void CloseSettings() => Settings.IsVisible = false;
+
+    internal async Task<JmaXmlLocalFileImportResult> ImportLocalXmlAsync(
+        string directoryPath,
+        CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
+        JmaXmlLocalFileImporter importer = new(
+            stationCatalog: _stationCatalog,
+            regionCatalog: _regionCatalog);
+        JmaXmlLocalFileImportResult result = await _repository
+            .ImportLocalXmlAsync(importer, directoryPath, cancellationToken)
+            .ConfigureAwait(true);
+        if (!_isDisposed)
+        {
+            CacheStatus = $"缓存：本地 XML 已导入 {result.SavedReportCount} 条报文";
+        }
+
+        return result;
+    }
 
     public void ShowEarthquakePage()
     {
