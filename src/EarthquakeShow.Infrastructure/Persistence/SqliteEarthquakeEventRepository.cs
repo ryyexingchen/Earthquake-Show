@@ -621,7 +621,9 @@ public sealed class SqliteEarthquakeEventRepository :
                 throw new InvalidDataException("SQLite 报文负载为空。");
             }
 
-            EarthquakeReport report = RefreshLegacyJmaIntensity(payload.ToDomain());
+            EarthquakeReport report = payload.ToDomain();
+            report = P2pQuakeEarthquakeSource.RefreshCachedTsunamiComment(report);
+            report = RefreshLegacyJmaIntensity(report);
             reports.Add(FillMissingJmaStationCoordinates(report));
         }
 

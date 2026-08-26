@@ -155,6 +155,44 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
         return ToReport(item, element.GetRawText(), receivedAt, endpoint, regionCatalog, stationCatalog);
     }
 
+    /// <summary>
+    /// 从缓存的 P2PQuake 原始报文重新归一化海啸状态，兼容旧缓存摘要。
+    /// </summary>
+    internal static EarthquakeReport RefreshCachedTsunamiComment(EarthquakeReport report)
+    {
+        if (!string.Equals(report.Source.SourceId, SourceName, StringComparison.Ordinal) ||
+            string.IsNullOrWhiteSpace(report.Source.SourcePayload))
+        {
+            return report;
+        }
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(report.Source.SourcePayload);
+            if (document.RootElement.ValueKind != JsonValueKind.Object ||
+                !document.RootElement.TryGetProperty("earthquake", out JsonElement earthquake) ||
+                earthquake.ValueKind != JsonValueKind.Object)
+            {
+                return report;
+            }
+
+            bool hasDomestic = earthquake.TryGetProperty("domesticTsunami", out _);
+            bool hasForeign = earthquake.TryGetProperty("foreignTsunami", out _);
+            if (!hasDomestic && !hasForeign)
+            {
+                return report;
+            }
+
+            string? domestic = ReadOptionalString(earthquake, "domesticTsunami");
+            string? foreign = ReadOptionalString(earthquake, "foreignTsunami");
+            return report with { TsunamiComment = BuildTsunamiComment(domestic, foreign) };
+        }
+        catch (JsonException)
+        {
+            return report;
+        }
+    }
+
     private static EarthquakeReport ToReport(
         P2pQuakeItem item,
         string rawPayload,
@@ -465,8 +503,9 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
             "Checking" => "津波 调查中",
             "NonEffective" => "若干の海面変動",
             "Watch" => "津波注意報",
-            "Warning" => "津波予報（種類不明）",
-            "" or "Unknown" => null,
+            "Warning" => "津波预报",
+            "" => null,
+            "Unknown" => "津波 调查中",
             _ => $"津波状态：{domesticValue}",
         };
         string? foreignComment = foreignValue switch
@@ -491,6 +530,14 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
         }
 
         return foreignComment is null ? null : $"海外：{foreignComment}";
+    }
+
+    private static string? ReadOptionalString(JsonElement parent, string propertyName)
+    {
+        return parent.TryGetProperty(propertyName, out JsonElement value) &&
+            value.ValueKind == JsonValueKind.String
+                ? value.GetString()
+                : null;
     }
 
     private static DateTimeOffset ParseRequiredTime(string? value, string fieldName)

@@ -276,6 +276,30 @@ public sealed class SqliteEarthquakeEventRepositoryTests
     }
 
     [Fact]
+    public async Task Initialize_RenormalizesCachedP2pTsunamiCommentFromSourcePayload()
+    {
+        using var database = new TemporaryDatabase();
+        EarthquakeReport legacy = CreateOnlineReport() with
+        {
+            TsunamiComment = "津波の心配なし",
+            Source = new SourceReference(
+                "p2pquake",
+                "cached-tsunami-status",
+                SourcePayload: "{\"earthquake\":{\"domesticTsunami\":\"Checking\",\"foreignTsunami\":\"Unknown\"}}"),
+        };
+
+        var writer = new SqliteEarthquakeEventRepository(database.Path);
+        await writer.InitializeAsync([legacy]);
+
+        var reader = new SqliteEarthquakeEventRepository(database.Path);
+        await reader.InitializeAsync([]);
+
+        EarthquakeReport reloaded = Assert.Single(
+            Assert.Single(await reader.ListEventsAsync()).Reports);
+        Assert.Equal("津波 调查中", reloaded.TsunamiComment);
+    }
+
+    [Fact]
     public async Task Initialize_CorruptDatabase_FallsBackToSeedWithoutThrowing()
     {
         using var database = new TemporaryDatabase();

@@ -138,6 +138,64 @@ public sealed class P2pQuakeEarthquakeSourceTests
     }
 
     [Fact]
+    public async Task Fetch_DomesticWarning_MapsToTsunamiForecast()
+    {
+        const string payload = """
+            [{
+              "code": 551,
+              "id": "p2p-tsunami-warning",
+              "issue": { "correct": "None", "time": "2026/08/20 12:08:07", "type": "DetailScale" },
+              "earthquake": {
+                "domesticTsunami": "Warning",
+                "foreignTsunami": "Unknown",
+                "hypocenter": { "depth": 10, "latitude": 32.4, "longitude": 130.6, "magnitude": 2.9, "name": "熊本県熊本地方" },
+                "maxScale": 40,
+                "time": "2026/08/20 12:04:00"
+              },
+              "points": []
+            }]
+            """;
+        using var httpClient = new HttpClient(new ResponseHandler(
+            Response(HttpStatusCode.OK, payload)));
+        var source = new P2pQuakeEarthquakeSource(
+            httpClient,
+            "https://example.test/v2/jma/quake");
+
+        EarthquakeReport report = Assert.Single((await source.FetchAsync()).Reports);
+
+        Assert.Equal("津波预报", report.TsunamiComment);
+    }
+
+    [Fact]
+    public async Task Fetch_DomesticUnknown_MapsToInvestigating()
+    {
+        const string payload = """
+            [{
+              "code": 551,
+              "id": "p2p-tsunami-unknown",
+              "issue": { "correct": "None", "time": "2026/08/20 12:08:07", "type": "DetailScale" },
+              "earthquake": {
+                "domesticTsunami": "Unknown",
+                "foreignTsunami": "Unknown",
+                "hypocenter": { "depth": 10, "latitude": 32.4, "longitude": 130.6, "magnitude": 2.9, "name": "熊本県熊本地方" },
+                "maxScale": 40,
+                "time": "2026/08/20 12:04:00"
+              },
+              "points": []
+            }]
+            """;
+        using var httpClient = new HttpClient(new ResponseHandler(
+            Response(HttpStatusCode.OK, payload)));
+        var source = new P2pQuakeEarthquakeSource(
+            httpClient,
+            "https://example.test/v2/jma/quake");
+
+        EarthquakeReport report = Assert.Single((await source.FetchAsync()).Reports);
+
+        Assert.Equal("津波 调查中", report.TsunamiComment);
+    }
+
+    [Fact]
     public async Task Fetch_ForeignVolcanicEruption_NormalizesUnknownValues()
     {
         const string payload = """
