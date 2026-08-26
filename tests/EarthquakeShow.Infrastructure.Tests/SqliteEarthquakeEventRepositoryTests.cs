@@ -8,7 +8,7 @@ using Xunit;
 
 namespace EarthquakeShow.Infrastructure.Tests;
 
-public sealed class SqliteEarthquakeEventRepositoryTests
+public sealed partial class SqliteEarthquakeEventRepositoryTests
 {
     [Fact]
     public async Task Initialize_EmptyDatabase_WritesSeedAndReloadsMergedEvent()

@@ -323,6 +323,24 @@ public sealed class SqliteEarthquakeEventRepository :
             cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<JmaXmlLocalFileImportResult> ImportLocalXmlAsync(
+        JmaXmlLocalFileImporter importer,
+        string directoryPath,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(importer);
+        JmaXmlLocalFileImportResult result = await importer
+            .ImportAsync(directoryPath, cancellationToken)
+            .ConfigureAwait(false);
+        if (result.Reports.IsDefaultOrEmpty)
+        {
+            return result;
+        }
+
+        await SaveReportsAsync(result.Reports, cancellationToken).ConfigureAwait(false);
+        return result with { SavedReportCount = result.Reports.Length };
+    }
+
     public Task ApplyStreamingResultAsync(
         EarthquakeSourceFetchResult result,
         CancellationToken cancellationToken = default)

@@ -96,4 +96,5 @@ public sealed record JmaXmlLocalFileImportFailure(
 public sealed record JmaXmlLocalFileImportResult(
     ImmutableArray<EarthquakeReport> Reports,
     ImmutableArray<string> SkippedFiles,
-    ImmutableArray<JmaXmlLocalFileImportFailure> Failures);
+    ImmutableArray<JmaXmlLocalFileImportFailure> Failures,
+    int SavedReportCount = 0);
