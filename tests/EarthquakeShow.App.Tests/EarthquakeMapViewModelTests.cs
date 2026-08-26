@@ -239,8 +239,7 @@ public sealed class EarthquakeMapViewModelTests
         map.AutoScale(EarthquakeMapViewModel.MaxBigZoomLevel);
 
         Assert.False(map.WillChangeDetailLevel(
-            preferMedium: false,
-            viewportBounds: new MapGeometryBounds(160, 175, -25, -5)));
+            new MapGeometryBounds(160, 175, -25, -5)));
     }
 
     [Fact]
@@ -697,7 +696,8 @@ public sealed class EarthquakeMapViewModelTests
             Assert.Contains("区域轮廓", map.BoundaryGeometry?.Source);
             Assert.Equal("测试离线轮廓", sourceBeforeGeometryChange);
 
-            await map.EnsureDetailLevelForZoomAsync(preferMedium: true);
+            map.AutoScale(3);
+            await map.EnsureDetailLevelForZoomAsync();
 
             Assert.Equal(MapDetailLevel.Medium, map.DetailLevel);
         }
@@ -806,7 +806,8 @@ public sealed class EarthquakeMapViewModelTests
                 OfflineMapBoundaryGeometry.LoadFromJson(BoundaryGeometryJson),
                 new MapLodResourceProvider(areasPath, municipalitiesPath, boundariesPath));
 
-            await map.EnsureDetailLevelForZoomAsync(preferMedium: true);
+            map.AutoScale(3);
+            await map.EnsureDetailLevelForZoomAsync();
 
             Assert.Equal(MapDetailLevel.Medium, map.DetailLevel);
             map.ResetView();

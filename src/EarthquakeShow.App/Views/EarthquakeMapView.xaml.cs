@@ -49,8 +49,7 @@ public partial class EarthquakeMapView : UserControl
         _viewportCenter = null;
         _lastFocusedCoordinate = ViewModel?.FocusedCoordinate;
         RenderMap();
-        await EnsureMapDetailLevelAsync(
-            preferMedium: ShouldPreferMediumForAutomaticView());
+        await EnsureMapDetailLevelAsync();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -78,8 +77,7 @@ public partial class EarthquakeMapView : UserControl
         }
 
         RequestRender();
-        _ = EnsureMapDetailLevelAsync(
-            preferMedium: ShouldPreferMediumForAutomaticView());
+        _ = EnsureMapDetailLevelAsync();
     }
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -97,8 +95,7 @@ public partial class EarthquakeMapView : UserControl
             _viewportCenter = null;
             ViewModel?.AutoScale(GetAutomaticZoomLevel());
             RequestRender();
-            _ = EnsureMapDetailLevelAsync(
-                preferMedium: ShouldPreferMediumForAutomaticView());
+            _ = EnsureMapDetailLevelAsync();
         }
 
         if (ViewModel?.FollowSelection == true &&
@@ -122,22 +119,13 @@ public partial class EarthquakeMapView : UserControl
 
         if (e.PropertyName == nameof(EarthquakeMapViewModel.ZoomLevel))
         {
-            _ = EnsureMapDetailLevelAsync(
-                preferMedium: ShouldPreferMediumForAutomaticView());
+            _ = EnsureMapDetailLevelAsync();
         }
         else if (e.PropertyName is nameof(EarthquakeMapViewModel.EffectiveFocusMode)
             or nameof(EarthquakeMapViewModel.HasSelectedEvent))
         {
-            _ = EnsureMapDetailLevelAsync(
-                preferMedium: ShouldPreferMediumForAutomaticView());
+            _ = EnsureMapDetailLevelAsync();
         }
-    }
-
-    private bool ShouldPreferMediumForAutomaticView()
-    {
-        return ViewModel?.FollowSelection == true &&
-            ViewModel.HasSelectedEvent &&
-            ViewModel.EffectiveFocusMode == EarthquakeMapFocusMode.SelectedEvent;
     }
 
     internal static bool ShouldResetPanForFocusedCoordinate(
@@ -197,7 +185,7 @@ public partial class EarthquakeMapView : UserControl
         _viewportCenter = null;
         ViewModel?.FocusSelectedEvent();
         ViewModel?.AutoScale(GetAutomaticZoomLevel());
-        await EnsureMapDetailLevelAsync(preferMedium: true);
+        await EnsureMapDetailLevelAsync();
     }
 
     private void OnMapMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -303,7 +291,7 @@ public partial class EarthquakeMapView : UserControl
         e.Handled = true;
     }
 
-    private async Task EnsureMapDetailLevelAsync(bool preferMedium = false)
+    private async Task EnsureMapDetailLevelAsync()
     {
         if (ViewModel is null || !IsLoaded)
         {
@@ -314,7 +302,7 @@ public partial class EarthquakeMapView : UserControl
             ? null
             : GetDetailViewportBounds();
         GeoCoordinate? viewportCenter = null;
-        if (ViewModel.WillChangeDetailLevel(preferMedium, viewportBounds) &&
+        if (ViewModel.WillChangeDetailLevel(viewportBounds) &&
             GetViewportCenter() is GeoCoordinate currentCenter)
         {
             viewportCenter = currentCenter;
@@ -324,12 +312,11 @@ public partial class EarthquakeMapView : UserControl
         TraceMap(
             "EnsureDetail",
             GetViewportCenter(),
-            $"preferMedium={preferMedium}, willChange={viewportCenter is not null}, bounds={FormatBounds(viewportBounds)}");
+            $"willChange={viewportCenter is not null}, bounds={FormatBounds(viewportBounds)}");
 
         try
         {
             await ViewModel.EnsureDetailLevelForZoomAsync(
-                preferMedium: preferMedium,
                 viewportBounds: viewportBounds,
                 viewportCenter: viewportCenter);
         }

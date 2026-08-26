@@ -341,12 +341,11 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
     public async Task EnsureDetailLevelForZoomAsync(
         CancellationToken cancellationToken = default,
-        bool preferMedium = false,
         MapGeometryBounds? viewportBounds = null,
         GeoCoordinate? viewportCenter = null)
     {
         ThrowIfDisposed();
-        MapDetailLevel desiredLevel = GetDesiredDetailLevel(preferMedium);
+        MapDetailLevel desiredLevel = GetDesiredDetailLevel();
         TraceDetail(
             "EnsureStart",
             $"generation={_detailLoadGeneration} desired={desiredLevel} current={_detailLevel} " +
@@ -505,10 +504,9 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     }
 
     internal bool WillChangeDetailLevel(
-        bool preferMedium,
         MapGeometryBounds? viewportBounds)
     {
-        MapDetailLevel desiredLevel = GetDesiredDetailLevel(preferMedium);
+        MapDetailLevel desiredLevel = GetDesiredDetailLevel();
         return desiredLevel != DetailLevel ||
             NeedsHighDetailReload(
                 desiredLevel,
@@ -773,20 +771,18 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 !Contains(loaded, requested));
     }
 
-    private MapDetailLevel GetDesiredDetailLevel(bool preferMedium)
+    private MapDetailLevel GetDesiredDetailLevel()
     {
         if (IsDistantEvent)
         {
             return MapDetailLevel.Overview;
         }
 
-        return preferMedium
-            ? MapDetailLevel.Medium
-            : ZoomLevel > HighDetailZoomThreshold
-                ? MapDetailLevel.High
-                : ZoomLevel > MediumDetailZoomThreshold
-                    ? MapDetailLevel.Medium
-                    : MapDetailLevel.Overview;
+        return ZoomLevel > HighDetailZoomThreshold
+            ? MapDetailLevel.High
+            : ZoomLevel > MediumDetailZoomThreshold
+                ? MapDetailLevel.Medium
+                : MapDetailLevel.Overview;
     }
 
     private void RebuildLayers()

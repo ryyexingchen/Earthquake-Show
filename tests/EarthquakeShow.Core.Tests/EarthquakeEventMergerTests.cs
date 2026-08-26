@@ -291,7 +291,7 @@ public sealed class EarthquakeEventMergerTests
     }
 
     [Fact]
-    public void Merge_DistantP2pAndJmaXmlMatchingEvent_CreatesOneEvent()
+    public void Merge_DistantP2pUpdatesAndJmaXmlMatchingEvent_CreatesOneEvent()
     {
         GeoCoordinate coordinate = new(-15.4, 167.8);
         EarthquakeReport jma = CreateReport(
@@ -307,11 +307,11 @@ public sealed class EarthquakeEventMergerTests
             DistantEarthquakeKind = DistantEarthquakeKind.VolcanicEruption,
             Hypocenter = new Hypocenter("南太平洋", "950", coordinate, null),
         };
-        EarthquakeReport p2p = CreateReport(
+        EarthquakeReport p2pFirst = CreateReport(
             "P2P-551",
-            "p2p-foreign",
+            "p2p-foreign-first",
             1,
-            eventId: "p2pquake:p2p-foreign",
+            eventId: "p2pquake:p2p-foreign-first",
             sourceId: "p2pquake",
             magnitude: null,
             intensity: JmaIntensity.Unknown) with
@@ -320,12 +320,74 @@ public sealed class EarthquakeEventMergerTests
             DistantEarthquakeKind = DistantEarthquakeKind.VolcanicEruption,
             Hypocenter = new Hypocenter("バヌアツ諸島", null, coordinate, null),
         };
+        EarthquakeReport p2pSecond = p2pFirst with
+        {
+            EventId = "p2pquake:p2p-foreign-second",
+            IssuedAt = BaseTime.AddHours(6),
+            ReceivedAt = BaseTime.AddHours(6).AddSeconds(1),
+            Source = new SourceReference("p2pquake", "p2p-foreign-second"),
+        };
+        EarthquakeReport p2pThird = p2pFirst with
+        {
+            EventId = "p2pquake:p2p-foreign-third",
+            IssuedAt = BaseTime.AddHours(9),
+            ReceivedAt = BaseTime.AddHours(9).AddSeconds(1),
+            Source = new SourceReference("p2pquake", "p2p-foreign-third"),
+        };
 
         EarthquakeEvent earthquakeEvent = Assert.Single(
-            EarthquakeEventMerger.Merge([p2p, jma]));
+            EarthquakeEventMerger.Merge([p2pFirst, jma, p2pSecond, p2pThird]));
 
         Assert.Equal("20260825184000", earthquakeEvent.EventId);
         Assert.Equal("jma-xml", earthquakeEvent.PreferredReport?.Source.SourceId);
+        Assert.Equal(4, earthquakeEvent.Reports.Length);
+    }
+
+    [Fact]
+    public void Merge_DistantP2pUpdatesWithDifferentEvidence_RemainSeparate()
+    {
+        EarthquakeReport first = CreateReport(
+            "P2P-551",
+            "p2p-foreign-first",
+            1,
+            eventId: "p2pquake:p2p-foreign-first",
+            sourceId: "p2pquake",
+            magnitude: null,
+            intensity: JmaIntensity.Unknown) with
+        {
+            ReportType = EarthquakeReportType.DistantEarthquake,
+            DistantEarthquakeKind = DistantEarthquakeKind.VolcanicEruption,
+            Hypocenter = new Hypocenter(
+                "バヌアツ諸島",
+                null,
+                new GeoCoordinate(-15.4, 167.8),
+                null),
+        };
+        EarthquakeReport differentLocation = first with
+        {
+            EventId = "p2pquake:p2p-foreign-location",
+            Hypocenter = new Hypocenter(
+                "南太平洋",
+                null,
+                new GeoCoordinate(-20, 175),
+                null),
+            Source = new SourceReference("p2pquake", "p2p-foreign-location"),
+        };
+        EarthquakeReport differentOrigin = first with
+        {
+            EventId = "p2pquake:p2p-foreign-origin",
+            OriginTime = BaseTime.AddMinutes(2),
+            Source = new SourceReference("p2pquake", "p2p-foreign-origin"),
+        };
+        EarthquakeReport differentKind = first with
+        {
+            EventId = "p2pquake:p2p-foreign-kind",
+            DistantEarthquakeKind = DistantEarthquakeKind.Earthquake,
+            Source = new SourceReference("p2pquake", "p2p-foreign-kind"),
+        };
+
+        Assert.Equal(4, EarthquakeEventMerger.Merge(
+            [first, differentLocation, differentOrigin, differentKind]).Length);
     }
 
     [Fact]

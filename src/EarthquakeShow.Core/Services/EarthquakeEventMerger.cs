@@ -127,6 +127,11 @@ public static class EarthquakeEventMerger
             return false;
         }
 
+        if (CanMergeRepeatedDistantP2pEvents(left, right))
+        {
+            return true;
+        }
+
         HashSet<EarthquakeReportType> leftStages = left
             .Select(report => report.ReportType)
             .ToHashSet();
@@ -186,6 +191,57 @@ public static class EarthquakeEventMerger
             {
                 return false;
             }
+        }
+
+        return true;
+    }
+
+    private static bool CanMergeRepeatedDistantP2pEvents(
+        IReadOnlyList<EarthquakeReport> left,
+        IReadOnlyList<EarthquakeReport> right)
+    {
+        if (left.Any(report => report.ReportType != EarthquakeReportType.DistantEarthquake) ||
+            right.Any(report => report.ReportType != EarthquakeReportType.DistantEarthquake))
+        {
+            return false;
+        }
+
+        if (left.Any(report => report.DistantEarthquakeKind is null) ||
+            right.Any(report => report.DistantEarthquakeKind is null))
+        {
+            return false;
+        }
+
+        DistantEarthquakeKind leftKind = left[0].DistantEarthquakeKind!.Value;
+        DistantEarthquakeKind rightKind = right[0].DistantEarthquakeKind!.Value;
+        if (left.Any(report => report.DistantEarthquakeKind != leftKind) ||
+            right.Any(report => report.DistantEarthquakeKind != rightKind) ||
+            leftKind != rightKind)
+        {
+            return false;
+        }
+
+        EarthquakeReport? leftAssociation = GetAssociationReport(left);
+        EarthquakeReport? rightAssociation = GetAssociationReport(right);
+        if (leftAssociation?.OriginTime is not DateTimeOffset leftOrigin ||
+            rightAssociation?.OriginTime is not DateTimeOffset rightOrigin ||
+            leftAssociation.Hypocenter?.Coordinate is not GeoCoordinate leftCoordinate ||
+            rightAssociation.Hypocenter?.Coordinate is not GeoCoordinate rightCoordinate)
+        {
+            return false;
+        }
+
+        if (Math.Abs((leftOrigin - rightOrigin).TotalSeconds) > TemporaryEventIdDifferenceSeconds ||
+            CalculateDistanceKm(leftCoordinate, rightCoordinate) > CrossSourceDistanceKm)
+        {
+            return false;
+        }
+
+        if (leftAssociation.Magnitude?.Value is double leftMagnitude &&
+            rightAssociation.Magnitude?.Value is double rightMagnitude &&
+            Math.Abs(leftMagnitude - rightMagnitude) > CrossSourceMagnitudeDifference)
+        {
+            return false;
         }
 
         return true;
