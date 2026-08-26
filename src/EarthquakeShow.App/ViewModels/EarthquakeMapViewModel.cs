@@ -184,29 +184,16 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     public IReadOnlyList<EarthquakeMapArea> SelectedAreaHighlights =>
         _selectedMapSelection?.Kind switch
         {
-            EarthquakeMapSelectionKind.Prefecture => Areas
-                .Where(area => string.Equals(
-                    area.PrefectureCode,
-                    _selectedMapSelection.Code,
-                    StringComparison.Ordinal))
-                .ToArray(),
-            EarthquakeMapSelectionKind.Area => Areas
-                .Where(area => string.Equals(
-                    area.Code,
-                    _selectedMapSelection.Code,
-                    StringComparison.Ordinal))
-                .ToArray(),
+            EarthquakeMapSelectionKind.Prefecture => GetSelectedAreaHighlights(
+                _selectedMapSelection),
+            EarthquakeMapSelectionKind.Area => GetSelectedAreaHighlights(
+                _selectedMapSelection),
             _ => [],
         };
 
     public IReadOnlyList<EarthquakeMapMunicipality> SelectedMunicipalityHighlights =>
         _selectedMapSelection?.Kind == EarthquakeMapSelectionKind.Municipality
-            ? Municipalities
-                .Where(item => string.Equals(
-                    item.Code,
-                    _selectedMapSelection.Code,
-                    StringComparison.Ordinal))
-                .ToArray()
+            ? GetSelectedMunicipalityHighlights(_selectedMapSelection)
             : [];
 
     public EarthquakeMapMarker? SelectedStationHighlight =>
@@ -218,6 +205,169 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                     _selectedMapSelection.Code,
                     StringComparison.Ordinal))
             : null;
+
+    private IReadOnlyList<EarthquakeMapArea> GetSelectedAreaHighlights(
+        EarthquakeMapSelection selection)
+    {
+        EarthquakeMapArea[] current = Areas
+            .Where(area => selection.Kind == EarthquakeMapSelectionKind.Prefecture
+                ? string.Equals(
+                    area.PrefectureCode,
+                    selection.Code,
+                    StringComparison.Ordinal)
+                : string.Equals(area.Code, selection.Code, StringComparison.Ordinal))
+            .ToArray();
+        if (current.Length > 0)
+        {
+            return current;
+        }
+
+        EarthquakeReport? viewedReport = _page.State.ViewedReport;
+        if (viewedReport is null)
+        {
+            return [];
+        }
+
+        EarthquakeReport report = GetMapReport(viewedReport);
+        Dictionary<string, IntensityArea> reportAreas = report.IntensityAreas
+            .GroupBy(area => area.Code, StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => group.OrderByDescending(area => area.MaxIntensity).First(),
+                StringComparer.Ordinal);
+        HashSet<string> codes = selection.Kind == EarthquakeMapSelectionKind.Prefecture
+            ? report.IntensityAreas
+                .Where(area => string.Equals(
+                    area.PrefectureCode,
+                    selection.Code,
+                    StringComparison.Ordinal))
+                .Select(area => area.Code)
+                .ToHashSet(StringComparer.Ordinal)
+            : [selection.Code];
+
+        return BuildAreaHighlights(
+            _overviewGeometry.Polygons.Where(polygon => codes.Contains(polygon.Code)),
+            reportAreas);
+    }
+
+    private IReadOnlyList<EarthquakeMapMunicipality> GetSelectedMunicipalityHighlights(
+        EarthquakeMapSelection selection)
+    {
+        EarthquakeMapMunicipality[] current = Municipalities
+            .Where(item => string.Equals(item.Code, selection.Code, StringComparison.Ordinal))
+            .ToArray();
+        if (current.Length > 0)
+        {
+            return current;
+        }
+
+        EarthquakeReport? viewedReport = _page.State.ViewedReport;
+        if (viewedReport is null)
+        {
+            return [];
+        }
+
+        EarthquakeReport report = GetMapReport(viewedReport);
+        Dictionary<string, IntensityMunicipality> reportMunicipalities = report.IntensityMunicipalities
+            .GroupBy(item => item.Code, StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => group.OrderByDescending(item => item.MaxIntensity).First(),
+                StringComparer.Ordinal);
+        return BuildMunicipalityHighlights(
+            FindMunicipalityGeometry(selection.Code),
+            reportMunicipalities);
+    }
+
+    private static IReadOnlyList<EarthquakeMapArea> BuildAreaHighlights(
+        IEnumerable<MapPolygonGeometry> polygons,
+        IReadOnlyDictionary<string, IntensityArea> reportAreas)
+    {
+        return polygons
+            .GroupBy(polygon => polygon.Code, StringComparer.Ordinal)
+            .Select(group =>
+            {
+                MapPolygonGeometry first = group.First();
+                reportAreas.TryGetValue(group.Key, out IntensityArea? source);
+                ImmutableArray<ImmutableArray<GeoCoordinate>> rings = group
+                    .SelectMany(GetPolygonRings)
+                    .ToImmutableArray();
+                ImmutableArray<GeoCoordinate> coordinates = rings.IsDefaultOrEmpty
+                    ? first.Coordinates
+                    : rings[0];
+                return new EarthquakeMapArea(
+                    group.Key,
+                    source?.Name ?? first.Name,
+                    source?.MaxIntensity ?? JmaIntensity.Unknown,
+                    coordinates)
+                {
+                    PrefectureCode = source?.PrefectureCode ?? string.Empty,
+                    Rings = rings,
+                };
+            })
+            .ToArray();
+    }
+
+    private static IReadOnlyList<EarthquakeMapMunicipality> BuildMunicipalityHighlights(
+        IEnumerable<MapPolygonGeometry> polygons,
+        IReadOnlyDictionary<string, IntensityMunicipality> reportMunicipalities)
+    {
+        return polygons
+            .GroupBy(polygon => polygon.Code, StringComparer.Ordinal)
+            .Select(group =>
+            {
+                MapPolygonGeometry first = group.First();
+                reportMunicipalities.TryGetValue(group.Key, out IntensityMunicipality? source);
+                ImmutableArray<ImmutableArray<GeoCoordinate>> rings = group
+                    .SelectMany(GetPolygonRings)
+                    .ToImmutableArray();
+                ImmutableArray<GeoCoordinate> coordinates = rings.IsDefaultOrEmpty
+                    ? first.Coordinates
+                    : rings[0];
+                return new EarthquakeMapMunicipality(
+                    group.Key,
+                    source?.Name ?? first.Name,
+                    source?.MaxIntensity ?? JmaIntensity.Unknown,
+                    coordinates)
+                {
+                    Rings = rings,
+                };
+            })
+            .ToArray();
+    }
+
+    private IEnumerable<MapPolygonGeometry> FindAreaGeometry(string areaCode)
+    {
+        MapPolygonGeometry[] current = Outline
+            .Where(item => string.Equals(item.Code, areaCode, StringComparison.Ordinal))
+            .ToArray();
+        return current.Length > 0
+            ? current
+            : _overviewGeometry.Polygons.Where(item =>
+                string.Equals(item.Code, areaCode, StringComparison.Ordinal));
+    }
+
+    private IEnumerable<MapPolygonGeometry> FindMunicipalityGeometry(string municipalityCode)
+    {
+        MapPolygonGeometry[] current = (_municipalityGeometry?.Polygons ?? [])
+            .Where(item => string.Equals(item.Code, municipalityCode, StringComparison.Ordinal))
+            .ToArray();
+        if (current.Length > 0)
+        {
+            return current;
+        }
+
+        return (_overviewMunicipalityGeometry?.Polygons ?? [])
+            .Where(item => string.Equals(item.Code, municipalityCode, StringComparison.Ordinal));
+    }
+
+    private static IEnumerable<ImmutableArray<GeoCoordinate>> GetPolygonRings(
+        MapPolygonGeometry polygon)
+    {
+        return polygon.Rings.IsDefaultOrEmpty
+            ? [polygon.Coordinates]
+            : polygon.Rings;
+    }
 
     public GeoCoordinate? FocusedCoordinate => _focusedCoordinate;
 
@@ -371,14 +521,8 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             return false;
         }
 
-        EarthquakeMapArea? area = Areas.FirstOrDefault(item =>
-            string.Equals(item.Code, areaCode, StringComparison.Ordinal));
-        if (area is null)
-        {
-            return false;
-        }
-
-        IReadOnlyList<GeoCoordinate> points = area.Rings
+        IReadOnlyList<GeoCoordinate> points = FindAreaGeometry(areaCode)
+            .SelectMany(GetPolygonRings)
             .SelectMany(ring => ring)
             .ToArray();
         return TryGetBoundsCenter(points, out coordinate);
@@ -394,14 +538,8 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             return false;
         }
 
-        EarthquakeMapMunicipality? municipality = Municipalities.FirstOrDefault(item =>
-            string.Equals(item.Code, municipalityCode, StringComparison.Ordinal));
-        if (municipality is null)
-        {
-            return false;
-        }
-
-        IReadOnlyList<GeoCoordinate> points = municipality.Rings
+        IReadOnlyList<GeoCoordinate> points = FindMunicipalityGeometry(municipalityCode)
+            .SelectMany(GetPolygonRings)
             .SelectMany(ring => ring)
             .ToArray();
         return TryGetBoundsCenter(points, out coordinate);
@@ -1256,14 +1394,20 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         out GeoCoordinate coordinate)
     {
         coordinate = default;
-        if (points.Count == 0)
+        GeoCoordinate[] validPoints = points
+            .Where(point => double.IsFinite(point.Latitude) &&
+                double.IsFinite(point.Longitude))
+            .ToArray();
+        if (validPoints.Length == 0)
         {
             return false;
         }
 
         coordinate = new GeoCoordinate(
-            (points.Min(point => point.Latitude) + points.Max(point => point.Latitude)) / 2,
-            (points.Min(point => point.Longitude) + points.Max(point => point.Longitude)) / 2);
+            (validPoints.Min(point => point.Latitude) +
+                validPoints.Max(point => point.Latitude)) / 2,
+            (validPoints.Min(point => point.Longitude) +
+                validPoints.Max(point => point.Longitude)) / 2);
         return true;
     }
 

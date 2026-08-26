@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using EarthquakeShow.App.ViewModels;
 
 namespace EarthquakeShow.App.Views;
@@ -59,9 +60,7 @@ public partial class EarthquakeDetailsView : UserControl
         System.Windows.Input.MouseButtonEventArgs e)
     {
         if (ViewModel is null ||
-            ItemsControl.ContainerFromElement(
-                ObservationTreeView,
-                e.OriginalSource as DependencyObject) is not TreeViewItem item ||
+            FindTreeViewItem(e.OriginalSource as DependencyObject) is not TreeViewItem item ||
             item.DataContext is not EarthquakeObservationTreeNode node ||
             !ViewModel.IsObservationNodeSelected(node))
         {
@@ -71,6 +70,38 @@ public partial class EarthquakeDetailsView : UserControl
         ViewModel.ToggleObservationNode(node);
         item.IsSelected = false;
         e.Handled = true;
+    }
+
+    private TreeViewItem? FindTreeViewItem(DependencyObject? source)
+    {
+        if (source is null)
+        {
+            return null;
+        }
+
+        if (ItemsControl.ContainerFromElement(ObservationTreeView, source)
+            is TreeViewItem container)
+        {
+            return container;
+        }
+
+        DependencyObject? current = source;
+        while (current is not null)
+        {
+            if (current is TreeViewItem item)
+            {
+                return item;
+            }
+
+            current = current switch
+            {
+                FrameworkContentElement contentElement => contentElement.Parent,
+                Visual visual => VisualTreeHelper.GetParent(visual),
+                _ => null,
+            };
+        }
+
+        return null;
     }
 
     private void OnExpandObservationTreeClick(object sender, RoutedEventArgs e)

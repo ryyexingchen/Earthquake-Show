@@ -94,6 +94,34 @@ public sealed class EarthquakeDetailsViewModelTests
     }
 
     [Fact]
+    public async Task Details_TogglingSameObservationNodeCanSelectCancelAndReselect()
+    {
+        EarthquakeReport report = CreateReport(
+            "toggle-observation",
+            BaseTime,
+            intensity: JmaIntensity.Four,
+            station: true);
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+        using var details = new EarthquakeDetailsViewModel(page, map);
+
+        EarthquakeObservationTreeNode node = Assert.Single(
+            details.ObservationTreeNodes,
+            item => item.Kind == "都道府县");
+
+        details.ToggleObservationNode(node);
+        Assert.Equal(node, details.SelectedObservationNode);
+        details.ToggleObservationNode(node);
+        Assert.Null(details.SelectedObservationNode);
+        details.ToggleObservationNode(node);
+        Assert.Equal(node, details.SelectedObservationNode);
+    }
+
+    [Fact]
     public async Task Details_BuildsObservationTreeAndKeepsUnmappedStation()
     {
         EarthquakeReport report = CreateReport(

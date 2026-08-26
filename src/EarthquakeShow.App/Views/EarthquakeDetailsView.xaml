@@ -120,7 +120,9 @@
         </Style>
     </UserControl.Resources>
 
-    <TabControl x:Name="DetailsTabs">
+    <TabControl x:Name="DetailsTabs"
+                HorizontalContentAlignment="Stretch"
+                VerticalContentAlignment="Stretch">
         <TabItem Header="摘要">
             <Grid>
                 <StackPanel MaxWidth="300"
@@ -411,8 +413,10 @@
             </Grid>
         </TabItem>
 
-        <TabItem Header="观测点">
-            <Grid Margin="12">
+        <TabItem Header="观测点"
+                 HorizontalContentAlignment="Stretch"
+                 VerticalContentAlignment="Stretch">
+            <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -457,6 +461,7 @@
                 <TreeView x:Name="ObservationTreeView"
                           Grid.Row="2"
                           AutomationProperties.Name="区域、市町村与观测点"
+                          HorizontalContentAlignment="Stretch"
                           ItemsSource="{Binding ObservationTreeNodes}"
                           PreviewMouseLeftButtonDown="OnObservationTreePreviewMouseLeftButtonDown"
                           SelectedItemChanged="OnObservationTreeSelectedItemChanged"

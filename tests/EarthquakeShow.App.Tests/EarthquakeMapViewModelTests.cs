@@ -453,6 +453,28 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public async Task AreaFocus_UsesOverviewGeometryWhenIntensityLayerIsMissing()
+    {
+        EarthquakeReport report = CreateReport() with
+        {
+            IntensityAreas = [],
+            IntensityMunicipalities = [],
+            IntensityStations = [],
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+
+        Assert.Empty(map.Areas);
+        Assert.True(map.TryGetAreaFocusCoordinate("741", out GeoCoordinate coordinate));
+        Assert.Equal(32.75, coordinate.Latitude, precision: 2);
+        Assert.Equal(130.70, coordinate.Longitude, precision: 2);
+    }
+
+    [Fact]
     public async Task SelectedEvent_BuildsMunicipalityLayerAndFocusesMunicipality()
     {
         EarthquakeReport report = CreateReport() with
