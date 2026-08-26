@@ -175,8 +175,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public EarthquakeReportType ViewedReportType =>
-        _page.State.ViewedReport?.ReportType ?? EarthquakeReportType.Unknown;
+    public EarthquakeReportType ViewedReportType => GetViewedReportType();
 
     public double ZoomLevel
     {
@@ -930,12 +929,11 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             return report;
         }
 
-        int viewedIndex = selectedEvent.Reports
-            .Select((item, index) => (item, index))
-            .FirstOrDefault(item =>
-                string.Equals(item.item.Source.SourceId, report.Source.SourceId, StringComparison.Ordinal) &&
-                string.Equals(item.item.Source.SourceMessageId, report.Source.SourceMessageId, StringComparison.Ordinal))
-            .index;
+        if (!TryGetViewedReportIndex(selectedEvent, report, out int viewedIndex))
+        {
+            return report;
+        }
+
         IEnumerable<EarthquakeReport> reports = selectedEvent.Reports.Take(viewedIndex + 1);
         EarthquakeReport? areaReport = reports.LastOrDefault(item => !item.IntensityAreas.IsDefaultOrEmpty);
         EarthquakeReport? municipalityReport = reports.LastOrDefault(item => !item.IntensityMunicipalities.IsDefaultOrEmpty);
@@ -957,6 +955,56 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 ? stationReport?.IntensityStations ?? []
                 : report.IntensityStations,
         };
+    }
+
+    private EarthquakeReportType GetViewedReportType()
+    {
+        EarthquakeReport? report = _page.State.ViewedReport;
+        if (report is null || report.ReportType != EarthquakeReportType.Hypocenter)
+        {
+            return report?.ReportType ?? EarthquakeReportType.Unknown;
+        }
+
+        EarthquakeEvent? selectedEvent = _page.State.SelectedEvent;
+        if (selectedEvent is null)
+        {
+            return report.ReportType;
+        }
+
+        if (!TryGetViewedReportIndex(selectedEvent, report, out int viewedIndex))
+        {
+            return report.ReportType;
+        }
+
+        bool hasDetailedObservations = selectedEvent.Reports
+            .Take(viewedIndex + 1)
+            .Any(item => item.IntensityStations.Length > 0);
+        return hasDetailedObservations
+            ? EarthquakeReportType.HypocenterAndIntensity
+            : EarthquakeReportType.SeismicIntensity;
+    }
+
+    private static bool TryGetViewedReportIndex(
+        EarthquakeEvent selectedEvent,
+        EarthquakeReport report,
+        out int viewedIndex)
+    {
+        for (int index = 0; index < selectedEvent.Reports.Length; index++)
+        {
+            EarthquakeReport item = selectedEvent.Reports[index];
+            if (string.Equals(item.Source.SourceId, report.Source.SourceId, StringComparison.Ordinal) &&
+                string.Equals(
+                    item.Source.SourceMessageId,
+                    report.Source.SourceMessageId,
+                    StringComparison.Ordinal))
+            {
+                viewedIndex = index;
+                return true;
+            }
+        }
+
+        viewedIndex = -1;
+        return false;
     }
 
     private IReadOnlyList<EarthquakeMapBoundaryLayer> BuildBoundaryLayers(

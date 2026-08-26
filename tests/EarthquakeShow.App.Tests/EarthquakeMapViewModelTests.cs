@@ -183,6 +183,83 @@ public sealed class EarthquakeMapViewModelTests
         Assert.Empty(map.Municipalities);
         Assert.DoesNotContain(map.Markers, marker =>
             marker.Kind == EarthquakeMapMarkerKind.Station);
+        Assert.Equal(EarthquakeReportType.SeismicIntensity, map.ViewedReportType);
+    }
+
+    [Fact]
+    public async Task HypocenterReportAfterDetailedObservations_UsesDetailedIntensityOutline()
+    {
+        EarthquakeReport intensity = CreateReport() with
+        {
+            ReportCode = "VXSE51",
+            ReportType = EarthquakeReportType.SeismicIntensity,
+            IssuedAt = BaseTime,
+            ReceivedAt = BaseTime.AddSeconds(1),
+            Hypocenter = null,
+            Magnitude = null,
+            IntensityMunicipalities = [],
+            IntensityStations = [],
+            Source = new SourceReference("jma-xml", "intensity-area"),
+        };
+        EarthquakeReport detailed = CreateReport() with
+        {
+            ReportCode = "VXSE53",
+            ReportType = EarthquakeReportType.HypocenterAndIntensity,
+            IssuedAt = BaseTime.AddMinutes(1),
+            ReceivedAt = BaseTime.AddMinutes(1).AddSeconds(1),
+            Source = new SourceReference("jma-xml", "detailed-intensity"),
+        };
+        EarthquakeReport hypocenter = CreateReport() with
+        {
+            ReportCode = "VXSE52",
+            ReportType = EarthquakeReportType.Hypocenter,
+            IssuedAt = BaseTime.AddMinutes(2),
+            ReceivedAt = BaseTime.AddMinutes(2).AddSeconds(1),
+            IntensityAreas = [],
+            IntensityMunicipalities = [],
+            IntensityStations = [],
+            Source = new SourceReference("jma-xml", "hypocenter"),
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([intensity, detailed, hypocenter]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+
+        Assert.Equal("hypocenter", page.State.ViewedReport?.Source.SourceMessageId);
+        Assert.Equal(EarthquakeReportType.HypocenterAndIntensity, map.ViewedReportType);
+    }
+
+    [Fact]
+    public async Task HypocenterReportAfterDetailedObservationsFromAnotherSource_UsesDetailedIntensityOutline()
+    {
+        EarthquakeReport detailed = CreateReport() with
+        {
+            IssuedAt = BaseTime,
+            ReceivedAt = BaseTime.AddSeconds(1),
+            Source = new SourceReference("p2pquake", "detailed-intensity"),
+        };
+        EarthquakeReport hypocenter = CreateReport() with
+        {
+            ReportCode = "VXSE52",
+            ReportType = EarthquakeReportType.Hypocenter,
+            IssuedAt = BaseTime.AddMinutes(1),
+            ReceivedAt = BaseTime.AddMinutes(1).AddSeconds(1),
+            IntensityAreas = [],
+            IntensityMunicipalities = [],
+            IntensityStations = [],
+            Source = new SourceReference("jma-xml", "hypocenter"),
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([detailed, hypocenter]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+
+        Assert.Equal("hypocenter", page.State.ViewedReport?.Source.SourceMessageId);
+        Assert.Equal(EarthquakeReportType.HypocenterAndIntensity, map.ViewedReportType);
     }
 
     [Fact]
