@@ -10,6 +10,23 @@ public sealed class RefreshBackoffPolicyTests
         new(2026, 8, 20, 12, 0, 0, TimeSpan.FromHours(9));
 
     [Fact]
+    public void DefaultOnlineInterval_IsFiveSeconds()
+    {
+        var policy = new RefreshBackoffPolicy();
+
+        Assert.Equal(TimeSpan.FromSeconds(5), policy.GetNextDelay([OnlineStatus()]));
+    }
+
+    [Fact]
+    public void GetNextDelay_DelayedStatus_UsesOnlineInterval()
+    {
+        var policy = new RefreshBackoffPolicy();
+
+        Assert.Equal(TimeSpan.FromSeconds(5), policy.GetNextDelay([DelayedStatus()]));
+        Assert.Equal(0, policy.ConsecutiveFailureCount);
+    }
+
+    [Fact]
     public void GetNextDelay_OnlineStatus_UsesBaseIntervalAndResetsFailures()
     {
         var policy = CreatePolicy();
@@ -68,6 +85,11 @@ public sealed class RefreshBackoffPolicyTests
     private static SourceStatus DisconnectedStatus() => new(
         "jma-xml",
         SourceConnectionState.Disconnected,
+        CheckedAt);
+
+    private static SourceStatus DelayedStatus() => new(
+        "jma-xml",
+        SourceConnectionState.Delayed,
         CheckedAt);
 
     private static SourceStatus RateLimitedStatus() => new(

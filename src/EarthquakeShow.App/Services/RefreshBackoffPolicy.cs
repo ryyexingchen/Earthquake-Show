@@ -4,7 +4,7 @@ namespace EarthquakeShow.App.Services;
 
 public sealed class RefreshBackoffPolicy
 {
-    public static readonly TimeSpan DefaultOnlineInterval = TimeSpan.FromMinutes(1);
+    public static readonly TimeSpan DefaultOnlineInterval = TimeSpan.FromSeconds(5);
     public static readonly TimeSpan DefaultFailureInterval = TimeSpan.FromSeconds(30);
     public static readonly TimeSpan DefaultRateLimitedInterval = TimeSpan.FromMinutes(2);
     public static readonly TimeSpan DefaultMaximumInterval = TimeSpan.FromMinutes(15);
@@ -40,7 +40,7 @@ public sealed class RefreshBackoffPolicy
         ArgumentNullException.ThrowIfNull(statuses);
         SourceStatus[] materialized = statuses.ToArray();
         if (materialized.Length > 0 && materialized.All(status =>
-                status.State == SourceConnectionState.Online))
+                status.State is SourceConnectionState.Online or SourceConnectionState.Delayed))
         {
             _consecutiveFailureCount = 0;
             return _onlineInterval;

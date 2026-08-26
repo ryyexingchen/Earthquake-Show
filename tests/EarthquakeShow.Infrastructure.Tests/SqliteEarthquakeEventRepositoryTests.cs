@@ -435,6 +435,24 @@ public sealed class SqliteEarthquakeEventRepositoryTests
     }
 
     [Fact]
+    public async Task Refresh_SourcesFetchInParallel()
+    {
+        using var database = new TemporaryDatabase();
+        var fetchGate = new CoordinatedFetchGate();
+        var xmlSource = new CoordinatedRealtimeSource("jma-xml", fetchGate);
+        var p2pSource = new CoordinatedRealtimeSource("p2pquake", fetchGate);
+        var repository = new SqliteEarthquakeEventRepository(
+            database.Path,
+            [xmlSource, p2pSource]);
+        await repository.InitializeAsync([]);
+
+        await repository.RefreshAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.True(xmlSource.FetchStarted);
+        Assert.True(p2pSource.FetchStarted);
+    }
+
+    [Fact]
     public async Task Refresh_IncrementalSources_KeepSinceIndependentPerSource()
     {
         using var database = new TemporaryDatabase();
@@ -665,6 +683,38 @@ public sealed class SqliteEarthquakeEventRepositoryTests
             cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult(result);
         }
+    }
+
+    private sealed class CoordinatedRealtimeSource(
+        string sourceId,
+        CoordinatedFetchGate fetchGate) : IRealtimeEarthquakeSource
+    {
+        public string SourceId => sourceId;
+
+        public bool FetchStarted { get; private set; }
+
+        public async Task<EarthquakeSourceFetchResult> FetchAsync(
+            CancellationToken cancellationToken = default)
+        {
+            FetchStarted = true;
+            if (Interlocked.Increment(ref fetchGate.StartedCount) == 2)
+            {
+                fetchGate.BothStarted.TrySetResult(true);
+            }
+
+            await fetchGate.BothStarted.Task.WaitAsync(cancellationToken);
+            return new EarthquakeSourceFetchResult(
+                [],
+                new SourceStatus(sourceId, SourceConnectionState.Online, DateTimeOffset.UtcNow));
+        }
+    }
+
+    private sealed class CoordinatedFetchGate
+    {
+        public TaskCompletionSource<bool> BothStarted { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public int StartedCount;
     }
 
     private sealed class RecordingRealtimeSource(

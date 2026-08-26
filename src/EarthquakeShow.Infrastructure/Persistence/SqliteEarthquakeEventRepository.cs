@@ -234,43 +234,14 @@ public sealed class SqliteEarthquakeEventRepository :
             return;
         }
 
+        // 两个 HTTP 来源并行抓取，避免 XML 响应慢时拖住 P2P 更新。
+        ImmutableArray<EarthquakeSourceFetchResult> results = (await Task.WhenAll(
+            _realtimeSources.Select(source => FetchSourceAsync(source, cancellationToken)))
+            .ConfigureAwait(false)).ToImmutableArray();
         var reports = ImmutableArray.CreateBuilder<EarthquakeReport>();
         var statuses = ImmutableArray.CreateBuilder<SourceStatus>();
-        foreach (IRealtimeEarthquakeSource source in _realtimeSources)
+        foreach (EarthquakeSourceFetchResult result in results)
         {
-            EarthquakeSourceFetchResult result;
-            try
-            {
-                DateTimeOffset? since = GetLatestIssuedAt(source.SourceId);
-                result = source is IIncrementalEarthquakeSource incrementalSource
-                    ? await incrementalSource.FetchSinceAsync(since, cancellationToken).ConfigureAwait(false)
-                    : await source.FetchAsync(cancellationToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (OperationCanceledException exception)
-            {
-                result = new EarthquakeSourceFetchResult(
-                    [],
-                    new SourceStatus(
-                        source.SourceId,
-                        SourceConnectionState.Disconnected,
-                        DateTimeOffset.UtcNow,
-                        Detail: $"数据源请求超时：{exception.Message}"));
-            }
-            catch (HttpRequestException exception)
-            {
-                result = new EarthquakeSourceFetchResult(
-                    [],
-                    new SourceStatus(
-                        source.SourceId,
-                        SourceConnectionState.Disconnected,
-                        DateTimeOffset.UtcNow,
-                        Detail: $"数据源网络错误：{exception.Message}"));
-            }
-
             reports.AddRange(result.Reports);
             statuses.Add(result.Status);
         }
@@ -298,6 +269,43 @@ public sealed class SqliteEarthquakeEventRepository :
                     StringComparison.Ordinal))
                 .Select(report => (DateTimeOffset?)report.IssuedAt)
                 .Max();
+        }
+    }
+
+    private async Task<EarthquakeSourceFetchResult> FetchSourceAsync(
+        IRealtimeEarthquakeSource source,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            DateTimeOffset? since = GetLatestIssuedAt(source.SourceId);
+            return source is IIncrementalEarthquakeSource incrementalSource
+                ? await incrementalSource.FetchSinceAsync(since, cancellationToken).ConfigureAwait(false)
+                : await source.FetchAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OperationCanceledException exception)
+        {
+            return new EarthquakeSourceFetchResult(
+                [],
+                new SourceStatus(
+                    source.SourceId,
+                    SourceConnectionState.Disconnected,
+                    DateTimeOffset.UtcNow,
+                    Detail: $"数据源请求超时：{exception.Message}"));
+        }
+        catch (HttpRequestException exception)
+        {
+            return new EarthquakeSourceFetchResult(
+                [],
+                new SourceStatus(
+                    source.SourceId,
+                    SourceConnectionState.Disconnected,
+                    DateTimeOffset.UtcNow,
+                    Detail: $"数据源网络错误：{exception.Message}"));
         }
     }
 
