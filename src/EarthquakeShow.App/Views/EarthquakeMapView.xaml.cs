@@ -14,6 +14,8 @@ public partial class EarthquakeMapView : UserControl
 {
     private static readonly Color OutlineFill = Color.FromRgb(243, 239, 228);
     private static readonly Color OutlineStroke = Color.FromRgb(121, 143, 153);
+    private static readonly Color SelectionGlow = Color.FromArgb(155, 255, 226, 82);
+    private static readonly Color SelectionStroke = Color.FromRgb(255, 209, 48);
     private bool _renderPending;
     private bool _isPanning;
     private Point _lastPanPoint;
@@ -577,6 +579,27 @@ public partial class EarthquakeMapView : UserControl
             MapContentCanvas.Children.Add(shape);
         }
 
+        foreach (EarthquakeMapArea area in ViewModel.SelectedAreaHighlights)
+        {
+            DrawSelectionGlow(
+                GetRings(area.Rings, area.Coordinates),
+                projection,
+                area.Name);
+        }
+
+        foreach (EarthquakeMapMunicipality municipality in ViewModel.SelectedMunicipalityHighlights)
+        {
+            DrawSelectionGlow(
+                GetRings(municipality.Rings, municipality.Coordinates),
+                projection,
+                municipality.Name);
+        }
+
+        if (ViewModel.SelectedStationHighlight is EarthquakeMapMarker selectedStation)
+        {
+            DrawSelectedMarkerGlow(selectedStation, projection);
+        }
+
         foreach (EarthquakeMapMarker marker in ViewModel.Markers)
         {
             DrawMarker(marker, projection);
@@ -840,6 +863,72 @@ public partial class EarthquakeMapView : UserControl
         Canvas.SetLeft(shape, point.X - size / 2);
         Canvas.SetTop(shape, point.Y - size / 2);
         MapContentCanvas.Children.Add(shape);
+    }
+
+    private void DrawSelectionGlow(
+        IReadOnlyList<ImmutableArray<GeoCoordinate>> rings,
+        MapProjection projection,
+        string name)
+    {
+        StreamGeometry geometry = ToPathGeometry(rings, projection);
+        var outer = new Path
+        {
+            Data = geometry,
+            Fill = null,
+            Stroke = new SolidColorBrush(SelectionGlow),
+            StrokeThickness = 8,
+            StrokeLineJoin = PenLineJoin.Round,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+            IsHitTestVisible = false,
+            ToolTip = $"已选中：{name}",
+        };
+        MapContentCanvas.Children.Add(outer);
+
+        var inner = new Path
+        {
+            Data = geometry,
+            Fill = null,
+            Stroke = new SolidColorBrush(SelectionStroke),
+            StrokeThickness = 2.4,
+            StrokeLineJoin = PenLineJoin.Round,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+            IsHitTestVisible = false,
+        };
+        MapContentCanvas.Children.Add(inner);
+    }
+
+    private void DrawSelectedMarkerGlow(
+        EarthquakeMapMarker marker,
+        MapProjection projection)
+    {
+        Point point = projection.Project(marker.Coordinate);
+        var outer = new Ellipse
+        {
+            Width = 24,
+            Height = 24,
+            Fill = null,
+            Stroke = new SolidColorBrush(SelectionGlow),
+            StrokeThickness = 5,
+            IsHitTestVisible = false,
+        };
+        Canvas.SetLeft(outer, point.X - outer.Width / 2);
+        Canvas.SetTop(outer, point.Y - outer.Height / 2);
+        MapContentCanvas.Children.Add(outer);
+
+        var inner = new Ellipse
+        {
+            Width = 13,
+            Height = 13,
+            Fill = null,
+            Stroke = new SolidColorBrush(SelectionStroke),
+            StrokeThickness = 2,
+            IsHitTestVisible = false,
+        };
+        Canvas.SetLeft(inner, point.X - inner.Width / 2);
+        Canvas.SetTop(inner, point.Y - inner.Height / 2);
+        MapContentCanvas.Children.Add(inner);
     }
 
     private static Color GetIntensityColor(JmaIntensity intensity, byte alpha)

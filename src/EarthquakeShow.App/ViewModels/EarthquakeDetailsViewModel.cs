@@ -256,6 +256,7 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
 
             _selectedObservation = value;
             OnPropertyChanged();
+            _map.SelectObservation(value?.Kind, value?.Code, value?.Coordinate);
             if (value?.Coordinate is GeoCoordinate coordinate)
             {
                 _map.FocusLocation(coordinate);
@@ -1020,6 +1021,7 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             .ToArray();
         _selectedObservation = null;
         _selectedObservationNode = null;
+        _map.ClearSelectedObservation();
         OnPropertyChanged(nameof(Observations));
         OnPropertyChanged(nameof(ObservationTreeNodes));
         OnPropertyChanged(nameof(ObservationCountText));

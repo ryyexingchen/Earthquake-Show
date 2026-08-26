@@ -190,6 +190,63 @@ public sealed class EarthquakeDetailsViewModelTests
     }
 
     [Fact]
+    public async Task Details_SelectionHighlightsPrefectureAreaMunicipalityAndStation()
+    {
+        EarthquakeReport report = CreateReport(
+            "selection-highlight",
+            BaseTime,
+            station: true) with
+        {
+            IntensityMunicipalities =
+            [new IntensityMunicipality("C1", "熊本市", "741", JmaIntensity.Four)],
+            IntensityStations =
+            [new IntensityStation(
+                "KMM001",
+                "熊本観測点",
+                "C1",
+                JmaIntensity.Four,
+                new GeoCoordinate(32.81, 130.71))],
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson),
+            OfflineMapGeometry.LoadFromJson(MunicipalityGeometryJson));
+        using var details = new EarthquakeDetailsViewModel(page, map);
+
+        EarthquakeObservationTreeNode prefecture = Assert.Single(
+            details.ObservationTreeNodes,
+            node => node.Kind == "都道府县");
+        details.SelectObservationNode(prefecture);
+        Assert.Equal(EarthquakeMapSelectionKind.Prefecture, map.SelectedMapSelection?.Kind);
+        Assert.Equal("43", map.SelectedMapSelection?.Code);
+        Assert.Single(map.SelectedAreaHighlights);
+
+        EarthquakeObservationTreeNode area = Assert.Single(
+            prefecture.Children,
+            node => node.Kind == "区域");
+        details.SelectObservationNode(area);
+        Assert.Equal(EarthquakeMapSelectionKind.Area, map.SelectedMapSelection?.Kind);
+        Assert.Single(map.SelectedAreaHighlights);
+
+        EarthquakeObservationTreeNode municipality = Assert.Single(
+            area.Children,
+            node => node.Kind == "市町村");
+        details.SelectObservationNode(municipality);
+        Assert.Equal(EarthquakeMapSelectionKind.Municipality, map.SelectedMapSelection?.Kind);
+        Assert.Single(map.SelectedMunicipalityHighlights);
+
+        EarthquakeObservationTreeNode station = Assert.Single(
+            municipality.Children,
+            node => node.Kind == "观测点");
+        details.SelectObservationNode(station);
+        Assert.Equal(EarthquakeMapSelectionKind.Station, map.SelectedMapSelection?.Kind);
+        Assert.Equal("KMM001", map.SelectedStationHighlight?.Code);
+    }
+
+    [Fact]
     public async Task Details_RawPayloadIsPreservedAndTimelineNavigationStopsAtBounds()
     {
         const string raw = "<Report>原始内容</Report>";

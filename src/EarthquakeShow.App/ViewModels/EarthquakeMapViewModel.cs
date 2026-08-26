@@ -12,12 +12,27 @@ public enum EarthquakeMapMarkerKind
     Station,
 }
 
+public enum EarthquakeMapSelectionKind
+{
+    Prefecture,
+    Area,
+    Municipality,
+    Station,
+}
+
+public sealed record EarthquakeMapSelection(
+    EarthquakeMapSelectionKind Kind,
+    string Code,
+    GeoCoordinate? Coordinate);
+
 public sealed record EarthquakeMapArea(
     string Code,
     string Name,
     JmaIntensity Intensity,
     ImmutableArray<GeoCoordinate> Coordinates)
 {
+    public string PrefectureCode { get; init; } = string.Empty;
+
     public ImmutableArray<ImmutableArray<GeoCoordinate>> Rings { get; init; } =
         ImmutableArray.Create(Coordinates);
 }
@@ -36,7 +51,10 @@ public sealed record EarthquakeMapMarker(
     EarthquakeMapMarkerKind Kind,
     string Label,
     GeoCoordinate Coordinate,
-    JmaIntensity Intensity);
+    JmaIntensity Intensity)
+{
+    public string Code { get; init; } = string.Empty;
+}
 
 public sealed record EarthquakeMapBoundaryLayer(
     JmaIntensity Intensity,
@@ -83,6 +101,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     private bool _lastHighLoadUsedCache;
     private bool _isApplyingAutoScale;
     private bool _isDisposed;
+    private EarthquakeMapSelection? _selectedMapSelection;
 
     public EarthquakeMapViewModel(
         EarthquakePageViewModel page,
@@ -160,7 +179,82 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
     public IReadOnlyList<EarthquakeMapMarker> Markers { get; private set; } = [];
 
+    public EarthquakeMapSelection? SelectedMapSelection => _selectedMapSelection;
+
+    public IReadOnlyList<EarthquakeMapArea> SelectedAreaHighlights =>
+        _selectedMapSelection?.Kind switch
+        {
+            EarthquakeMapSelectionKind.Prefecture => Areas
+                .Where(area => string.Equals(
+                    area.PrefectureCode,
+                    _selectedMapSelection.Code,
+                    StringComparison.Ordinal))
+                .ToArray(),
+            EarthquakeMapSelectionKind.Area => Areas
+                .Where(area => string.Equals(
+                    area.Code,
+                    _selectedMapSelection.Code,
+                    StringComparison.Ordinal))
+                .ToArray(),
+            _ => [],
+        };
+
+    public IReadOnlyList<EarthquakeMapMunicipality> SelectedMunicipalityHighlights =>
+        _selectedMapSelection?.Kind == EarthquakeMapSelectionKind.Municipality
+            ? Municipalities
+                .Where(item => string.Equals(
+                    item.Code,
+                    _selectedMapSelection.Code,
+                    StringComparison.Ordinal))
+                .ToArray()
+            : [];
+
+    public EarthquakeMapMarker? SelectedStationHighlight =>
+        _selectedMapSelection?.Kind == EarthquakeMapSelectionKind.Station
+            ? Markers.FirstOrDefault(marker =>
+                marker.Kind == EarthquakeMapMarkerKind.Station &&
+                string.Equals(
+                    marker.Code,
+                    _selectedMapSelection.Code,
+                    StringComparison.Ordinal))
+            : null;
+
     public GeoCoordinate? FocusedCoordinate => _focusedCoordinate;
+
+    public void SelectObservation(
+        string? kind,
+        string? code,
+        GeoCoordinate? coordinate)
+    {
+        EarthquakeMapSelection? selection = kind switch
+        {
+            "都道府县" when !string.IsNullOrWhiteSpace(code) =>
+                new(EarthquakeMapSelectionKind.Prefecture, code, coordinate),
+            "区域" when !string.IsNullOrWhiteSpace(code) =>
+                new(EarthquakeMapSelectionKind.Area, code, coordinate),
+            "市町村" when !string.IsNullOrWhiteSpace(code) =>
+                new(EarthquakeMapSelectionKind.Municipality, code, coordinate),
+            "观测点" when !string.IsNullOrWhiteSpace(code) =>
+                new(EarthquakeMapSelectionKind.Station, code, coordinate),
+            _ => null,
+        };
+
+        if (_selectedMapSelection == selection)
+        {
+            return;
+        }
+
+        _selectedMapSelection = selection;
+        OnPropertyChanged(nameof(SelectedMapSelection));
+        OnPropertyChanged(nameof(SelectedAreaHighlights));
+        OnPropertyChanged(nameof(SelectedMunicipalityHighlights));
+        OnPropertyChanged(nameof(SelectedStationHighlight));
+    }
+
+    public void ClearSelectedObservation()
+    {
+        SelectObservation(null, null, null);
+    }
 
     internal MapGeometryBounds OverviewBounds => _overviewGeometry.Bounds;
 
@@ -798,6 +892,10 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
         if (report is null)
         {
+            if (reportChanged)
+            {
+                ClearSelectedObservation();
+            }
             Areas = [];
             Municipalities = [];
             Markers = [];
@@ -852,6 +950,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                     area.MaxIntensity,
                     rings[0])
                 {
+                    PrefectureCode = area.PrefectureCode,
                     Rings = rings,
                 };
             })
@@ -912,11 +1011,15 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 EarthquakeMapMarkerKind.Station,
                 station.Name,
                 station.Coordinate!.Value,
-                station.Intensity)));
+                station.Intensity)
+            {
+                Code = station.Code,
+            }));
         Markers = markers;
         RaiseLayerProperties();
         if (reportChanged)
         {
+            ClearSelectedObservation();
             OnPropertyChanged(nameof(ViewedReportKey));
         }
     }
@@ -1086,6 +1189,9 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(FocusedCoordinate));
         OnPropertyChanged(nameof(UnmappedAreaCount));
         OnPropertyChanged(nameof(UnmappedMunicipalityCount));
+        OnPropertyChanged(nameof(SelectedAreaHighlights));
+        OnPropertyChanged(nameof(SelectedMunicipalityHighlights));
+        OnPropertyChanged(nameof(SelectedStationHighlight));
     }
 
     private static bool TryGetBoundsCenter(
