@@ -457,12 +457,40 @@ public sealed class P2pQuakeEarthquakeSource : IRealtimeEarthquakeSource
 
     private static string? BuildTsunamiComment(string? domestic, string? foreign)
     {
-        string[] values = new[] { domestic, foreign }
-            .Where(value => !string.IsNullOrWhiteSpace(value) && value is not ("None" or "Unknown"))
-            .Select(value => value!.Trim())
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-        return values.Length == 0 ? null : string.Join("；", values);
+        string domesticValue = domestic?.Trim() ?? string.Empty;
+        string foreignValue = foreign?.Trim() ?? string.Empty;
+        string? domesticComment = domesticValue switch
+        {
+            "None" => "津波の心配なし",
+            "Checking" => "津波 调查中",
+            "NonEffective" => "若干の海面変動",
+            "Watch" => "津波注意報",
+            "Warning" => "津波予報（種類不明）",
+            "" or "Unknown" => null,
+            _ => $"津波状态：{domesticValue}",
+        };
+        string? foreignComment = foreignValue switch
+        {
+            "Checking" => "调查中",
+            "NonEffectiveNearby" => "震源附近可能有小海啸，但没有灾害危险",
+            "WarningNearby" => "震源附近可能有海啸",
+            "WarningPacific" => "太平洋可能有海啸",
+            "WarningPacificWide" => "太平洋广域可能有海啸",
+            "WarningIndian" => "印度洋可能有海啸",
+            "WarningIndianWide" => "印度洋广域可能有海啸",
+            "Potential" => "通常在此规模下可能有海啸",
+            "" or "None" or "Unknown" => null,
+            _ => $"状态：{foreignValue}",
+        };
+
+        if (domesticComment is not null)
+        {
+            return foreignComment is null
+                ? domesticComment
+                : $"{domesticComment}；海外：{foreignComment}";
+        }
+
+        return foreignComment is null ? null : $"海外：{foreignComment}";
     }
 
     private static DateTimeOffset ParseRequiredTime(string? value, string fieldName)

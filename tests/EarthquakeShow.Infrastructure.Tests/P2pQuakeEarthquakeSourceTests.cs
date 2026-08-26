@@ -90,6 +90,7 @@ public sealed class P2pQuakeEarthquakeSourceTests
         Assert.Equal(10, report.Hypocenter?.DepthKm);
         Assert.Equal(2.9, report.Magnitude?.Value);
         Assert.Equal(JmaIntensity.Four, report.MaxIntensity);
+        Assert.Equal("津波の心配なし", report.TsunamiComment);
         IntensityArea area = Assert.Single(report.IntensityAreas);
         Assert.Equal("熊本県", area.Name);
         Assert.Equal("p2p-pref:熊本県", area.PrefectureCode);
@@ -103,6 +104,37 @@ public sealed class P2pQuakeEarthquakeSourceTests
         Assert.Equal(municipality.Code, station.MunicipalityCode);
         Assert.StartsWith("p2p:熊本県:", station.Code, StringComparison.Ordinal);
         Assert.Contains("\"p2p-message-1\"", report.Source.SourcePayload);
+    }
+
+    [Fact]
+    public async Task Fetch_TsunamiStatuses_MapsDomesticAndForeignMeanings()
+    {
+        const string payload = """
+            [{
+              "code": 551,
+              "id": "p2p-tsunami-status",
+              "issue": { "correct": "None", "time": "2026/08/20 12:08:07", "type": "DetailScale" },
+              "earthquake": {
+                "domesticTsunami": "Checking",
+                "foreignTsunami": "WarningPacificWide",
+                "hypocenter": { "depth": 10, "latitude": 32.4, "longitude": 130.6, "magnitude": 2.9, "name": "熊本県熊本地方" },
+                "maxScale": 40,
+                "time": "2026/08/20 12:04:00"
+              },
+              "points": []
+            }]
+            """;
+        using var httpClient = new HttpClient(new ResponseHandler(
+            Response(HttpStatusCode.OK, payload)));
+        var source = new P2pQuakeEarthquakeSource(
+            httpClient,
+            "https://example.test/v2/jma/quake");
+
+        EarthquakeReport report = Assert.Single((await source.FetchAsync()).Reports);
+
+        Assert.Equal(
+            "津波 调查中；海外：太平洋广域可能有海啸",
+            report.TsunamiComment);
     }
 
     [Fact]
