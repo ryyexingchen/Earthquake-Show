@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using EarthquakeShow.App.ViewModels;
 
 namespace EarthquakeShow.App.Views;
@@ -18,6 +19,18 @@ public partial class EarthquakeEventListView : UserControl
     {
         SearchBox.Focus();
         SearchBox.SelectAll();
+    }
+
+    public void ScrollToSelectedItem()
+    {
+        if (EventListBox.SelectedItem is null)
+        {
+            return;
+        }
+
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Loaded,
+            new Action(() => EventListBox.ScrollIntoView(EventListBox.SelectedItem)));
     }
 
     private async void OnRefreshClick(object sender, RoutedEventArgs e)
@@ -43,6 +56,14 @@ public partial class EarthquakeEventListView : UserControl
         {
             RequestOpenDetails?.Invoke(this, EventArgs.Empty);
             e.Handled = true;
+        }
+    }
+
+    private void OnEventListSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (e.AddedItems.Count > 0)
+        {
+            ScrollToSelectedItem();
         }
     }
 }

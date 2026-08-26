@@ -19,6 +19,11 @@ public partial class EarthquakeDetailsView : UserControl
         DetailsTabs.Focus();
     }
 
+    public void ShowSummary()
+    {
+        DetailsTabs.SelectedIndex = 0;
+    }
+
     private void OnPreviousReportClick(object sender, RoutedEventArgs e)
     {
         ViewModel?.GoPreviousReport();

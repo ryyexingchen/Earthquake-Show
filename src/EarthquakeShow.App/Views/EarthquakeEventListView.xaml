@@ -163,11 +163,13 @@
             </Expander>
         </StackPanel>
 
-        <ListBox Grid.Row="2"
+        <ListBox x:Name="EventListBox"
+                 Grid.Row="2"
                  AutomationProperties.Name="地震事件列表"
                  ItemsSource="{Binding Items}"
                  ItemContainerStyle="{StaticResource EventListBoxItemStyle}"
                  PreviewKeyDown="OnEventListPreviewKeyDown"
+                 SelectionChanged="OnEventListSelectionChanged"
                  SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
                  ScrollViewer.CanContentScroll="True"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"

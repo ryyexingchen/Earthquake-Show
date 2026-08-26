@@ -27,6 +27,8 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    public event EventHandler? NewReportNavigationRequested;
+
     public EarthquakePageState State
     {
         get => _state;
@@ -312,12 +314,14 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
     {
         EarthquakeEvent? selectedEvent = FindSelectedEvent(events);
         EarthquakeReport? viewedReport = FindViewedReport(selectedEvent);
+        bool navigatedToNewest = false;
         if (navigateToNewest &&
             TryFindNewestIncomingReport(events, State.Events, out EarthquakeEvent? incomingEvent,
                 out EarthquakeReport? incomingReport))
         {
             selectedEvent = incomingEvent;
             viewedReport = incomingReport;
+            navigatedToNewest = true;
         }
 
         State = State with
@@ -328,6 +332,11 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
             LoadState = EarthquakePageLoadState.Ready,
             ErrorMessage = null,
         };
+
+        if (navigatedToNewest)
+        {
+            NewReportNavigationRequested?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     private static bool TryFindNewestIncomingReport(

@@ -55,6 +55,8 @@ public sealed class EarthquakePageViewModelTests
         var repository = new InMemoryEarthquakeEventRepository(
             [historyFirst, historyLatest, current]);
         using var viewModel = new EarthquakePageViewModel(repository);
+        int navigationCount = 0;
+        viewModel.NewReportNavigationRequested += (_, _) => navigationCount++;
         await viewModel.LoadAsync();
         Assert.True(viewModel.SelectEvent("history"));
         Assert.True(viewModel.SelectReport("jma-xml", "history-1"));
@@ -67,6 +69,7 @@ public sealed class EarthquakePageViewModelTests
 
         Assert.Equal("newest-event", viewModel.State.SelectedEvent?.EventId);
         Assert.Equal("newest-event-1", viewModel.State.ViewedReport?.Source.SourceMessageId);
+        Assert.Equal(1, navigationCount);
     }
 
     [Fact]
@@ -76,12 +79,15 @@ public sealed class EarthquakePageViewModelTests
         EarthquakeReport second = CreateReport("event", "event-2", 2);
         var repository = new InMemoryEarthquakeEventRepository([first, second]);
         using var viewModel = new EarthquakePageViewModel(repository);
+        int navigationCount = 0;
+        viewModel.NewReportNavigationRequested += (_, _) => navigationCount++;
         await viewModel.LoadAsync();
         Assert.True(viewModel.SelectReport("jma-xml", "event-1"));
 
         repository.ApplyReports([first, second]);
 
         Assert.Equal("event-1", viewModel.State.ViewedReport?.Source.SourceMessageId);
+        Assert.Equal(0, navigationCount);
     }
 
     [Fact]

@@ -25,6 +25,8 @@ public partial class MainWindow : Window
         _viewModel = new ViewModels.MainWindowViewModel(cachePath, enableNetwork);
         InitializeComponent();
         DataContext = _viewModel;
+        _viewModel.EarthquakePage.NewReportNavigationRequested +=
+            OnNewReportNavigationRequested;
         SizeChanged += OnWindowSizeChanged;
         UpdateLayout(Width);
     }
@@ -72,6 +74,15 @@ public partial class MainWindow : Window
     private void OnEventListRequestOpenDetails(object? sender, EventArgs e)
     {
         _viewModel.Layout.OpenDetailsPane();
+        DetailsView.FocusDetails();
+    }
+
+    private void OnNewReportNavigationRequested(object? sender, EventArgs e)
+    {
+        _viewModel.ShowEarthquakePage();
+        EventListView.ScrollToSelectedItem();
+        _viewModel.Layout.OpenDetailsPane();
+        DetailsView.ShowSummary();
         DetailsView.FocusDetails();
     }
 
@@ -123,6 +134,8 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         SizeChanged -= OnWindowSizeChanged;
+        _viewModel.EarthquakePage.NewReportNavigationRequested -=
+            OnNewReportNavigationRequested;
         _viewModel.Dispose();
         base.OnClosed(e);
     }
