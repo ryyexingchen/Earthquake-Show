@@ -17,7 +17,7 @@
                     <Setter Property="Background" Value="#78C7D8" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Kind}" Value="Two">
-                    <Setter Property="Background" Value="#70D6C1" />
+                    <Setter Property="Background" Value="#56C1A8" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Kind}" Value="Three">
                     <Setter Property="Background" Value="#F0C943" />
@@ -72,7 +72,7 @@
                     <Setter Property="Background" Value="#78C7D8" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IntensityKind}" Value="Two">
-                    <Setter Property="Background" Value="#70D6C1" />
+                    <Setter Property="Background" Value="#56C1A8" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IntensityKind}" Value="Three">
                     <Setter Property="Background" Value="#F0C943" />
@@ -247,9 +247,16 @@
                                         <TextBlock Grid.Column="1" Text="调查中" />
                                     </Grid>
                                 </StackPanel>
-                                <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
-                                    <TextBlock Foreground="{StaticResource MutedTextBrush}" Text="海啸" />
-                                    <Border Margin="12,0,0,0" Padding="4,1">
+                                <StackPanel Margin="0,8,0,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="88" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Foreground="{StaticResource MutedTextBrush}" Text="海啸" />
+                                        <Border Grid.Column="1"
+                                                HorizontalAlignment="Left"
+                                                Padding="4,1">
                                         <Border.Style>
                                             <Style TargetType="Border">
                                                 <Setter Property="Background" Value="{StaticResource SurfaceSubtleBrush}" />
@@ -284,7 +291,8 @@
                                                 </Style>
                                             </TextBlock.Style>
                                         </TextBlock>
-                                    </Border>
+                                        </Border>
+                                    </Grid>
                                 </StackPanel>
                             </StackPanel>
                             <ItemsControl Grid.IsSharedSizeScope="True"
@@ -321,7 +329,7 @@
                                     Padding="10,8"
                                     BorderBrush="{StaticResource BorderBrush}"
                                     BorderThickness="1"
-                                    Visibility="{Binding HasSourceDifferences, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    Visibility="Collapsed">
                                 <StackPanel>
                                     <TextBlock FontWeight="SemiBold" Text="来源差异" />
                                     <ItemsControl Margin="0,6,0,0" ItemsSource="{Binding SourceDifferences}">

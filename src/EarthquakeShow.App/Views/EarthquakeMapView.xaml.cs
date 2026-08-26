@@ -617,7 +617,7 @@ public partial class EarthquakeMapView : UserControl
             {
                 Margin = new Thickness(5, 0, 0, 0),
                 FontSize = 10,
-                Text = intensity == JmaIntensity.Unknown ? "不明" : intensity.ToCode(),
+                Text = GetIntensityLegendText(intensity),
             });
             LegendItemsPanel.Children.Add(row);
         }
@@ -645,6 +645,19 @@ public partial class EarthquakeMapView : UserControl
         }
 
         return result;
+    }
+
+    internal static string GetIntensityLegendText(JmaIntensity intensity)
+    {
+        return intensity switch
+        {
+            JmaIntensity.FiveLower => "5-",
+            JmaIntensity.FiveUpper => "5+",
+            JmaIntensity.SixLower => "6-",
+            JmaIntensity.SixUpper => "6+",
+            JmaIntensity.Unknown => "不明",
+            _ => intensity.ToCode(),
+        };
     }
 
     internal static bool ShouldFillIntensityAreas(EarthquakeReportType reportType)
@@ -834,7 +847,7 @@ public partial class EarthquakeMapView : UserControl
         Color color = intensity switch
         {
             JmaIntensity.One => Color.FromRgb(120, 199, 216),
-            JmaIntensity.Two => Color.FromRgb(112, 214, 193),
+            JmaIntensity.Two => Color.FromRgb(86, 193, 168),
             JmaIntensity.Three => Color.FromRgb(240, 201, 67),
             JmaIntensity.Four => Color.FromRgb(232, 154, 60),
             JmaIntensity.FiveLower => Color.FromRgb(232, 94, 63),

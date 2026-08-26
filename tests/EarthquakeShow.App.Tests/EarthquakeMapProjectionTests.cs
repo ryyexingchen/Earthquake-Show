@@ -134,6 +134,20 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Theory]
+    [InlineData(JmaIntensity.FiveLower, "5-")]
+    [InlineData(JmaIntensity.FiveUpper, "5+")]
+    [InlineData(JmaIntensity.SixLower, "6-")]
+    [InlineData(JmaIntensity.SixUpper, "6+")]
+    [InlineData(JmaIntensity.Three, "3")]
+    [InlineData(JmaIntensity.Unknown, "不明")]
+    public void LegendText_UsesDisplayCodesForJmaHalfIntensities(
+        JmaIntensity intensity,
+        string expected)
+    {
+        Assert.Equal(expected, EarthquakeMapView.GetIntensityLegendText(intensity));
+    }
+
+    [Theory]
     [InlineData(EarthquakeReportType.SeismicIntensity, true)]
     [InlineData(EarthquakeReportType.Hypocenter, true)]
     [InlineData(EarthquakeReportType.HypocenterAndIntensity, false)]

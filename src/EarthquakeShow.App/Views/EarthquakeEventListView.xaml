@@ -288,7 +288,7 @@
                             <Setter TargetName="IntensityBadge" Property="Background" Value="#78C7D8" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding MaxIntensity}" Value="Two">
-                            <Setter TargetName="IntensityBadge" Property="Background" Value="#70D6C1" />
+                            <Setter TargetName="IntensityBadge" Property="Background" Value="#56C1A8" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding MaxIntensity}" Value="Three">
                             <Setter TargetName="IntensityBadge" Property="Background" Value="#F0C943" />
