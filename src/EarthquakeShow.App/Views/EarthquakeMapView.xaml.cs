@@ -19,6 +19,7 @@ public partial class EarthquakeMapView : UserControl
     private static readonly Color OutlineStroke = Color.FromRgb(121, 143, 153);
     private static readonly FontFamily StationLabelFont = new("Segoe UI");
     private static readonly Dictionary<int, SolidColorBrush> BrushCache = [];
+    private static readonly Dictionary<(int Color, double Thickness), Pen> PenCache = [];
     private readonly DispatcherTimer _renderThrottleTimer;
     private bool _renderPending;
     private bool _isPanning;
@@ -531,6 +532,22 @@ public partial class EarthquakeMapView : UserControl
 
     internal static bool ShouldDeferRenderDuringPan(bool isPanning) => isPanning;
 
+    internal static bool HasStaticGeometry(
+        int outlineCount,
+        int areaCount,
+        int municipalityCount,
+        int boundaryCount,
+        int selectedAreaCount,
+        int selectedMunicipalityCount)
+    {
+        return outlineCount > 0 ||
+            areaCount > 0 ||
+            municipalityCount > 0 ||
+            boundaryCount > 0 ||
+            selectedAreaCount > 0 ||
+            selectedMunicipalityCount > 0;
+    }
+
     private void RenderMap()
     {
         if (!IsLoaded || ViewModel is null || MapCanvas.ActualWidth < 10 || MapCanvas.ActualHeight < 10)
@@ -538,6 +555,7 @@ public partial class EarthquakeMapView : UserControl
             return;
         }
 
+        EarthquakeMapViewModel mapViewModel = ViewModel;
         long renderStarted = Stopwatch.GetTimestamp();
         MapPanTransform.X = 0;
         MapPanTransform.Y = 0;
@@ -546,11 +564,11 @@ public partial class EarthquakeMapView : UserControl
         long elementBuildStarted = Stopwatch.GetTimestamp();
         UpdateLegend();
         GeoCoordinate? selectedEventFocusCoordinate =
-            ViewModel.TryGetSelectedEventFocusCoordinate(out GeoCoordinate eventFocus)
+            mapViewModel.TryGetSelectedEventFocusCoordinate(out GeoCoordinate eventFocus)
                 ? eventFocus
                 : null;
         MapGeometryBounds? selectedEventBounds =
-            ViewModel.TryGetSelectedEventBounds(out MapGeometryBounds eventBounds)
+            mapViewModel.TryGetSelectedEventBounds(out MapGeometryBounds eventBounds)
                 ? eventBounds
                 : null;
         MapProjection projection = CreateProjection(
@@ -560,128 +578,117 @@ public partial class EarthquakeMapView : UserControl
         TraceMap(
             "Render",
             projection.Unproject(new Point(MapCanvas.ActualWidth / 2, MapCanvas.ActualHeight / 2)),
-            $"committed={FormatCoordinate(_viewportCenter)}, focus={FormatCoordinate(ViewModel.FocusedCoordinate)}");
-        bool drawBaseOutlineStroke = ViewModel.BoundaryLayers.Count == 0;
-        bool fillIntensityAreas = ShouldFillIntensityAreas(ViewModel.ViewedReportType);
-        IReadOnlyList<MapPolygonGeometry> visibleOutline = ViewModel.IsDistantEvent
+            $"committed={FormatCoordinate(_viewportCenter)}, focus={FormatCoordinate(mapViewModel.FocusedCoordinate)}");
+        bool drawBaseOutlineStroke = mapViewModel.BoundaryLayers.Count == 0;
+        bool fillIntensityAreas = ShouldFillIntensityAreas(mapViewModel.ViewedReportType);
+        IReadOnlyList<MapPolygonGeometry> visibleOutline = mapViewModel.IsDistantEvent
             ? []
-            : ViewModel.Outline;
+            : mapViewModel.Outline;
 
-        foreach (MapPolygonGeometry polygon in visibleOutline)
-        {
-            var shape = new Path
+        // 将静态区域几何合并到一个 DrawingVisual，避免为每个多边形创建 FrameworkElement。
+        var staticGeometryHost = new MapDrawingHost(
+            MapCanvas.ActualWidth,
+            MapCanvas.ActualHeight,
+            context =>
             {
-                Data = ToPathGeometry(GetRings(polygon.Rings, polygon.Coordinates), projection),
-                Fill = GetBrush(OutlineFill),
-                Stroke = drawBaseOutlineStroke
-                    ? GetBrush(OutlineStroke)
-                    : null,
-                StrokeThickness = 1,
-                StrokeLineJoin = PenLineJoin.Round,
-                StrokeStartLineCap = PenLineCap.Round,
-                StrokeEndLineCap = PenLineCap.Round,
-                ToolTip = polygon.Name,
-            };
-            MapContentCanvas.Children.Add(shape);
-        }
-
-        if (fillIntensityAreas)
-        {
-            foreach (EarthquakeMapArea area in ViewModel.Areas)
-            {
-                if (!ShouldDrawIntensityArea(ViewModel.ViewedReportType, area.Intensity))
+                foreach (MapPolygonGeometry polygon in visibleOutline)
                 {
-                    continue;
+                    DrawGeometry(
+                        context,
+                        ToPathGeometry(GetRings(polygon.Rings, polygon.Coordinates), projection),
+                        GetBrush(OutlineFill),
+                        drawBaseOutlineStroke ? CreatePen(OutlineStroke, 1) : null);
                 }
 
-                var shape = new Path
+                if (fillIntensityAreas)
                 {
-                    Data = ToPathGeometry(GetRings(area.Rings, area.Coordinates), projection),
-                    Fill = GetBrush(GetIntensityColor(area.Intensity, 150)),
-                    Stroke = GetBrush(GetIntensityBorderColor(area.Intensity, 235)),
-                    StrokeThickness = 1.1,
-                    StrokeLineJoin = PenLineJoin.Round,
-                    StrokeStartLineCap = PenLineCap.Round,
-                    StrokeEndLineCap = PenLineCap.Round,
-                    ToolTip = $"{area.Name} · 震度 {GetIntensityText(area.Intensity)}",
-                };
-                MapContentCanvas.Children.Add(shape);
-            }
-        }
+                    foreach (EarthquakeMapArea area in mapViewModel.Areas)
+                    {
+                        if (!ShouldDrawIntensityArea(mapViewModel.ViewedReportType, area.Intensity))
+                        {
+                            continue;
+                        }
 
-        foreach (EarthquakeMapMunicipality municipality in ViewModel.Municipalities)
+                        DrawGeometry(
+                            context,
+                            ToPathGeometry(GetRings(area.Rings, area.Coordinates), projection),
+                            GetBrush(GetIntensityColor(area.Intensity, 150)),
+                            CreatePen(GetIntensityBorderColor(area.Intensity, 235), 1.1));
+                    }
+                }
+
+                foreach (EarthquakeMapMunicipality municipality in mapViewModel.Municipalities)
+                {
+                    bool hasIntensity = IsKnownIntensity(municipality.Intensity);
+                    DrawGeometry(
+                        context,
+                        ToPathGeometry(
+                            GetRings(municipality.Rings, municipality.Coordinates),
+                            projection),
+                        hasIntensity
+                            ? GetBrush(GetIntensityColor(municipality.Intensity, 150))
+                            : null,
+                        CreatePen(
+                            hasIntensity
+                                ? Color.FromArgb(225, 42, 50, 55)
+                                : OutlineStroke,
+                            0.8));
+                }
+
+                foreach (EarthquakeMapBoundaryLayer layer in mapViewModel.BoundaryLayers)
+                {
+                    if (layer.Boundaries.Length == 0 ||
+                        !ShouldDrawIntensityBoundary(mapViewModel.ViewedReportType, layer.Intensity))
+                    {
+                        continue;
+                    }
+
+                    DrawGeometry(
+                        context,
+                        ToBoundaryPathGeometry(layer.Boundaries, projection),
+                        null,
+                        CreatePen(
+                            fillIntensityAreas
+                                ? GetIntensityBorderColor(layer.Intensity, 245)
+                                : GetIntensityColor(layer.Intensity, 245),
+                            1.8));
+                }
+
+                foreach (EarthquakeMapArea area in mapViewModel.SelectedAreaHighlights)
+                {
+                    DrawSelectionGlow(
+                        context,
+                        GetRings(area.Rings, area.Coordinates),
+                        projection,
+                        area.Intensity);
+                }
+
+                foreach (EarthquakeMapMunicipality municipality in mapViewModel.SelectedMunicipalityHighlights)
+                {
+                    DrawSelectionGlow(
+                        context,
+                        GetRings(municipality.Rings, municipality.Coordinates),
+                        projection,
+                        municipality.Intensity);
+                }
+            });
+        if (HasStaticGeometry(
+                visibleOutline.Count,
+                mapViewModel.Areas.Count,
+                mapViewModel.Municipalities.Count,
+                mapViewModel.BoundaryLayers.Count,
+                mapViewModel.SelectedAreaHighlights.Count,
+                mapViewModel.SelectedMunicipalityHighlights.Count))
         {
-            bool hasIntensity = IsKnownIntensity(municipality.Intensity);
-
-            var shape = new Path
-            {
-                Data = ToPathGeometry(
-                    GetRings(municipality.Rings, municipality.Coordinates),
-                    projection),
-                Fill = hasIntensity
-                    ? GetBrush(GetIntensityColor(municipality.Intensity, 150))
-                    : null,
-                Stroke = hasIntensity
-                    ? GetBrush(Color.FromArgb(225, 42, 50, 55))
-                    : GetBrush(OutlineStroke),
-                StrokeThickness = 0.8,
-                StrokeLineJoin = PenLineJoin.Round,
-                StrokeStartLineCap = PenLineCap.Round,
-                StrokeEndLineCap = PenLineCap.Round,
-                ToolTip = hasIntensity
-                    ? $"{municipality.Name} · 震度 {GetIntensityText(municipality.Intensity)}"
-                    : null,
-            };
-            MapContentCanvas.Children.Add(shape);
+            MapContentCanvas.Children.Add(staticGeometryHost);
         }
 
-        foreach (EarthquakeMapBoundaryLayer layer in ViewModel.BoundaryLayers)
-        {
-            if (layer.Boundaries.Length == 0 ||
-                !ShouldDrawIntensityBoundary(ViewModel.ViewedReportType, layer.Intensity))
-            {
-                continue;
-            }
-
-            var shape = new Path
-            {
-                Data = ToBoundaryPathGeometry(layer.Boundaries, projection),
-                Stroke = GetBrush(fillIntensityAreas
-                    ? GetIntensityBorderColor(layer.Intensity, 245)
-                    : GetIntensityColor(layer.Intensity, 245)),
-                StrokeThickness = 1.8,
-                StrokeLineJoin = PenLineJoin.Round,
-                StrokeStartLineCap = PenLineCap.Round,
-                StrokeEndLineCap = PenLineCap.Round,
-                IsHitTestVisible = false,
-            };
-            MapContentCanvas.Children.Add(shape);
-        }
-
-        foreach (EarthquakeMapArea area in ViewModel.SelectedAreaHighlights)
-        {
-            DrawSelectionGlow(
-                GetRings(area.Rings, area.Coordinates),
-                projection,
-                area.Name,
-                area.Intensity);
-        }
-
-        foreach (EarthquakeMapMunicipality municipality in ViewModel.SelectedMunicipalityHighlights)
-        {
-            DrawSelectionGlow(
-                GetRings(municipality.Rings, municipality.Coordinates),
-                projection,
-                municipality.Name,
-                municipality.Intensity);
-        }
-
-        if (ViewModel.SelectedStationHighlight is EarthquakeMapMarker selectedStation)
+        if (mapViewModel.SelectedStationHighlight is EarthquakeMapMarker selectedStation)
         {
             DrawSelectedMarkerGlow(selectedStation, projection);
         }
 
-        foreach (EarthquakeMapMarker marker in OrderMarkersForRendering(ViewModel.Markers))
+        foreach (EarthquakeMapMarker marker in OrderMarkersForRendering(mapViewModel.Markers))
         {
             DrawMarker(marker, projection);
         }
@@ -692,9 +699,9 @@ public partial class EarthquakeMapView : UserControl
             $"elapsed={Stopwatch.GetElapsedTime(renderStarted).TotalMilliseconds:0.##}ms " +
             $"build={Stopwatch.GetElapsedTime(elementBuildStarted).TotalMilliseconds:0.##}ms " +
             $"children={MapContentCanvas.Children.Count} " +
-            $"outline={visibleOutline.Count} areas={ViewModel.Areas.Count} " +
-            $"municipalities={ViewModel.Municipalities.Count} " +
-            $"boundaries={ViewModel.BoundaryLayers.Count} markers={ViewModel.Markers.Count}");
+            $"outline={visibleOutline.Count} areas={mapViewModel.Areas.Count} " +
+            $"municipalities={mapViewModel.Municipalities.Count} " +
+            $"boundaries={mapViewModel.BoundaryLayers.Count} markers={mapViewModel.Markers.Count}");
     }
 
     private void UpdateLegend()
@@ -1009,10 +1016,38 @@ public partial class EarthquakeMapView : UserControl
         return luminance > 0.58 ? Colors.Black : Colors.White;
     }
 
-    private void DrawSelectionGlow(
+    private static void DrawGeometry(
+        DrawingContext context,
+        StreamGeometry geometry,
+        Brush? fill,
+        Pen? stroke)
+    {
+        context.DrawGeometry(fill, stroke, geometry);
+    }
+
+    private static Pen CreatePen(Color color, double thickness)
+    {
+        int colorKey = color.A << 24 | color.R << 16 | color.G << 8 | color.B;
+        if (PenCache.TryGetValue((colorKey, thickness), out Pen? cachedPen))
+        {
+            return cachedPen;
+        }
+
+        var pen = new Pen(GetBrush(color), thickness)
+        {
+            LineJoin = PenLineJoin.Round,
+            StartLineCap = PenLineCap.Round,
+            EndLineCap = PenLineCap.Round,
+        };
+        pen.Freeze();
+        PenCache[(colorKey, thickness)] = pen;
+        return pen;
+    }
+
+    private static void DrawSelectionGlow(
+        DrawingContext context,
         IReadOnlyList<ImmutableArray<GeoCoordinate>> rings,
         MapProjection projection,
-        string name,
         JmaIntensity? intensity)
     {
         ImmutableArray<ImmutableArray<GeoCoordinate>> renderableRings = rings
@@ -1025,42 +1060,14 @@ public partial class EarthquakeMapView : UserControl
 
         StreamGeometry geometry = ToPathGeometry(renderableRings, projection);
         (Color outerColor, Color innerColor) = GetSelectionColors(intensity);
-        var fill = new Path
-        {
-            Data = geometry,
-            Fill = intensity is JmaIntensity known && IsKnownIntensity(known)
+        context.DrawGeometry(
+            intensity is JmaIntensity known && IsKnownIntensity(known)
                 ? GetBrush(GetIntensityColor(known, 150))
                 : null,
-            IsHitTestVisible = false,
-        };
-        MapContentCanvas.Children.Add(fill);
-
-        var outer = new Path
-        {
-            Data = geometry,
-            Fill = null,
-            Stroke = GetBrush(outerColor),
-            StrokeThickness = 8,
-            StrokeLineJoin = PenLineJoin.Round,
-            StrokeStartLineCap = PenLineCap.Round,
-            StrokeEndLineCap = PenLineCap.Round,
-            IsHitTestVisible = false,
-            ToolTip = $"已选中：{name}",
-        };
-        MapContentCanvas.Children.Add(outer);
-
-        var inner = new Path
-        {
-            Data = geometry,
-            Fill = null,
-            Stroke = GetBrush(innerColor),
-            StrokeThickness = 2.4,
-            StrokeLineJoin = PenLineJoin.Round,
-            StrokeStartLineCap = PenLineCap.Round,
-            StrokeEndLineCap = PenLineCap.Round,
-            IsHitTestVisible = false,
-        };
-        MapContentCanvas.Children.Add(inner);
+            null,
+            geometry);
+        context.DrawGeometry(null, CreatePen(outerColor, 8), geometry);
+        context.DrawGeometry(null, CreatePen(innerColor, 2.4), geometry);
     }
 
     private static (Color Outer, Color Inner) GetSelectionColors(JmaIntensity? intensity)
@@ -1156,6 +1163,33 @@ public partial class EarthquakeMapView : UserControl
     private static bool IsKnownIntensity(JmaIntensity intensity)
     {
         return intensity is >= JmaIntensity.One and <= JmaIntensity.Seven;
+    }
+
+    private sealed class MapDrawingHost : FrameworkElement
+    {
+        private readonly DrawingVisual _visual = new();
+
+        public MapDrawingHost(double width, double height, Action<DrawingContext> draw)
+        {
+            Width = width;
+            Height = height;
+            IsHitTestVisible = false;
+            using DrawingContext context = _visual.RenderOpen();
+            draw(context);
+            AddVisualChild(_visual);
+        }
+
+        protected override int VisualChildrenCount => 1;
+
+        protected override Visual GetVisualChild(int index)
+        {
+            if (index != 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+
+            return _visual;
+        }
     }
 
     private static Color GetIntensityBorderColor(JmaIntensity intensity, byte alpha)

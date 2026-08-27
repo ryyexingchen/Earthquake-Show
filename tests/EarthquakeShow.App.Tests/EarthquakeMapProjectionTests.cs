@@ -310,6 +310,27 @@ public sealed class EarthquakeMapProjectionTests
         Assert.Equal(expected, EarthquakeMapView.ShouldDeferRenderDuringPan(isPanning));
     }
 
+    [Theory]
+    [InlineData(1, 0, 0, 0, 0, 0, true)]
+    [InlineData(0, 0, 0, 0, 0, 0, false)]
+    public void StaticMapLayersUseOneDrawingHostWhenGeometryExists(
+        int outlineCount,
+        int areaCount,
+        int municipalityCount,
+        int boundaryCount,
+        int selectedAreaCount,
+        int selectedMunicipalityCount,
+        bool expected)
+    {
+        Assert.Equal(expected, EarthquakeMapView.HasStaticGeometry(
+            outlineCount,
+            areaCount,
+            municipalityCount,
+            boundaryCount,
+            selectedAreaCount,
+            selectedMunicipalityCount));
+    }
+
     [Fact]
     public void GlobalZoomLevelUsesOverviewScaleAndProgressesByOnePointTwentyFive()
     {
