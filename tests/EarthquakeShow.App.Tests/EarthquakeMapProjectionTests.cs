@@ -212,6 +212,32 @@ public sealed class EarthquakeMapProjectionTests
         Assert.Equal(expected, EarthquakeMapView.ShouldShowStationLabels(zoomLevel));
     }
 
+    [Theory]
+    [InlineData(EarthquakeMapMarkerKind.Station, false, 8)]
+    [InlineData(EarthquakeMapMarkerKind.Station, true, 20)]
+    [InlineData(EarthquakeMapMarkerKind.Hypocenter, false, 15)]
+    [InlineData(EarthquakeMapMarkerKind.Hypocenter, true, 15)]
+    public void MarkerSize_PreservesLowAndHighDetailPresentation(
+        EarthquakeMapMarkerKind kind,
+        bool showStationLabel,
+        double expected)
+    {
+        Assert.Equal(expected, EarthquakeMapView.GetMarkerSize(kind, showStationLabel));
+    }
+
+    [Theory]
+    [InlineData(0, false, false)]
+    [InlineData(0, true, true)]
+    [InlineData(1, false, true)]
+    public void MarkerDrawingHost_IsCreatedOnlyWhenMarkersExist(
+        int markerCount,
+        bool hasSelectedStation,
+        bool expected)
+    {
+        Assert.Equal(expected,
+            EarthquakeMapView.ShouldRenderMarkerHost(markerCount, hasSelectedStation));
+    }
+
     [Fact]
     public void MarkerRendering_DrawsHypocenterAfterStationLabels()
     {

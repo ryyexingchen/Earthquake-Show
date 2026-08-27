@@ -1,10 +1,10 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 using EarthquakeShow.App.ViewModels;
 using EarthquakeShow.Core.Models;
@@ -18,6 +18,8 @@ public partial class EarthquakeMapView : UserControl
     private static readonly Color OutlineFill = Color.FromRgb(243, 239, 228);
     private static readonly Color OutlineStroke = Color.FromRgb(121, 143, 153);
     private static readonly FontFamily StationLabelFont = new("BIZ UDPGothic");
+    private static readonly Typeface StationLabelTypeface =
+        new(StationLabelFont, FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
     private static readonly Dictionary<int, SolidColorBrush> BrushCache = [];
     private static readonly Dictionary<(int Color, double Thickness), Pen> PenCache = [];
     private readonly DispatcherTimer _renderThrottleTimer;
@@ -866,14 +868,26 @@ public partial class EarthquakeMapView : UserControl
             MapContentCanvas.Children.Add(staticGeometryHost);
         }
 
-        if (mapViewModel.SelectedStationHighlight is EarthquakeMapMarker selectedStation)
+        if (ShouldRenderMarkerHost(mapViewModel.Markers.Count, mapViewModel.SelectedStationHighlight is not null))
         {
-            DrawSelectedMarkerGlow(selectedStation, projection);
-        }
+            // 将观测点和震源统一绘制到一个 DrawingVisual，避免每个点创建多个控件。
+            double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+            var markerHost = new MapDrawingHost(
+                MapCanvas.ActualWidth,
+                MapCanvas.ActualHeight,
+                context =>
+                {
+                    if (mapViewModel.SelectedStationHighlight is EarthquakeMapMarker selectedStation)
+                    {
+                        DrawSelectedMarkerGlow(context, selectedStation, projection);
+                    }
 
-        foreach (EarthquakeMapMarker marker in OrderMarkersForRendering(mapViewModel.Markers))
-        {
-            DrawMarker(marker, projection);
+                    foreach (EarthquakeMapMarker marker in OrderMarkersForRendering(mapViewModel.Markers))
+                    {
+                        DrawMarker(context, marker, projection, mapViewModel.ZoomLevel, pixelsPerDip);
+                    }
+                });
+            MapContentCanvas.Children.Add(markerHost);
         }
 
         TraceMap(
@@ -1135,51 +1149,54 @@ public partial class EarthquakeMapView : UserControl
         return geometry;
     }
 
-    private void DrawMarker(EarthquakeMapMarker marker, MapProjection projection)
+    private void DrawMarker(
+        DrawingContext context,
+        EarthquakeMapMarker marker,
+        MapProjection projection,
+        double zoomLevel,
+        double pixelsPerDip)
     {
         Point point = projection.Project(marker.Coordinate);
         bool showStationLabel = marker.Kind == EarthquakeMapMarkerKind.Station &&
-            ShouldShowStationLabels(ViewModel!.ZoomLevel);
-        double size = marker.Kind == EarthquakeMapMarkerKind.Hypocenter
-            ? 15
-            : showStationLabel ? 20 : 8;
-        var shape = new Ellipse
-        {
-            Width = size,
-            Height = size,
-            Fill = marker.Kind == EarthquakeMapMarkerKind.Hypocenter
-                ? GetBrush(Color.FromRgb(190, 61, 52))
-                : GetBrush(GetIntensityColor(marker.Intensity, 245)),
-            Stroke = marker.Kind == EarthquakeMapMarkerKind.Hypocenter
-                ? GetBrush(Colors.White)
-                : GetBrush(GetIntensityBorderColor(marker.Intensity, 245)),
-            StrokeThickness = 1.5,
-            ToolTip = $"{marker.Label} · 震度 {GetIntensityText(marker.Intensity)}",
-        };
-        Canvas.SetLeft(shape, point.X - size / 2);
-        Canvas.SetTop(shape, point.Y - size / 2);
-        MapContentCanvas.Children.Add(shape);
+            ShouldShowStationLabels(zoomLevel);
+        double size = GetMarkerSize(marker.Kind, showStationLabel);
+        Brush fill = marker.Kind == EarthquakeMapMarkerKind.Hypocenter
+            ? GetBrush(Color.FromRgb(190, 61, 52))
+            : GetBrush(GetIntensityColor(marker.Intensity, 245));
+        Pen stroke = CreatePen(
+            marker.Kind == EarthquakeMapMarkerKind.Hypocenter
+                ? Colors.White
+                : GetIntensityBorderColor(marker.Intensity, 245),
+            1.5);
+        context.DrawEllipse(fill, stroke, point, size / 2, size / 2);
 
         if (showStationLabel)
         {
-            var label = new Label
-            {
-                Width = size,
-                Height = size,
-                Content = GetStationMarkerText(marker.Intensity),
-                HorizontalContentAlignment = HorizontalAlignment.Center,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                FontFamily = StationLabelFont,
-                FontSize = 10,
-                FontWeight = FontWeights.Bold,
-                Padding = new Thickness(0),
-                Foreground = GetBrush(GetIntensityTextColor(marker.Intensity)),
-                IsHitTestVisible = false,
-            };
-            Canvas.SetLeft(label, point.X - size / 2);
-            Canvas.SetTop(label, point.Y - size / 2);
-            MapContentCanvas.Children.Add(label);
+            string text = GetStationMarkerText(marker.Intensity) ?? "?";
+            var formattedText = new FormattedText(
+                text,
+                CultureInfo.InvariantCulture,
+                FlowDirection.LeftToRight,
+                StationLabelTypeface,
+                10,
+                GetBrush(GetIntensityTextColor(marker.Intensity)),
+                pixelsPerDip);
+            context.DrawText(
+                formattedText,
+                new Point(point.X - formattedText.Width / 2, point.Y - formattedText.Height / 2));
         }
+    }
+
+    internal static double GetMarkerSize(EarthquakeMapMarkerKind kind, bool showStationLabel)
+    {
+        return kind == EarthquakeMapMarkerKind.Hypocenter
+            ? 15
+            : showStationLabel ? 20 : 8;
+    }
+
+    internal static bool ShouldRenderMarkerHost(int markerCount, bool hasSelectedStation)
+    {
+        return markerCount > 0 || hasSelectedStation;
     }
 
     internal static bool ShouldShowStationLabels(double zoomLevel)
@@ -1269,37 +1286,15 @@ public partial class EarthquakeMapView : UserControl
         return (Color.FromArgb(225, 16, 34, 48), Color.FromRgb(0, 206, 255));
     }
 
-    private void DrawSelectedMarkerGlow(
+    private static void DrawSelectedMarkerGlow(
+        DrawingContext context,
         EarthquakeMapMarker marker,
         MapProjection projection)
     {
         Point point = projection.Project(marker.Coordinate);
         (Color outerColor, Color innerColor) = GetSelectionColors(marker.Intensity);
-        var outer = new Ellipse
-        {
-            Width = 24,
-            Height = 24,
-            Fill = null,
-            Stroke = GetBrush(outerColor),
-            StrokeThickness = 5,
-            IsHitTestVisible = false,
-        };
-        Canvas.SetLeft(outer, point.X - outer.Width / 2);
-        Canvas.SetTop(outer, point.Y - outer.Height / 2);
-        MapContentCanvas.Children.Add(outer);
-
-        var inner = new Ellipse
-        {
-            Width = 13,
-            Height = 13,
-            Fill = null,
-            Stroke = GetBrush(innerColor),
-            StrokeThickness = 2,
-            IsHitTestVisible = false,
-        };
-        Canvas.SetLeft(inner, point.X - inner.Width / 2);
-        Canvas.SetTop(inner, point.Y - inner.Height / 2);
-        MapContentCanvas.Children.Add(inner);
+        context.DrawEllipse(null, CreatePen(outerColor, 5), point, 12, 12);
+        context.DrawEllipse(null, CreatePen(innerColor, 2), point, 6.5, 6.5);
     }
 
     private static Color GetIntensityColor(JmaIntensity intensity, byte alpha)
