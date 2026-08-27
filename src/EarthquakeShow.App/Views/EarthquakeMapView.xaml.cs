@@ -915,15 +915,17 @@ public partial class EarthquakeMapView : UserControl
 
         if (showStationLabel)
         {
-            var label = new TextBlock
+            var label = new Label
             {
                 Width = size,
                 Height = size,
-                Text = GetStationMarkerText(marker.Intensity),
-                TextAlignment = TextAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
+                Content = GetStationMarkerText(marker.Intensity),
+                HorizontalContentAlignment = HorizontalAlignment.Center,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                FontFamily = new FontFamily("Segoe UI"),
                 FontSize = 10,
                 FontWeight = FontWeights.Bold,
+                Padding = new Thickness(0),
                 Foreground = new SolidColorBrush(GetIntensityTextColor(marker.Intensity)),
                 IsHitTestVisible = false,
             };
