@@ -39,6 +39,38 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public async Task NonMapPageStateDoesNotRebuildMapLayers()
+    {
+        EarthquakeReport report = CreateReport();
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+        var changedProperties = new List<string?>();
+        map.PropertyChanged += (_, eventArgs) =>
+            changedProperties.Add(eventArgs.PropertyName);
+
+        page.SetSearchText("熊本");
+
+        Assert.DoesNotContain(nameof(EarthquakeMapViewModel.Areas), changedProperties);
+        Assert.DoesNotContain(nameof(EarthquakeMapViewModel.Markers), changedProperties);
+
+        changedProperties.Clear();
+        await page.RefreshAsync();
+
+        Assert.DoesNotContain(nameof(EarthquakeMapViewModel.Areas), changedProperties);
+        Assert.DoesNotContain(nameof(EarthquakeMapViewModel.Markers), changedProperties);
+
+        page.SetMapViewState(page.State.Map with { FollowSelection = false });
+
+        Assert.Contains(nameof(EarthquakeMapViewModel.FollowSelection), changedProperties);
+        Assert.DoesNotContain(nameof(EarthquakeMapViewModel.Areas), changedProperties);
+        Assert.DoesNotContain(nameof(EarthquakeMapViewModel.Markers), changedProperties);
+    }
+
+    [Fact]
     public async Task CancelledLodRequestLeavesCurrentGeometryAndErrorStateUntouched()
     {
         using var page = new EarthquakePageViewModel(

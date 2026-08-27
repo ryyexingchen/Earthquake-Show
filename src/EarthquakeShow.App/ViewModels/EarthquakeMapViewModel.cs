@@ -109,6 +109,8 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     private bool _isApplyingAutoScale;
     private bool _isDisposed;
     private EarthquakeMapSelection? _selectedMapSelection;
+    private EarthquakeMapViewState _lastMapState;
+    private string? _selectedEventId;
 
     public EarthquakeMapViewModel(
         EarthquakePageViewModel page,
@@ -125,6 +127,8 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         _municipalityGeometry = _overviewMunicipalityGeometry;
         _boundaryGeometry = _overviewBoundaryGeometry;
         _lodResourceProvider = lodResourceProvider;
+        _lastMapState = _page.State.Map;
+        _selectedEventId = _page.State.SelectedEvent?.EventId;
         _page.PropertyChanged += OnPagePropertyChanged;
         RebuildLayers();
     }
@@ -1107,7 +1111,15 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     {
         if (eventArgs.PropertyName == nameof(EarthquakePageViewModel.State))
         {
-            bool reportChanged = IsViewedReportChanged(_page.State.ViewedReport);
+            EarthquakePageState state = _page.State;
+            bool reportChanged = IsViewedReportChanged(state.ViewedReport);
+            bool mapStateChanged = _lastMapState != state.Map;
+            bool selectedEventChanged = !string.Equals(
+                _selectedEventId,
+                state.SelectedEvent?.EventId,
+                StringComparison.Ordinal);
+            _lastMapState = state.Map;
+            _selectedEventId = state.SelectedEvent?.EventId;
             if (ShouldAutoScaleAfterReportChange(
                     _isApplyingAutoScale,
                     _isMapPanning,
@@ -1128,8 +1140,22 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 TraceDetail("AutoScaleSkipped", "reason=manual-pan");
             }
 
-            RebuildLayers();
+            if (reportChanged || selectedEventChanged)
+            {
+                RebuildLayers();
+            }
+            else if (mapStateChanged)
+            {
+                RaiseMapStateProperties();
+            }
         }
+    }
+
+    private void RaiseMapStateProperties()
+    {
+        OnPropertyChanged(nameof(FocusMode));
+        OnPropertyChanged(nameof(FollowSelection));
+        OnPropertyChanged(nameof(EffectiveFocusMode));
     }
 
     internal static bool ShouldAutoScaleAfterReportChange(

@@ -46,6 +46,7 @@ public partial class EarthquakeMapView : UserControl
     private long _lastPanTraceAt;
     private Task? _detailEnsureTask;
     private bool _detailEnsureRequested;
+    private bool _detailEnsureDeferredLogged;
 
     public EarthquakeMapView()
     {
@@ -302,6 +303,7 @@ public partial class EarthquakeMapView : UserControl
 
         _isPanning = true;
         _panContentChanged = _renderPending;
+        _detailEnsureDeferredLogged = false;
         ViewModel.SetMapPanning(true);
         ViewModel.BeginManualInteraction();
         _lastPanPoint = e.GetPosition(MapCanvas);
@@ -477,9 +479,15 @@ public partial class EarthquakeMapView : UserControl
         _detailEnsureRequested = true;
         if (ShouldDeferDetailCheckDuringPan(_isPanning))
         {
-            TraceMap("EnsureDetailDeferred", GetViewportCenter(), "reason=manual-pan");
+            if (!_detailEnsureDeferredLogged)
+            {
+                _detailEnsureDeferredLogged = true;
+                TraceMap("EnsureDetailDeferred", GetViewportCenter(), "reason=manual-pan");
+            }
             return Task.CompletedTask;
         }
+
+        _detailEnsureDeferredLogged = false;
 
         if (_detailEnsureTask is { IsCompleted: false })
         {
