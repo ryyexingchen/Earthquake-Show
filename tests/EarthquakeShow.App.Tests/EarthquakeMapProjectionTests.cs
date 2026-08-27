@@ -278,6 +278,18 @@ public sealed class EarthquakeMapProjectionTests
         Assert.Equal("?", EarthquakeMapView.GetStationMarkerText(JmaIntensity.Unknown));
     }
 
+    [Fact]
+    public void StationLabelText_IsReusedForSameIntensityAndDpi()
+    {
+        FormattedText first = EarthquakeMapView.GetStationLabelText(JmaIntensity.Three, 1);
+        FormattedText second = EarthquakeMapView.GetStationLabelText(JmaIntensity.Three, 1);
+
+        Assert.Same(first, second);
+        Assert.NotSame(
+            first,
+            EarthquakeMapView.GetStationLabelText(JmaIntensity.Four, 1));
+    }
+
     [Theory]
     [InlineData(JmaIntensity.One, 0, 0, 0)]
     [InlineData(JmaIntensity.Three, 0, 0, 0)]

@@ -22,6 +22,8 @@ public partial class EarthquakeMapView : UserControl
         new(StationLabelFont, FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
     private static readonly Dictionary<int, SolidColorBrush> BrushCache = [];
     private static readonly Dictionary<(int Color, double Thickness), Pen> PenCache = [];
+    private static readonly Dictionary<(JmaIntensity Intensity, double PixelsPerDip), FormattedText>
+        StationLabelTextCache = [];
     private readonly DispatcherTimer _renderThrottleTimer;
     private readonly DispatcherTimer _wheelZoomTimer;
     private bool _renderPending;
@@ -1172,19 +1174,33 @@ public partial class EarthquakeMapView : UserControl
 
         if (showStationLabel)
         {
-            string text = GetStationMarkerText(marker.Intensity) ?? "?";
-            var formattedText = new FormattedText(
-                text,
-                CultureInfo.InvariantCulture,
-                FlowDirection.LeftToRight,
-                StationLabelTypeface,
-                10,
-                GetBrush(GetIntensityTextColor(marker.Intensity)),
-                pixelsPerDip);
+            FormattedText formattedText = GetStationLabelText(marker.Intensity, pixelsPerDip);
             context.DrawText(
                 formattedText,
                 new Point(point.X - formattedText.Width / 2, point.Y - formattedText.Height / 2));
         }
+    }
+
+    internal static FormattedText GetStationLabelText(
+        JmaIntensity intensity,
+        double pixelsPerDip)
+    {
+        var key = (intensity, pixelsPerDip);
+        if (StationLabelTextCache.TryGetValue(key, out FormattedText? cachedText))
+        {
+            return cachedText;
+        }
+
+        var formattedText = new FormattedText(
+            GetStationMarkerText(intensity) ?? "?",
+            CultureInfo.InvariantCulture,
+            FlowDirection.LeftToRight,
+            StationLabelTypeface,
+            10,
+            GetBrush(GetIntensityTextColor(intensity)),
+            pixelsPerDip);
+        StationLabelTextCache[key] = formattedText;
+        return formattedText;
     }
 
     internal static double GetMarkerSize(EarthquakeMapMarkerKind kind, bool showStationLabel)
