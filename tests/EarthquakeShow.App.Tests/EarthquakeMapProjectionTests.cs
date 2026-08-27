@@ -206,9 +206,9 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Fact]
-    public void StationMarkerText_UnknownIntensityIsHidden()
+    public void StationMarkerText_UnknownIntensityUsesQuestionMark()
     {
-        Assert.Null(EarthquakeMapView.GetStationMarkerText(JmaIntensity.Unknown));
+        Assert.Equal("?", EarthquakeMapView.GetStationMarkerText(JmaIntensity.Unknown));
     }
 
     [Theory]
@@ -275,6 +275,31 @@ public sealed class EarthquakeMapProjectionTests
             MapDetailLevel.Medium,
             loaded,
             new MapGeometryBounds(132, 135, 32, 35)));
+    }
+
+    [Fact]
+    public void InFlightHighDetailLoadIsReusedForContainedViewport()
+    {
+        MapGeometryBounds loading = new(129, 132, 31, 35);
+
+        Assert.True(EarthquakeMapViewModel.ShouldReuseInFlightHighLoad(
+            true,
+            MapDetailLevel.High,
+            loading,
+            MapDetailLevel.High,
+            new MapGeometryBounds(130, 131, 32, 34)));
+        Assert.False(EarthquakeMapViewModel.ShouldReuseInFlightHighLoad(
+            true,
+            MapDetailLevel.High,
+            loading,
+            MapDetailLevel.High,
+            new MapGeometryBounds(132, 135, 32, 35)));
+        Assert.False(EarthquakeMapViewModel.ShouldReuseInFlightHighLoad(
+            true,
+            MapDetailLevel.Medium,
+            loading,
+            MapDetailLevel.High,
+            new MapGeometryBounds(130, 131, 32, 34)));
     }
 
     [Fact]

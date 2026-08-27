@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using EarthquakeShow.App.ViewModels;
 using EarthquakeShow.Core.Models;
 
@@ -18,6 +19,7 @@ public partial class EarthquakeMapView : UserControl
     private static readonly Color OutlineStroke = Color.FromRgb(121, 143, 153);
     private static readonly FontFamily StationLabelFont = new("Segoe UI");
     private static readonly Dictionary<int, SolidColorBrush> BrushCache = [];
+    private readonly DispatcherTimer _renderThrottleTimer;
     private bool _renderPending;
     private bool _isPanning;
     private Point _lastPanPoint;
@@ -30,6 +32,11 @@ public partial class EarthquakeMapView : UserControl
     public EarthquakeMapView()
     {
         InitializeComponent();
+        _renderThrottleTimer = new DispatcherTimer(DispatcherPriority.Render)
+        {
+            Interval = TimeSpan.FromMilliseconds(32),
+        };
+        _renderThrottleTimer.Tick += OnRenderThrottleTimerTick;
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
         SizeChanged += OnSizeChanged;
@@ -52,6 +59,8 @@ public partial class EarthquakeMapView : UserControl
         MapPanTransform.Y = 0;
         _viewportCenter = null;
         _lastFocusedCoordinate = ViewModel?.FocusedCoordinate;
+        _renderThrottleTimer.Stop();
+        _renderPending = false;
         RenderMap();
         await EnsureMapDetailLevelAsync();
     }
@@ -64,6 +73,9 @@ public partial class EarthquakeMapView : UserControl
         MapPanTransform.X = 0;
         MapPanTransform.Y = 0;
         _viewportCenter = null;
+        MapContentCanvas.CacheMode = null;
+        _renderThrottleTimer.Stop();
+        _renderPending = false;
         if (ViewModel is not null)
         {
             ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
@@ -169,11 +181,20 @@ public partial class EarthquakeMapView : UserControl
         }
 
         _renderPending = true;
-        Dispatcher.BeginInvoke(new Action(() =>
+        _renderThrottleTimer.Start();
+    }
+
+    private void OnRenderThrottleTimerTick(object? sender, EventArgs e)
+    {
+        _renderThrottleTimer.Stop();
+        if (!_renderPending || !IsLoaded)
         {
             _renderPending = false;
-            RenderMap();
-        }));
+            return;
+        }
+
+        _renderPending = false;
+        RenderMap();
     }
 
     private async void OnZoomInClick(object sender, RoutedEventArgs e)
@@ -214,6 +235,7 @@ public partial class EarthquakeMapView : UserControl
         }
 
         ViewModel.BeginManualInteraction();
+        MapContentCanvas.CacheMode = new BitmapCache { RenderAtScale = 1.0 };
         _isPanning = true;
         _lastPanPoint = e.GetPosition(MapCanvas);
         TraceMap("MouseDown", GetViewportCenter());
@@ -485,6 +507,7 @@ public partial class EarthquakeMapView : UserControl
             MapCanvas.ReleaseMouseCapture();
         }
 
+        MapContentCanvas.CacheMode = null;
         Cursor = null;
     }
 
@@ -902,8 +925,7 @@ public partial class EarthquakeMapView : UserControl
     {
         Point point = projection.Project(marker.Coordinate);
         bool showStationLabel = marker.Kind == EarthquakeMapMarkerKind.Station &&
-            ShouldShowStationLabels(ViewModel!.ZoomLevel) &&
-            IsKnownIntensity(marker.Intensity);
+            ShouldShowStationLabels(ViewModel!.ZoomLevel);
         double size = marker.Kind == EarthquakeMapMarkerKind.Hypocenter
             ? 15
             : showStationLabel ? 20 : 8;
@@ -953,7 +975,7 @@ public partial class EarthquakeMapView : UserControl
 
     internal static string? GetStationMarkerText(JmaIntensity intensity)
     {
-        return IsKnownIntensity(intensity) ? GetIntensityLegendText(intensity) : null;
+        return IsKnownIntensity(intensity) ? GetIntensityLegendText(intensity) : "?";
     }
 
     internal static Color GetIntensityTextColor(JmaIntensity intensity)

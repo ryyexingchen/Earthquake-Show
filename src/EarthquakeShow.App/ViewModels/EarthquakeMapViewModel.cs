@@ -91,6 +91,8 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     private CancellationTokenSource? _detailLoadCancellation;
     private bool _isLoadingDetail;
     private MapDetailLevel? _loadingDetailLevel;
+    private MapGeometryBounds? _loadingHighViewportBounds;
+    private GeoCoordinate? _loadingViewportCenter;
     private string? _detailLoadError;
     private MapDetailLevel? _detailLoadErrorLevel;
     private MapGeometryBounds? _highLoadedViewportBounds;
@@ -642,6 +644,8 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         {
             _detailLoadCancellation?.Cancel();
             _detailLoadGeneration++;
+            _loadingHighViewportBounds = null;
+            _loadingViewportCenter = null;
             if (_detailLevel != MapDetailLevel.Overview)
             {
                 ApplyGeometrySet(
@@ -657,6 +661,37 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             _retainedHighGeometrySet = null;
             _retainedHighViewportBounds = null;
 
+            return;
+        }
+
+        if (_isLoadingDetail && _loadingDetailLevel != desiredLevel)
+        {
+            TraceDetail(
+                "CancelInFlightLevelChange",
+                $"from={_loadingDetailLevel} to={desiredLevel}");
+            _detailLoadCancellation?.Cancel();
+            _detailLoadGeneration++;
+        }
+
+        // 连续缩放/拖动时复用仍在进行的高精度加载，避免重复解析大型 GeoJSON。
+        // 视口中心单独更新，确保异步加载完成后使用用户最后看到的位置。
+        if (ShouldReuseInFlightHighLoad(
+                _isLoadingDetail,
+                _loadingDetailLevel,
+                _loadingHighViewportBounds,
+                desiredLevel,
+                viewportBounds))
+        {
+            if (viewportCenter is not null)
+            {
+                _loadingViewportCenter = viewportCenter;
+            }
+
+            TraceDetail(
+                "EnsureReuseInFlight",
+                $"detail={desiredLevel} viewport={FormatBounds(viewportBounds)} " +
+                $"loading={FormatBounds(_loadingHighViewportBounds)} " +
+                $"center={FormatCoordinate(_loadingViewportCenter)}");
             return;
         }
 
@@ -704,6 +739,10 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         _detailLoadCancellation = loadCancellation;
         _detailLoadErrorLevel = desiredLevel;
         _loadingDetailLevel = desiredLevel;
+        _loadingHighViewportBounds = desiredLevel == MapDetailLevel.High
+            ? viewportBounds
+            : null;
+        _loadingViewportCenter = viewportCenter;
         _lastHighLoadUsedCache = false;
         IsLoadingDetail = true;
         try
@@ -735,7 +774,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                     return;
                 }
 
-                ApplyMediumFallback(viewportCenter);
+                ApplyMediumFallback(_loadingViewportCenter);
                 await Task.Yield();
                 if (loadGeneration != _detailLoadGeneration ||
                     loadCancellation.IsCancellationRequested ||
@@ -762,8 +801,8 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 geometrySet,
                 desiredLevel,
                 viewportBounds,
-                viewportCenter);
-            TraceDetail("LoadApplied", $"generation={loadGeneration} detail={desiredLevel} center={FormatCoordinate(viewportCenter)}");
+                _loadingViewportCenter);
+            TraceDetail("LoadApplied", $"generation={loadGeneration} detail={desiredLevel} center={FormatCoordinate(_loadingViewportCenter)}");
         }
         catch (OperationCanceledException)
         {
@@ -784,6 +823,8 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             {
                 _detailLoadCancellation = null;
                 _loadingDetailLevel = null;
+                _loadingHighViewportBounds = null;
+                _loadingViewportCenter = null;
                 IsLoadingDetail = false;
             }
 
@@ -1057,6 +1098,21 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             requestedBounds is MapGeometryBounds requested &&
             (loadedBounds is not MapGeometryBounds loaded ||
                 !Contains(loaded, requested));
+    }
+
+    internal static bool ShouldReuseInFlightHighLoad(
+        bool isLoading,
+        MapDetailLevel? loadingLevel,
+        MapGeometryBounds? loadingBounds,
+        MapDetailLevel desiredLevel,
+        MapGeometryBounds? requestedBounds)
+    {
+        return isLoading &&
+            desiredLevel == MapDetailLevel.High &&
+            loadingLevel == MapDetailLevel.High &&
+            loadingBounds is MapGeometryBounds loaded &&
+            requestedBounds is MapGeometryBounds requested &&
+            Contains(loaded, requested);
     }
 
     private MapDetailLevel GetDesiredDetailLevel()
