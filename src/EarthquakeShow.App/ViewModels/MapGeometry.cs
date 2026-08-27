@@ -11,6 +11,9 @@ public sealed record MapPolygonGeometry(
     ImmutableArray<GeoCoordinate> Coordinates,
     bool IsOfficialBoundary)
 {
+    public MapGeometryBounds Bounds { get; init; } =
+        MapGeometryBounds.FromCoordinates(Coordinates);
+
     /// <summary>当前多边形的外环和内环；Coordinates 保留为外环兼容属性。</summary>
     public ImmutableArray<ImmutableArray<GeoCoordinate>> Rings { get; init; } =
         ImmutableArray.Create(Coordinates);
@@ -25,6 +28,65 @@ public readonly record struct MapGeometryBounds(
     public double LongitudeSpan => Math.Max(0.000001, MaxLongitude - MinLongitude);
 
     public double LatitudeSpan => Math.Max(0.000001, MaxLatitude - MinLatitude);
+
+    public bool Intersects(MapGeometryBounds other) =>
+        MinLongitude <= other.MaxLongitude &&
+        MaxLongitude >= other.MinLongitude &&
+        MinLatitude <= other.MaxLatitude &&
+        MaxLatitude >= other.MinLatitude;
+
+    public static MapGeometryBounds FromBounds(IEnumerable<MapGeometryBounds> bounds)
+    {
+        ArgumentNullException.ThrowIfNull(bounds);
+        using IEnumerator<MapGeometryBounds> enumerator = bounds.GetEnumerator();
+        if (!enumerator.MoveNext())
+        {
+            throw new ArgumentException("包围盒集合不能为空。", nameof(bounds));
+        }
+
+        MapGeometryBounds result = enumerator.Current;
+        while (enumerator.MoveNext())
+        {
+            MapGeometryBounds current = enumerator.Current;
+            result = new MapGeometryBounds(
+                Math.Min(result.MinLongitude, current.MinLongitude),
+                Math.Max(result.MaxLongitude, current.MaxLongitude),
+                Math.Min(result.MinLatitude, current.MinLatitude),
+                Math.Max(result.MaxLatitude, current.MaxLatitude));
+        }
+
+        return result;
+    }
+
+    public static MapGeometryBounds FromCoordinates(IEnumerable<GeoCoordinate> coordinates)
+    {
+        ArgumentNullException.ThrowIfNull(coordinates);
+        using IEnumerator<GeoCoordinate> enumerator = coordinates.GetEnumerator();
+        if (!enumerator.MoveNext())
+        {
+            throw new ArgumentException("坐标集合不能为空。", nameof(coordinates));
+        }
+
+        GeoCoordinate first = enumerator.Current;
+        double minLongitude = first.Longitude;
+        double maxLongitude = first.Longitude;
+        double minLatitude = first.Latitude;
+        double maxLatitude = first.Latitude;
+        while (enumerator.MoveNext())
+        {
+            GeoCoordinate current = enumerator.Current;
+            minLongitude = Math.Min(minLongitude, current.Longitude);
+            maxLongitude = Math.Max(maxLongitude, current.Longitude);
+            minLatitude = Math.Min(minLatitude, current.Latitude);
+            maxLatitude = Math.Max(maxLatitude, current.Latitude);
+        }
+
+        return new MapGeometryBounds(
+            minLongitude,
+            maxLongitude,
+            minLatitude,
+            maxLatitude);
+    }
 }
 
 public sealed class OfflineMapGeometry
@@ -361,14 +423,16 @@ public sealed class OfflineMapGeometry
             return true;
         }
 
-        ImmutableArray<GeoCoordinate> outerRing = rings[0];
+        ImmutableArray<ImmutableArray<GeoCoordinate>> immutableRings = rings.ToImmutable();
+        ImmutableArray<GeoCoordinate> outerRing = immutableRings[0];
         polygons.Add(new MapPolygonGeometry(
                 code,
                 name,
                 outerRing,
                 officialBoundary)
         {
-                Rings = rings.ToImmutable(),
+                Bounds = MapGeometryBounds.FromCoordinates(immutableRings.SelectMany(item => item)),
+                Rings = immutableRings,
         });
         return true;
     }

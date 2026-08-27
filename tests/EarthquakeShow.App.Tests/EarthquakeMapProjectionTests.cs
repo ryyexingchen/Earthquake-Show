@@ -502,6 +502,51 @@ public sealed class EarthquakeMapProjectionTests
             EarthquakeMapView.ShouldReuseStaticGeometry(hasMatchingKey, hasCachedHost));
     }
 
+    [Fact]
+    public void HighDetailRenderBoundsIncludeViewportBuffer()
+    {
+        MapGeometryBounds bounds = EarthquakeMapView.ExpandRenderBounds(
+            new MapGeometryBounds(130, 132, 32, 33),
+            EarthquakeMapView.HighDetailRenderBufferRatio);
+
+        Assert.Equal(129.7, bounds.MinLongitude, precision: 6);
+        Assert.Equal(132.3, bounds.MaxLongitude, precision: 6);
+        Assert.Equal(31.85, bounds.MinLatitude, precision: 6);
+        Assert.Equal(33.15, bounds.MaxLatitude, precision: 6);
+    }
+
+    [Theory]
+    [InlineData(129, 130, 31, 32, true)]
+    [InlineData(132, 133, 33, 34, true)]
+    [InlineData(133.01, 134, 33, 34, false)]
+    public void GeometryBoundsIntersectionSupportsViewportCulling(
+        double minLongitude,
+        double maxLongitude,
+        double minLatitude,
+        double maxLatitude,
+        bool expected)
+    {
+        MapGeometryBounds viewport = new(130, 133, 32, 33);
+        MapGeometryBounds geometry = new(
+            minLongitude,
+            maxLongitude,
+            minLatitude,
+            maxLatitude);
+
+        Assert.Equal(expected, geometry.Intersects(viewport));
+    }
+
+    [Fact]
+    public void GeometryBoundsCombineWithoutRescanningCoordinates()
+    {
+        MapGeometryBounds combined = MapGeometryBounds.FromBounds([
+            new MapGeometryBounds(130, 131, 32, 33),
+            new MapGeometryBounds(129, 132, 31, 34),
+        ]);
+
+        Assert.Equal(new MapGeometryBounds(129, 132, 31, 34), combined);
+    }
+
     [Theory]
     [InlineData(true, true)]
     [InlineData(false, false)]

@@ -8,7 +8,11 @@ namespace EarthquakeShow.App.ViewModels;
 public sealed record EarthquakeMapBoundary(
     string AreaCode1,
     string AreaCode2,
-    ImmutableArray<GeoCoordinate> Coordinates);
+    ImmutableArray<GeoCoordinate> Coordinates)
+{
+    public MapGeometryBounds Bounds { get; init; } =
+        MapGeometryBounds.FromCoordinates(Coordinates);
+}
 
 public sealed class OfflineMapBoundaryGeometry
 {

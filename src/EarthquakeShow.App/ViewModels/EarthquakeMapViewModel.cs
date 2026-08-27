@@ -31,6 +31,9 @@ public sealed record EarthquakeMapArea(
     JmaIntensity Intensity,
     ImmutableArray<GeoCoordinate> Coordinates)
 {
+    public MapGeometryBounds Bounds { get; init; } =
+        MapGeometryBounds.FromCoordinates(Coordinates);
+
     public string PrefectureCode { get; init; } = string.Empty;
 
     public ImmutableArray<ImmutableArray<GeoCoordinate>> Rings { get; init; } =
@@ -43,6 +46,9 @@ public sealed record EarthquakeMapMunicipality(
     JmaIntensity Intensity,
     ImmutableArray<GeoCoordinate> Coordinates)
 {
+    public MapGeometryBounds Bounds { get; init; } =
+        MapGeometryBounds.FromCoordinates(Coordinates);
+
     public ImmutableArray<ImmutableArray<GeoCoordinate>> Rings { get; init; } =
         ImmutableArray.Create(Coordinates);
 }
@@ -312,6 +318,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                     source?.MaxIntensity ?? JmaIntensity.Unknown,
                     coordinates)
                 {
+                    Bounds = MapGeometryBounds.FromBounds(group.Select(item => item.Bounds)),
                     PrefectureCode = source?.PrefectureCode ?? string.Empty,
                     Rings = rings,
                 };
@@ -341,6 +348,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                     source?.MaxIntensity ?? JmaIntensity.Unknown,
                     coordinates)
                 {
+                    Bounds = MapGeometryBounds.FromBounds(group.Select(item => item.Bounds)),
                     Rings = rings,
                 };
             })
@@ -1381,6 +1389,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                     area.MaxIntensity,
                     rings[0])
                 {
+                    Bounds = MapGeometryBounds.FromBounds(polygons.Select(item => item.Bounds)),
                     PrefectureCode = area.PrefectureCode,
                     Rings = rings,
                 };
@@ -1416,6 +1425,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                     municipality.MaxIntensity,
                     rings[0])
                 {
+                    Bounds = MapGeometryBounds.FromBounds(polygons.Select(item => item.Bounds)),
                     Rings = rings,
                 };
             })

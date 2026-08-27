@@ -14,6 +14,7 @@ namespace EarthquakeShow.App.Views;
 public partial class EarthquakeMapView : UserControl
 {
     internal const double StationLabelZoomThreshold = 8;
+    internal const double HighDetailRenderBufferRatio = 0.15;
 
     private static readonly Color OutlineFill = Color.FromRgb(243, 239, 228);
     private static readonly Color OutlineStroke = Color.FromRgb(121, 143, 153);
@@ -586,6 +587,40 @@ public partial class EarthquakeMapView : UserControl
             Math.Max(topLeft.Latitude, bottomRight.Latitude) + latitudeMargin);
     }
 
+    private static MapGeometryBounds GetBufferedRenderBounds(
+        MapProjection projection,
+        double width,
+        double height)
+    {
+        GeoCoordinate topLeft = projection.Unproject(new Point(0, 0));
+        GeoCoordinate bottomRight = projection.Unproject(new Point(width, height));
+        return ExpandRenderBounds(
+            new MapGeometryBounds(
+                Math.Min(topLeft.Longitude, bottomRight.Longitude),
+                Math.Max(topLeft.Longitude, bottomRight.Longitude),
+                Math.Min(topLeft.Latitude, bottomRight.Latitude),
+                Math.Max(topLeft.Latitude, bottomRight.Latitude)),
+            HighDetailRenderBufferRatio);
+    }
+
+    internal static MapGeometryBounds ExpandRenderBounds(
+        MapGeometryBounds bounds,
+        double bufferRatio)
+    {
+        if (!double.IsFinite(bufferRatio) || bufferRatio < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(bufferRatio));
+        }
+
+        double longitudeMargin = bounds.LongitudeSpan * bufferRatio;
+        double latitudeMargin = bounds.LatitudeSpan * bufferRatio;
+        return new MapGeometryBounds(
+            bounds.MinLongitude - longitudeMargin,
+            bounds.MaxLongitude + longitudeMargin,
+            bounds.MinLatitude - latitudeMargin,
+            bounds.MaxLatitude + latitudeMargin);
+    }
+
     private double GetAutomaticZoomLevel()
     {
         if (ViewModel is null)
@@ -841,6 +876,12 @@ public partial class EarthquakeMapView : UserControl
             selectedEventFocusCoordinate,
             selectedEventBounds,
             _viewportCenter);
+        MapGeometryBounds? renderBounds = mapViewModel.DetailLevel == MapDetailLevel.High
+            ? GetBufferedRenderBounds(
+                projection,
+                MapCanvas.ActualWidth,
+                MapCanvas.ActualHeight)
+            : null;
         TraceMap(
             "Render",
             projection.Unproject(new Point(MapCanvas.ActualWidth / 2, MapCanvas.ActualHeight / 2)),
@@ -849,7 +890,46 @@ public partial class EarthquakeMapView : UserControl
         bool fillIntensityAreas = ShouldFillIntensityAreas(mapViewModel.ViewedReportType);
         IReadOnlyList<MapPolygonGeometry> visibleOutline = mapViewModel.IsDistantEvent
             ? []
-            : mapViewModel.Outline;
+            : renderBounds is MapGeometryBounds outlineBounds
+                ? mapViewModel.Outline
+                    .Where(item => item.Bounds.Intersects(outlineBounds))
+                    .ToArray()
+                : mapViewModel.Outline;
+        IReadOnlyList<EarthquakeMapArea> visibleAreas = renderBounds is MapGeometryBounds areaBounds
+            ? mapViewModel.Areas
+                .Where(item => item.Bounds.Intersects(areaBounds))
+                .ToArray()
+            : mapViewModel.Areas;
+        IReadOnlyList<EarthquakeMapMunicipality> visibleMunicipalities =
+            renderBounds is MapGeometryBounds municipalityBounds
+                ? mapViewModel.Municipalities
+                    .Where(item => item.Bounds.Intersects(municipalityBounds))
+                    .ToArray()
+                : mapViewModel.Municipalities;
+        IReadOnlyList<EarthquakeMapBoundaryLayer> visibleBoundaryLayers =
+            renderBounds is MapGeometryBounds boundaryBounds
+                ? mapViewModel.BoundaryLayers
+                    .Select(layer => new EarthquakeMapBoundaryLayer(
+                        layer.Intensity,
+                        layer.Boundaries
+                            .Where(item => item.Bounds.Intersects(boundaryBounds))
+                            .ToImmutableArray()))
+                    .Where(layer => !layer.Boundaries.IsDefaultOrEmpty)
+                    .ToArray()
+                : mapViewModel.BoundaryLayers;
+        IReadOnlyList<EarthquakeMapArea> visibleSelectedAreas =
+            renderBounds is MapGeometryBounds selectedAreaBounds
+                ? mapViewModel.SelectedAreaHighlights
+                    .Where(item => item.Bounds.Intersects(selectedAreaBounds))
+                    .ToArray()
+                : mapViewModel.SelectedAreaHighlights;
+        IReadOnlyList<EarthquakeMapMunicipality> visibleSelectedMunicipalities =
+            renderBounds is MapGeometryBounds selectedMunicipalityBounds
+                ? mapViewModel.SelectedMunicipalityHighlights
+                    .Where(item => item.Bounds.Intersects(selectedMunicipalityBounds))
+                    .ToArray()
+                : mapViewModel.SelectedMunicipalityHighlights;
+        int visibleBoundaryCount = visibleBoundaryLayers.Sum(layer => layer.Boundaries.Length);
 
         StaticGeometryCacheKey staticGeometryCacheKey = CreateStaticGeometryCacheKey(
             mapViewModel,
@@ -888,7 +968,7 @@ public partial class EarthquakeMapView : UserControl
 
                 if (fillIntensityAreas)
                 {
-                    foreach (EarthquakeMapArea area in mapViewModel.Areas)
+                    foreach (EarthquakeMapArea area in visibleAreas)
                     {
                         if (!ShouldDrawIntensityArea(mapViewModel.ViewedReportType, area.Intensity))
                         {
@@ -903,7 +983,7 @@ public partial class EarthquakeMapView : UserControl
                     }
                 }
 
-                foreach (EarthquakeMapMunicipality municipality in mapViewModel.Municipalities)
+                foreach (EarthquakeMapMunicipality municipality in visibleMunicipalities)
                 {
                     bool hasIntensity = IsKnownIntensity(municipality.Intensity);
                     DrawGeometry(
@@ -921,7 +1001,7 @@ public partial class EarthquakeMapView : UserControl
                             0.8));
                 }
 
-                foreach (EarthquakeMapBoundaryLayer layer in mapViewModel.BoundaryLayers)
+                foreach (EarthquakeMapBoundaryLayer layer in visibleBoundaryLayers)
                 {
                     if (layer.Boundaries.Length == 0 ||
                         !ShouldDrawIntensityBoundary(mapViewModel.ViewedReportType, layer.Intensity))
@@ -940,7 +1020,7 @@ public partial class EarthquakeMapView : UserControl
                             1.8));
                 }
 
-                foreach (EarthquakeMapArea area in mapViewModel.SelectedAreaHighlights)
+                foreach (EarthquakeMapArea area in visibleSelectedAreas)
                 {
                     DrawSelectionGlow(
                         context,
@@ -949,7 +1029,7 @@ public partial class EarthquakeMapView : UserControl
                         area.Intensity);
                 }
 
-                foreach (EarthquakeMapMunicipality municipality in mapViewModel.SelectedMunicipalityHighlights)
+                foreach (EarthquakeMapMunicipality municipality in visibleSelectedMunicipalities)
                 {
                     DrawSelectionGlow(
                         context,
@@ -964,11 +1044,11 @@ public partial class EarthquakeMapView : UserControl
         double staticElapsed = Stopwatch.GetElapsedTime(staticStarted).TotalMilliseconds;
         if (HasStaticGeometry(
                 visibleOutline.Count,
-                mapViewModel.Areas.Count,
-                mapViewModel.Municipalities.Count,
-                mapViewModel.BoundaryLayers.Count,
-                mapViewModel.SelectedAreaHighlights.Count,
-                mapViewModel.SelectedMunicipalityHighlights.Count))
+                visibleAreas.Count,
+                visibleMunicipalities.Count,
+                visibleBoundaryCount,
+                visibleSelectedAreas.Count,
+                visibleSelectedMunicipalities.Count))
         {
             MapContentCanvas.Children.Add(staticGeometryHost);
         }
@@ -1005,9 +1085,12 @@ public partial class EarthquakeMapView : UserControl
             $"elapsed={Stopwatch.GetElapsedTime(renderStarted).TotalMilliseconds:0.##}ms " +
             $"build={Stopwatch.GetElapsedTime(elementBuildStarted).TotalMilliseconds:0.##}ms " +
             $"children={MapContentCanvas.Children.Count} " +
-                    $"outline={visibleOutline.Count} areas={mapViewModel.Areas.Count} " +
-            $"municipalities={mapViewModel.Municipalities.Count} " +
-            $"boundaries={mapViewModel.BoundaryLayers.Count} markers={mapViewModel.Markers.Count} " +
+            $"outline={visibleOutline.Count}/{mapViewModel.Outline.Length} " +
+            $"areas={visibleAreas.Count}/{mapViewModel.Areas.Count} " +
+            $"municipalities={visibleMunicipalities.Count}/{mapViewModel.Municipalities.Count} " +
+            $"boundaries={visibleBoundaryCount}/" +
+            $"{mapViewModel.BoundaryLayers.Sum(layer => layer.Boundaries.Length)} " +
+            $"markers={mapViewModel.Markers.Count} " +
             $"markerTypes={CountMarkerDrawingTypes(mapViewModel.Markers)} " +
             $"staticCache={(staticGeometryCacheHit ? "hit" : "miss")} " +
             $"stages=legend:{legendElapsed:0.##}ms,static:{staticElapsed:0.##}ms," +

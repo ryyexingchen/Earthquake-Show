@@ -131,6 +131,10 @@ public sealed class EarthquakeMapViewModelTests
         Assert.Equal(0, geometry.InvalidGeometryCount);
         Assert.Equal(129, geometry.Bounds.MinLongitude, precision: 3);
         Assert.Equal(132, geometry.Bounds.MaxLongitude, precision: 3);
+        Assert.Equal(129, geometry.Polygons[1].Bounds.MinLongitude, precision: 3);
+        Assert.Equal(132, geometry.Polygons[1].Bounds.MaxLongitude, precision: 3);
+        Assert.Equal(31, geometry.Polygons[1].Bounds.MinLatitude, precision: 3);
+        Assert.Equal(34.5, geometry.Polygons[1].Bounds.MaxLatitude, precision: 3);
     }
 
     [Fact]

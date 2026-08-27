@@ -22,6 +22,9 @@ public sealed class MapBoundaryGeometryTests
         Assert.Equal(0.015, geometry.SimplificationToleranceDegrees, precision: 3);
         Assert.Equal(129, geometry.Bounds.MinLongitude, precision: 3);
         Assert.Equal(131, geometry.Bounds.MaxLongitude, precision: 3);
+        Assert.Equal(129, geometry.Boundaries[0].Bounds.MinLongitude, precision: 3);
+        Assert.Equal(130, geometry.Boundaries[0].Bounds.MaxLongitude, precision: 3);
+        Assert.Equal(30, geometry.Boundaries[0].Bounds.MinLatitude, precision: 3);
     }
 
     [Fact]
