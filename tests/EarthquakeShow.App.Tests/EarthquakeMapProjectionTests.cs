@@ -421,6 +421,23 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Theory]
+    [InlineData(true, false, false, true)]
+    [InlineData(true, true, false, false)]
+    [InlineData(true, false, true, false)]
+    [InlineData(false, false, false, false)]
+    public void PanVisualReuseRequiresStableContentAndDetail(
+        bool isPanning,
+        bool contentChanged,
+        bool detailWillChange,
+        bool expected)
+    {
+        Assert.Equal(expected, EarthquakeMapView.ShouldReusePanVisual(
+            isPanning,
+            contentChanged,
+            detailWillChange));
+    }
+
+    [Theory]
     [InlineData(1, 0, 0, 0, 0, 0, true)]
     [InlineData(0, 0, 0, 0, 0, 0, false)]
     public void StaticMapLayersUseOneDrawingHostWhenGeometryExists(

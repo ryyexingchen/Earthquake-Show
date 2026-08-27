@@ -33,6 +33,7 @@ public partial class EarthquakeMapView : UserControl
     private bool _markerCacheShowLabels;
     private double _markerCachePixelsPerDip;
     private bool _renderPending;
+    private bool _panContentChanged;
     private bool _isPanning;
     private bool _isWheelZooming;
     private double _wheelBaseZoomLevel;
@@ -84,6 +85,7 @@ public partial class EarthquakeMapView : UserControl
         MapContentCanvas.CacheMode = CreatePanCache();
         _renderThrottleTimer.Stop();
         _renderPending = false;
+        _panContentChanged = false;
         RenderMap();
         await EnsureMapDetailLevelAsync();
     }
@@ -107,6 +109,7 @@ public partial class EarthquakeMapView : UserControl
         MapContentCanvas.CacheMode = null;
         _renderThrottleTimer.Stop();
         _renderPending = false;
+        _panContentChanged = false;
         if (ViewModel is not null)
         {
             ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
@@ -116,6 +119,11 @@ public partial class EarthquakeMapView : UserControl
 
     private void OnSizeChanged(object sender, SizeChangedEventArgs e)
     {
+        if (_isPanning)
+        {
+            _panContentChanged = true;
+        }
+
         if (!_isPanning &&
             ViewModel?.FollowSelection == true &&
             ViewModel.HasSelectedEvent &&
@@ -140,6 +148,7 @@ public partial class EarthquakeMapView : UserControl
 
         if (e.PropertyName == nameof(EarthquakeMapViewModel.ViewedReportKey))
         {
+            _panContentChanged |= _isPanning;
             CancelWheelZoomPreview();
             if (!_isPanning)
             {
@@ -180,12 +189,10 @@ public partial class EarthquakeMapView : UserControl
             or nameof(EarthquakeMapViewModel.BoundaryLayers)
             or nameof(EarthquakeMapViewModel.Markers)
             or nameof(EarthquakeMapViewModel.ZoomLevel)
-            or nameof(EarthquakeMapViewModel.FocusedCoordinate)
-            or nameof(EarthquakeMapViewModel.FollowSelection)
-            or nameof(EarthquakeMapViewModel.EffectiveFocusMode)
             or nameof(EarthquakeMapViewModel.HasSelectedEvent)
             or nameof(EarthquakeMapViewModel.SelectedMapSelection))
         {
+            _panContentChanged |= _isPanning;
             RequestRender();
         }
 
@@ -294,6 +301,7 @@ public partial class EarthquakeMapView : UserControl
         }
 
         _isPanning = true;
+        _panContentChanged = _renderPending;
         ViewModel.SetMapPanning(true);
         ViewModel.BeginManualInteraction();
         _lastPanPoint = e.GetPosition(MapCanvas);
@@ -334,7 +342,14 @@ public partial class EarthquakeMapView : UserControl
             return;
         }
 
-        CommitViewportCenter("MouseUp");
+        bool reusePanVisual = ShouldReusePanVisualAfterCommit();
+        CommitViewportCenter("MouseUp", requestRender: !reusePanVisual);
+        if (reusePanVisual)
+        {
+            _renderPending = false;
+            _renderThrottleTimer.Stop();
+            TraceMap("PanVisualReuse", GetViewportCenter(), "reason=mouse-up");
+        }
         StopPanning();
         await EnsureMapDetailLevelAsync();
         e.Handled = true;
@@ -345,7 +360,14 @@ public partial class EarthquakeMapView : UserControl
         bool wasPanning = _isPanning;
         if (wasPanning)
         {
-            CommitViewportCenter("LostMouseCapture");
+            bool reusePanVisual = ShouldReusePanVisualAfterCommit();
+            CommitViewportCenter("LostMouseCapture", requestRender: !reusePanVisual);
+            if (reusePanVisual)
+            {
+                _renderPending = false;
+                _renderThrottleTimer.Stop();
+                TraceMap("PanVisualReuse", GetViewportCenter(), "reason=lost-capture");
+            }
         }
         StopPanning();
         if (wasPanning)
@@ -658,7 +680,7 @@ public partial class EarthquakeMapView : UserControl
             : projectedCenter;
     }
 
-    private void CommitViewportCenter(string reason)
+    private void CommitViewportCenter(string reason, bool requestRender = true)
     {
         GeoCoordinate? center = GetViewportCenter();
         if (center is not null)
@@ -666,9 +688,40 @@ public partial class EarthquakeMapView : UserControl
             _viewportCenter = center;
         }
 
-        _panOffset = default;
+        if (!requestRender)
+        {
+            Vector committedVisualOffset = _panOffset - _renderedPanOffset;
+            _panOffset = default;
+            _renderedPanOffset = -committedVisualOffset;
+            MapPanTransform.X = committedVisualOffset.X;
+            MapPanTransform.Y = committedVisualOffset.Y;
+        }
+        else
+        {
+            _panOffset = default;
+        }
+
         TraceMap(reason, center);
-        RequestRender();
+        if (requestRender)
+        {
+            RequestRender();
+        }
+    }
+
+    private bool ShouldReusePanVisualAfterCommit()
+    {
+        if (ViewModel is null || _panContentChanged)
+        {
+            return false;
+        }
+
+        MapGeometryBounds? viewportBounds = ViewModel.IsDistantEvent
+            ? null
+            : GetDetailViewportBounds();
+        return ShouldReusePanVisual(
+            _isPanning,
+            _panContentChanged,
+            ViewModel.WillChangeDetailLevel(viewportBounds));
     }
 
     private void StopPanning()
@@ -699,6 +752,14 @@ public partial class EarthquakeMapView : UserControl
     }
 
     internal static bool ShouldDeferRenderDuringPan(bool isPanning) => isPanning;
+
+    internal static bool ShouldReusePanVisual(
+        bool isPanning,
+        bool contentChanged,
+        bool detailWillChange)
+    {
+        return isPanning && !contentChanged && !detailWillChange;
+    }
 
     internal static bool ShouldDeferRenderDuringInteraction(
         bool isPanning,
@@ -758,6 +819,7 @@ public partial class EarthquakeMapView : UserControl
         MapPanTransform.Y = 0;
         _renderedPanOffset = _panOffset;
         MapContentCanvas.Children.Clear();
+        _panContentChanged = false;
         long elementBuildStarted = Stopwatch.GetTimestamp();
         long legendStarted = Stopwatch.GetTimestamp();
         UpdateLegend();
