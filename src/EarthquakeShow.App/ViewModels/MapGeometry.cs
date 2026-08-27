@@ -35,6 +35,12 @@ public readonly record struct MapGeometryBounds(
         MinLatitude <= other.MaxLatitude &&
         MaxLatitude >= other.MinLatitude;
 
+    public bool Contains(MapGeometryBounds other) =>
+        MinLongitude <= other.MinLongitude &&
+        MaxLongitude >= other.MaxLongitude &&
+        MinLatitude <= other.MinLatitude &&
+        MaxLatitude >= other.MaxLatitude;
+
     public static MapGeometryBounds FromBounds(IEnumerable<MapGeometryBounds> bounds)
     {
         ArgumentNullException.ThrowIfNull(bounds);

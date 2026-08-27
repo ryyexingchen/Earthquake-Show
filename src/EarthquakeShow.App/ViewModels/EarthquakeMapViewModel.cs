@@ -953,6 +953,18 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         return GetDesiredDetailLevel() != DetailLevel;
     }
 
+    internal bool WillDecreaseDetailLevel()
+    {
+        return IsDetailLevelDecrease(DetailLevel, GetDesiredDetailLevel());
+    }
+
+    internal static bool IsDetailLevelDecrease(
+        MapDetailLevel currentLevel,
+        MapDetailLevel desiredLevel)
+    {
+        return desiredLevel < currentLevel;
+    }
+
     internal void SetMapPanning(bool isPanning)
     {
         _isMapPanning = isPanning;

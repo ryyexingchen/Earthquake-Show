@@ -14,7 +14,7 @@ namespace EarthquakeShow.App.Views;
 public partial class EarthquakeMapView : UserControl
 {
     internal const double StationLabelZoomThreshold = 8;
-    internal const double HighDetailRenderBufferRatio = 0.15;
+    internal const double HighDetailRenderBufferRatio = 0.25;
 
     private static readonly Color OutlineFill = Color.FromRgb(243, 239, 228);
     private static readonly Color OutlineStroke = Color.FromRgb(121, 143, 153);
@@ -30,6 +30,7 @@ public partial class EarthquakeMapView : UserControl
     private readonly Dictionary<MarkerDrawingKey, DrawingGroup> _markerDrawingCache = [];
     private MapDrawingHost? _staticGeometryHost;
     private StaticGeometryCacheKey? _staticGeometryCacheKey;
+    private MapGeometryBounds? _renderedHighDetailBounds;
     private string? _markerCacheReportKey;
     private bool _markerCacheShowLabels;
     private double _markerCachePixelsPerDip;
@@ -48,6 +49,7 @@ public partial class EarthquakeMapView : UserControl
     private Task? _detailEnsureTask;
     private bool _detailEnsureRequested;
     private bool _detailEnsureDeferredLogged;
+    private bool _renderDeferredForDetailDecrease;
 
     public EarthquakeMapView()
     {
@@ -83,6 +85,7 @@ public partial class EarthquakeMapView : UserControl
         MapPanTransform.X = 0;
         MapPanTransform.Y = 0;
         _viewportCenter = null;
+        _renderedHighDetailBounds = null;
         _lastFocusedCoordinate = ViewModel?.FocusedCoordinate;
         MapContentCanvas.CacheMode = CreatePanCache();
         _renderThrottleTimer.Stop();
@@ -104,10 +107,12 @@ public partial class EarthquakeMapView : UserControl
         ResetWheelZoomTransform();
         _wheelZoomTimer.Stop();
         _detailEnsureRequested = false;
+        _renderDeferredForDetailDecrease = false;
         _markerDrawingCache.Clear();
         _markerCacheReportKey = null;
         _staticGeometryHost = null;
         _staticGeometryCacheKey = null;
+        _renderedHighDetailBounds = null;
         MapContentCanvas.CacheMode = null;
         _renderThrottleTimer.Stop();
         _renderPending = false;
@@ -228,7 +233,8 @@ public partial class EarthquakeMapView : UserControl
     private void RequestRender()
     {
         _renderPending = true;
-        if (ShouldDeferRenderDuringInteraction(_isPanning, _isWheelZooming))
+        if (_renderDeferredForDetailDecrease ||
+            ShouldDeferRenderDuringInteraction(_isPanning, _isWheelZooming))
         {
             return;
         }
@@ -453,9 +459,22 @@ public partial class EarthquakeMapView : UserControl
             return;
         }
 
+        bool deferRender = ViewModel?.WillDecreaseDetailLevel() == true;
         _isWheelZooming = false;
-        CommitViewportCenter("MouseWheel");
-        TraceMap("WheelCommit", GetViewportCenter());
+        if (deferRender)
+        {
+            _renderDeferredForDetailDecrease = true;
+            _renderThrottleTimer.Stop();
+        }
+
+        CommitViewportCenter(
+            "MouseWheel",
+            requestRender: !deferRender,
+            preserveVisual: false);
+        TraceMap(
+            "WheelCommit",
+            GetViewportCenter(),
+            $"renderDeferred={deferRender}");
     }
 
     internal static double GetWheelPreviewScale(
@@ -501,15 +520,27 @@ public partial class EarthquakeMapView : UserControl
 
     private async Task ProcessDetailChecksAsync()
     {
-        while (_detailEnsureRequested && IsLoaded)
+        try
         {
-            if (ShouldDeferDetailCheckDuringPan(_isPanning))
+            while (_detailEnsureRequested && IsLoaded)
             {
-                return;
-            }
+                if (ShouldDeferDetailCheckDuringPan(_isPanning))
+                {
+                    return;
+                }
 
-            _detailEnsureRequested = false;
-            await EnsureMapDetailLevelCoreAsync();
+                _detailEnsureRequested = false;
+                await EnsureMapDetailLevelCoreAsync();
+            }
+        }
+        finally
+        {
+            if (_renderDeferredForDetailDecrease && !_isPanning)
+            {
+                _renderDeferredForDetailDecrease = false;
+                TraceMap("WheelRenderResumed", GetViewportCenter(), "reason=detail-check-complete");
+                RequestRender();
+            }
         }
     }
 
@@ -573,18 +604,19 @@ public partial class EarthquakeMapView : UserControl
         }
 
         MapProjection projection = CreateProjection();
-        GeoCoordinate topLeft = projection.Unproject(new Point(0, 0));
-        GeoCoordinate bottomRight = projection.Unproject(
-            new Point(MapCanvas.ActualWidth, MapCanvas.ActualHeight));
-        double longitudeSpan = Math.Abs(bottomRight.Longitude - topLeft.Longitude);
-        double latitudeSpan = Math.Abs(bottomRight.Latitude - topLeft.Latitude);
+        MapGeometryBounds viewportBounds = GetViewportBounds(
+            projection,
+            MapCanvas.ActualWidth,
+            MapCanvas.ActualHeight);
+        double longitudeSpan = viewportBounds.LongitudeSpan;
+        double latitudeSpan = viewportBounds.LatitudeSpan;
         double longitudeMargin = Math.Max(0.1, longitudeSpan * 0.2);
         double latitudeMargin = Math.Max(0.1, latitudeSpan * 0.2);
         return new MapGeometryBounds(
-            Math.Min(topLeft.Longitude, bottomRight.Longitude) - longitudeMargin,
-            Math.Max(topLeft.Longitude, bottomRight.Longitude) + longitudeMargin,
-            Math.Min(topLeft.Latitude, bottomRight.Latitude) - latitudeMargin,
-            Math.Max(topLeft.Latitude, bottomRight.Latitude) + latitudeMargin);
+            viewportBounds.MinLongitude - longitudeMargin,
+            viewportBounds.MaxLongitude + longitudeMargin,
+            viewportBounds.MinLatitude - latitudeMargin,
+            viewportBounds.MaxLatitude + latitudeMargin);
     }
 
     private static MapGeometryBounds GetBufferedRenderBounds(
@@ -592,15 +624,23 @@ public partial class EarthquakeMapView : UserControl
         double width,
         double height)
     {
+        return ExpandRenderBounds(
+            GetViewportBounds(projection, width, height),
+            HighDetailRenderBufferRatio);
+    }
+
+    private static MapGeometryBounds GetViewportBounds(
+        MapProjection projection,
+        double width,
+        double height)
+    {
         GeoCoordinate topLeft = projection.Unproject(new Point(0, 0));
         GeoCoordinate bottomRight = projection.Unproject(new Point(width, height));
-        return ExpandRenderBounds(
-            new MapGeometryBounds(
-                Math.Min(topLeft.Longitude, bottomRight.Longitude),
-                Math.Max(topLeft.Longitude, bottomRight.Longitude),
-                Math.Min(topLeft.Latitude, bottomRight.Latitude),
-                Math.Max(topLeft.Latitude, bottomRight.Latitude)),
-            HighDetailRenderBufferRatio);
+        return new MapGeometryBounds(
+            Math.Min(topLeft.Longitude, bottomRight.Longitude),
+            Math.Max(topLeft.Longitude, bottomRight.Longitude),
+            Math.Min(topLeft.Latitude, bottomRight.Latitude),
+            Math.Max(topLeft.Latitude, bottomRight.Latitude));
     }
 
     internal static MapGeometryBounds ExpandRenderBounds(
@@ -723,7 +763,10 @@ public partial class EarthquakeMapView : UserControl
             : projectedCenter;
     }
 
-    private void CommitViewportCenter(string reason, bool requestRender = true)
+    private void CommitViewportCenter(
+        string reason,
+        bool requestRender = true,
+        bool preserveVisual = true)
     {
         GeoCoordinate? center = GetViewportCenter();
         if (center is not null)
@@ -731,7 +774,7 @@ public partial class EarthquakeMapView : UserControl
             _viewportCenter = center;
         }
 
-        if (!requestRender)
+        if (!requestRender && preserveVisual)
         {
             Vector committedVisualOffset = _panOffset - _renderedPanOffset;
             _panOffset = default;
@@ -758,10 +801,38 @@ public partial class EarthquakeMapView : UserControl
             return false;
         }
 
+        bool renderedCoverageContainsViewport = IsRenderedCoverageCurrent();
+        if (!renderedCoverageContainsViewport)
+        {
+            TraceMap("PanRenderCoverageExpired", GetViewportCenter());
+        }
+
         return ShouldReusePanVisual(
             _isPanning,
             _panContentChanged,
-            ViewModel.WillSwitchDetailLevel());
+            ViewModel.WillSwitchDetailLevel(),
+            renderedCoverageContainsViewport);
+    }
+
+    private bool IsRenderedCoverageCurrent()
+    {
+        if (ViewModel?.DetailLevel != MapDetailLevel.High)
+        {
+            return true;
+        }
+
+        if (_renderedHighDetailBounds is not MapGeometryBounds renderedBounds ||
+            MapCanvas.ActualWidth < 10 ||
+            MapCanvas.ActualHeight < 10)
+        {
+            return false;
+        }
+
+        MapGeometryBounds viewportBounds = GetViewportBounds(
+            CreateProjection(),
+            MapCanvas.ActualWidth,
+            MapCanvas.ActualHeight);
+        return renderedBounds.Contains(viewportBounds);
     }
 
     private void StopPanning()
@@ -796,9 +867,13 @@ public partial class EarthquakeMapView : UserControl
     internal static bool ShouldReusePanVisual(
         bool isPanning,
         bool contentChanged,
-        bool detailWillChange)
+        bool detailWillChange,
+        bool renderedCoverageContainsViewport)
     {
-        return isPanning && !contentChanged && !detailWillChange;
+        return isPanning &&
+            !contentChanged &&
+            !detailWillChange &&
+            renderedCoverageContainsViewport;
     }
 
     internal static bool ShouldDeferRenderDuringInteraction(
@@ -1078,6 +1153,7 @@ public partial class EarthquakeMapView : UserControl
             MapContentCanvas.Children.Add(markerHost);
         }
         double markerElapsed = Stopwatch.GetElapsedTime(markerStarted).TotalMilliseconds;
+        _renderedHighDetailBounds = renderBounds;
 
         TraceMap(
             "RenderComplete",

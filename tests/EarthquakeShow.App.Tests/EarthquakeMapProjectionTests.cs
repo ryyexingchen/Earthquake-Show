@@ -452,20 +452,23 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Theory]
-    [InlineData(true, false, false, true)]
-    [InlineData(true, true, false, false)]
-    [InlineData(true, false, true, false)]
-    [InlineData(false, false, false, false)]
-    public void PanVisualReuseRequiresStableContentAndDetail(
+    [InlineData(true, false, false, true, true)]
+    [InlineData(true, true, false, true, false)]
+    [InlineData(true, false, true, true, false)]
+    [InlineData(true, false, false, false, false)]
+    [InlineData(false, false, false, true, false)]
+    public void PanVisualReuseRequiresStableContentDetailAndRenderCoverage(
         bool isPanning,
         bool contentChanged,
         bool detailWillChange,
+        bool renderedCoverageContainsViewport,
         bool expected)
     {
         Assert.Equal(expected, EarthquakeMapView.ShouldReusePanVisual(
             isPanning,
             contentChanged,
-            detailWillChange));
+            detailWillChange,
+            renderedCoverageContainsViewport));
     }
 
     [Theory]
@@ -509,10 +512,10 @@ public sealed class EarthquakeMapProjectionTests
             new MapGeometryBounds(130, 132, 32, 33),
             EarthquakeMapView.HighDetailRenderBufferRatio);
 
-        Assert.Equal(129.7, bounds.MinLongitude, precision: 6);
-        Assert.Equal(132.3, bounds.MaxLongitude, precision: 6);
-        Assert.Equal(31.85, bounds.MinLatitude, precision: 6);
-        Assert.Equal(33.15, bounds.MaxLatitude, precision: 6);
+        Assert.Equal(129.5, bounds.MinLongitude, precision: 6);
+        Assert.Equal(132.5, bounds.MaxLongitude, precision: 6);
+        Assert.Equal(31.75, bounds.MinLatitude, precision: 6);
+        Assert.Equal(33.25, bounds.MaxLatitude, precision: 6);
     }
 
     [Theory]
@@ -545,6 +548,15 @@ public sealed class EarthquakeMapProjectionTests
         ]);
 
         Assert.Equal(new MapGeometryBounds(129, 132, 31, 34), combined);
+    }
+
+    [Fact]
+    public void RenderCoverageDetectsCumulativePanOutsideBufferedViewport()
+    {
+        MapGeometryBounds rendered = new(129.5, 132.5, 31.75, 33.25);
+
+        Assert.True(rendered.Contains(new MapGeometryBounds(130, 132, 32, 33)));
+        Assert.False(rendered.Contains(new MapGeometryBounds(130.8, 132.8, 32, 33)));
     }
 
     [Theory]
@@ -592,6 +604,22 @@ public sealed class EarthquakeMapProjectionTests
             expected,
             EarthquakeMapView.GetWheelPreviewScale(baseZoomLevel, currentZoomLevel),
             precision: 6);
+    }
+
+    [Theory]
+    [InlineData(MapDetailLevel.High, MapDetailLevel.Medium, true)]
+    [InlineData(MapDetailLevel.High, MapDetailLevel.Overview, true)]
+    [InlineData(MapDetailLevel.Medium, MapDetailLevel.Overview, true)]
+    [InlineData(MapDetailLevel.Medium, MapDetailLevel.High, false)]
+    [InlineData(MapDetailLevel.Medium, MapDetailLevel.Medium, false)]
+    public void DetailLevelDecreaseIsDistinguishedFromUpgradeAndSameLevel(
+        MapDetailLevel currentLevel,
+        MapDetailLevel desiredLevel,
+        bool expected)
+    {
+        Assert.Equal(
+            expected,
+            EarthquakeMapViewModel.IsDetailLevelDecrease(currentLevel, desiredLevel));
     }
 
     [Theory]
