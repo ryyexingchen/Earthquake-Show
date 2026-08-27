@@ -63,6 +63,21 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public void TryLoadHigh_ReturnsNullWhenCancellationWasRequested()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var provider = new MapLodResourceProvider(
+            "areas-medium.geojson",
+            "municipalities-medium.geojson",
+            "boundaries-medium.geojson",
+            "areas-high.geojson",
+            "municipalities-high.geojson");
+
+        Assert.Null(provider.TryLoadHigh(cancellation.Token));
+    }
+
+    [Fact]
     public void LoadFromJson_RejectsUnsupportedGeometry()
     {
         const string json = """

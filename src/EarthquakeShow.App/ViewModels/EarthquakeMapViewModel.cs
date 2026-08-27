@@ -828,7 +828,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
             MapGeometrySet? geometrySet = await Task.Run(
                 () => desiredLevel == MapDetailLevel.High
-                    ? _lodResourceProvider.LoadHigh(
+                    ? _lodResourceProvider.TryLoadHigh(
                         loadCancellation.Token,
                         viewportBounds)
                     : _lodResourceProvider.TryLoadMedium(loadCancellation.Token),

@@ -74,23 +74,43 @@ public sealed class MapLodResourceProvider
         CancellationToken cancellationToken = default,
         MapGeometryBounds? viewportBounds = null)
     {
+        MapGeometrySet? geometrySet = TryLoadHigh(cancellationToken, viewportBounds);
+        return geometrySet ?? throw new OperationCanceledException(cancellationToken);
+    }
+
+    public MapGeometrySet? TryLoadHigh(
+        CancellationToken cancellationToken = default,
+        MapGeometryBounds? viewportBounds = null)
+    {
         if (string.IsNullOrWhiteSpace(_highAreasPath) ||
             string.IsNullOrWhiteSpace(_highMunicipalitiesPath))
         {
             throw new InvalidOperationException("未配置高精度地图资源。");
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
-        OfflineMapGeometry areas = OfflineMapGeometry.LoadFromFile(
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+
+        OfflineMapGeometry? areas = OfflineMapGeometry.TryLoadFromFile(
             _highAreasPath,
             viewportBounds,
             cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-        OfflineMapGeometry municipalities = OfflineMapGeometry.LoadFromFile(
+        if (areas is null || cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+
+        OfflineMapGeometry? municipalities = OfflineMapGeometry.TryLoadFromFile(
             _highMunicipalitiesPath,
             viewportBounds,
             cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
+        if (municipalities is null || cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+
         OfflineMapBoundaryGeometry boundaries = string.IsNullOrWhiteSpace(_highBoundariesPath)
             ? OfflineMapBoundaryGeometry.FromPolygons(areas)
             : OfflineMapBoundaryGeometry.LoadFromFile(_highBoundariesPath, viewportBounds);

@@ -68,6 +68,15 @@ public sealed class OfflineMapGeometry
         MapGeometryBounds? filterBounds = null,
         CancellationToken cancellationToken = default)
     {
+        OfflineMapGeometry? geometry = TryLoadFromFile(path, filterBounds, cancellationToken);
+        return geometry ?? throw new OperationCanceledException(cancellationToken);
+    }
+
+    public static OfflineMapGeometry? TryLoadFromFile(
+        string path,
+        MapGeometryBounds? filterBounds = null,
+        CancellationToken cancellationToken = default)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         using FileStream stream = File.OpenRead(path);
         if (filterBounds is MapGeometryBounds bounds &&
@@ -76,12 +85,16 @@ public sealed class OfflineMapGeometry
             return LoadFromIndexedFile(stream, index, bounds, cancellationToken);
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+
         using JsonDocument document = JsonDocument.Parse(stream);
         return LoadFromDocument(document, filterBounds);
     }
 
-    private static OfflineMapGeometry LoadFromIndexedFile(
+    private static OfflineMapGeometry? LoadFromIndexedFile(
         FileStream stream,
         MapGeometryFeatureIndexFile index,
         MapGeometryBounds filterBounds,
@@ -91,7 +104,10 @@ public sealed class OfflineMapGeometry
         int invalidGeometryCount = 0;
         foreach (MapGeometryFeatureIndexEntry entry in index.Features)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return null;
+            }
             if (!Intersects(
                     entry.MinLongitude,
                     entry.MaxLongitude,
