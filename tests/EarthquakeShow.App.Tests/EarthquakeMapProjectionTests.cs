@@ -302,6 +302,14 @@ public sealed class EarthquakeMapProjectionTests
             new MapGeometryBounds(130, 131, 32, 34)));
     }
 
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public void RenderIsDeferredWhilePanning(bool isPanning, bool expected)
+    {
+        Assert.Equal(expected, EarthquakeMapView.ShouldDeferRenderDuringPan(isPanning));
+    }
+
     [Fact]
     public void GlobalZoomLevelUsesOverviewScaleAndProgressesByOnePointTwentyFive()
     {

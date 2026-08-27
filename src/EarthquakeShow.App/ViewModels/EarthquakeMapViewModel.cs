@@ -99,6 +99,11 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     private MapGeometrySet? _mediumGeometrySet;
     private MapGeometrySet? _retainedHighGeometrySet;
     private MapGeometryBounds? _retainedHighViewportBounds;
+    private bool _isMapPanning;
+    private MapGeometrySet? _pendingGeometrySet;
+    private MapDetailLevel? _pendingGeometryLevel;
+    private MapGeometryBounds? _pendingGeometryBounds;
+    private GeoCoordinate? _pendingGeometryCenter;
     private long _detailLoadGeneration;
     private bool _lastHighLoadUsedCache;
     private bool _isApplyingAutoScale;
@@ -642,6 +647,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             $"viewport={FormatBounds(viewportBounds)} center={FormatCoordinate(viewportCenter)}");
         if (desiredLevel == MapDetailLevel.Overview)
         {
+            ClearPendingGeometry();
             _detailLoadCancellation?.Cancel();
             _detailLoadGeneration++;
             _loadingHighViewportBounds = null;
@@ -662,6 +668,30 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             _retainedHighViewportBounds = null;
 
             return;
+        }
+
+        if (!_isMapPanning && _pendingGeometrySet is not null &&
+            _pendingGeometryLevel == desiredLevel &&
+            (desiredLevel != MapDetailLevel.High ||
+                (_pendingGeometryBounds is MapGeometryBounds pendingBounds &&
+                    viewportBounds is MapGeometryBounds requestedBounds &&
+                    Contains(pendingBounds, requestedBounds))))
+        {
+            MapGeometrySet pendingGeometrySet = _pendingGeometrySet;
+            MapGeometryBounds? deferredBounds = _pendingGeometryBounds;
+            GeoCoordinate? pendingCenter = _pendingGeometryCenter;
+            ClearPendingGeometry();
+            ApplyGeometrySet(pendingGeometrySet, desiredLevel, deferredBounds, viewportCenter ?? pendingCenter);
+            TraceDetail(
+                "ApplyDeferred",
+                $"detail={desiredLevel} viewport={FormatBounds(viewportBounds)} " +
+                $"center={FormatCoordinate(viewportCenter ?? pendingCenter)}");
+            return;
+        }
+
+        if (_pendingGeometrySet is not null)
+        {
+            ClearPendingGeometry();
         }
 
         if (_isLoadingDetail && _loadingDetailLevel != desiredLevel)
@@ -745,6 +775,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         _loadingViewportCenter = viewportCenter;
         _lastHighLoadUsedCache = false;
         IsLoadingDetail = true;
+        long loadStarted = Stopwatch.GetTimestamp();
         try
         {
             if (desiredLevel == MapDetailLevel.High &&
@@ -760,7 +791,9 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 }
 
                 _mediumGeometrySet = mediumGeometrySet;
-                TraceDetail("MediumLoaded", $"generation={loadGeneration}");
+                TraceDetail(
+                    "MediumLoaded",
+                    $"generation={loadGeneration} elapsed={Stopwatch.GetElapsedTime(loadStarted).TotalMilliseconds:0.##}ms");
             }
 
             if (desiredLevel == MapDetailLevel.High &&
@@ -774,7 +807,14 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                     return;
                 }
 
-                ApplyMediumFallback(_loadingViewportCenter);
+                if (!_isMapPanning)
+                {
+                    ApplyMediumFallback(_loadingViewportCenter);
+                }
+                else
+                {
+                    TraceDetail("MediumFallbackDeferred", $"generation={loadGeneration}");
+                }
                 await Task.Yield();
                 if (loadGeneration != _detailLoadGeneration ||
                     loadCancellation.IsCancellationRequested ||
@@ -797,12 +837,26 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 return;
             }
 
-            ApplyGeometrySet(
-                geometrySet,
-                desiredLevel,
-                viewportBounds,
-                _loadingViewportCenter);
-            TraceDetail("LoadApplied", $"generation={loadGeneration} detail={desiredLevel} center={FormatCoordinate(_loadingViewportCenter)}");
+            if (_isMapPanning)
+            {
+                _pendingGeometrySet = geometrySet;
+                _pendingGeometryLevel = desiredLevel;
+                _pendingGeometryBounds = viewportBounds;
+                _pendingGeometryCenter = _loadingViewportCenter;
+                TraceDetail(
+                    "LoadReadyDeferred",
+                    $"generation={loadGeneration} detail={desiredLevel} " +
+                    $"elapsed={Stopwatch.GetElapsedTime(loadStarted).TotalMilliseconds:0.##}ms " +
+                    $"viewport={FormatBounds(viewportBounds)} center={FormatCoordinate(_loadingViewportCenter)}");
+                return;
+            }
+
+            ApplyGeometrySet(geometrySet, desiredLevel, viewportBounds, _loadingViewportCenter);
+            TraceDetail(
+                "LoadApplied",
+                $"generation={loadGeneration} detail={desiredLevel} " +
+                $"elapsed={Stopwatch.GetElapsedTime(loadStarted).TotalMilliseconds:0.##}ms " +
+                $"center={FormatCoordinate(_loadingViewportCenter)}");
         }
         catch (OperationCanceledException)
         {
@@ -841,6 +895,19 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 desiredLevel,
                 _highLoadedViewportBounds,
                 viewportBounds);
+    }
+
+    internal void SetMapPanning(bool isPanning)
+    {
+        _isMapPanning = isPanning;
+    }
+
+    private void ClearPendingGeometry()
+    {
+        _pendingGeometrySet = null;
+        _pendingGeometryLevel = null;
+        _pendingGeometryBounds = null;
+        _pendingGeometryCenter = null;
     }
 
     public void ZoomIn()
@@ -984,6 +1051,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         _detailLoadCancellation?.Cancel();
         _detailLoadCancellation?.Dispose();
         _detailLoadCancellation = null;
+        ClearPendingGeometry();
         _isDisposed = true;
     }
 

@@ -32,7 +32,7 @@ public partial class EarthquakeMapView : UserControl
     public EarthquakeMapView()
     {
         InitializeComponent();
-        _renderThrottleTimer = new DispatcherTimer(DispatcherPriority.Render)
+        _renderThrottleTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
             Interval = TimeSpan.FromMilliseconds(32),
         };
@@ -175,13 +175,16 @@ public partial class EarthquakeMapView : UserControl
 
     private void RequestRender()
     {
-        if (_renderPending)
+        _renderPending = true;
+        if (ShouldDeferRenderDuringPan(_isPanning))
         {
             return;
         }
 
-        _renderPending = true;
-        _renderThrottleTimer.Start();
+        if (!_renderThrottleTimer.IsEnabled)
+        {
+            _renderThrottleTimer.Start();
+        }
     }
 
     private void OnRenderThrottleTimerTick(object? sender, EventArgs e)
@@ -190,6 +193,11 @@ public partial class EarthquakeMapView : UserControl
         if (!_renderPending || !IsLoaded)
         {
             _renderPending = false;
+            return;
+        }
+
+        if (ShouldDeferRenderDuringPan(_isPanning))
+        {
             return;
         }
 
@@ -235,6 +243,7 @@ public partial class EarthquakeMapView : UserControl
         }
 
         ViewModel.BeginManualInteraction();
+        ViewModel.SetMapPanning(true);
         MapContentCanvas.CacheMode = new BitmapCache { RenderAtScale = 1.0 };
         _isPanning = true;
         _lastPanPoint = e.GetPosition(MapCanvas);
@@ -473,7 +482,10 @@ public partial class EarthquakeMapView : UserControl
             new Point(MapCanvas.ActualWidth / 2, MapCanvas.ActualHeight / 2));
         // 几何替换前的画布中心代表用户此刻实际看到的位置；异步请求携带的中心可能已经过期。
         _viewportCenter = projectedCenter;
-        _panOffset = default;
+        if (!_isPanning)
+        {
+            _panOffset = default;
+        }
         TraceMap(
             "GeometryChanging",
             projectedCenter,
@@ -502,6 +514,7 @@ public partial class EarthquakeMapView : UserControl
         }
 
         _isPanning = false;
+        ViewModel?.SetMapPanning(false);
         if (MapCanvas.IsMouseCaptured)
         {
             MapCanvas.ReleaseMouseCapture();
@@ -509,7 +522,14 @@ public partial class EarthquakeMapView : UserControl
 
         MapContentCanvas.CacheMode = null;
         Cursor = null;
+
+        if (_renderPending && IsLoaded && !_renderThrottleTimer.IsEnabled)
+        {
+            _renderThrottleTimer.Start();
+        }
     }
+
+    internal static bool ShouldDeferRenderDuringPan(bool isPanning) => isPanning;
 
     private void RenderMap()
     {
@@ -523,6 +543,7 @@ public partial class EarthquakeMapView : UserControl
         MapPanTransform.Y = 0;
         _renderedPanOffset = _panOffset;
         MapContentCanvas.Children.Clear();
+        long elementBuildStarted = Stopwatch.GetTimestamp();
         UpdateLegend();
         GeoCoordinate? selectedEventFocusCoordinate =
             ViewModel.TryGetSelectedEventFocusCoordinate(out GeoCoordinate eventFocus)
@@ -669,6 +690,8 @@ public partial class EarthquakeMapView : UserControl
             "RenderComplete",
             projection.Unproject(new Point(MapCanvas.ActualWidth / 2, MapCanvas.ActualHeight / 2)),
             $"elapsed={Stopwatch.GetElapsedTime(renderStarted).TotalMilliseconds:0.##}ms " +
+            $"build={Stopwatch.GetElapsedTime(elementBuildStarted).TotalMilliseconds:0.##}ms " +
+            $"children={MapContentCanvas.Children.Count} " +
             $"outline={visibleOutline.Count} areas={ViewModel.Areas.Count} " +
             $"municipalities={ViewModel.Municipalities.Count} " +
             $"boundaries={ViewModel.BoundaryLayers.Count} markers={ViewModel.Markers.Count}");
