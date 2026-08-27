@@ -27,6 +27,8 @@ public partial class EarthquakeMapView : UserControl
     private readonly DispatcherTimer _renderThrottleTimer;
     private readonly DispatcherTimer _wheelZoomTimer;
     private readonly Dictionary<MarkerDrawingKey, DrawingGroup> _markerDrawingCache = [];
+    private MapDrawingHost? _staticGeometryHost;
+    private StaticGeometryCacheKey? _staticGeometryCacheKey;
     private string? _markerCacheReportKey;
     private bool _markerCacheShowLabels;
     private double _markerCachePixelsPerDip;
@@ -100,6 +102,8 @@ public partial class EarthquakeMapView : UserControl
         _detailEnsureRequested = false;
         _markerDrawingCache.Clear();
         _markerCacheReportKey = null;
+        _staticGeometryHost = null;
+        _staticGeometryCacheKey = null;
         MapContentCanvas.CacheMode = null;
         _renderThrottleTimer.Stop();
         _renderPending = false;
@@ -778,12 +782,31 @@ public partial class EarthquakeMapView : UserControl
             ? []
             : mapViewModel.Outline;
 
-        // 将静态区域几何合并到一个 DrawingVisual，避免为每个多边形创建 FrameworkElement。
-        var staticGeometryHost = new MapDrawingHost(
-            MapCanvas.ActualWidth,
-            MapCanvas.ActualHeight,
-            context =>
-            {
+        StaticGeometryCacheKey staticGeometryCacheKey = CreateStaticGeometryCacheKey(
+            mapViewModel,
+            selectedEventFocusCoordinate,
+            selectedEventBounds);
+        bool staticGeometryCacheHit = _staticGeometryHost is not null &&
+            ShouldReuseStaticGeometry(
+                _staticGeometryCacheKey is StaticGeometryCacheKey cachedKey &&
+                cachedKey.Equals(staticGeometryCacheKey),
+                _staticGeometryHost is not null);
+        MapDrawingHost staticGeometryHost;
+        if (staticGeometryCacheHit)
+        {
+            staticGeometryHost = _staticGeometryHost!;
+            TraceMap("StaticGeometryReuse", projection.Unproject(new Point(
+                MapCanvas.ActualWidth / 2,
+                MapCanvas.ActualHeight / 2)));
+        }
+        else
+        {
+            // 将静态区域几何合并到一个 DrawingVisual，避免为每个多边形创建 FrameworkElement。
+            staticGeometryHost = new MapDrawingHost(
+                MapCanvas.ActualWidth,
+                MapCanvas.ActualHeight,
+                context =>
+                {
                 foreach (MapPolygonGeometry polygon in visibleOutline)
                 {
                     DrawGeometry(
@@ -864,7 +887,10 @@ public partial class EarthquakeMapView : UserControl
                         projection,
                         municipality.Intensity);
                 }
-            });
+                });
+            _staticGeometryHost = staticGeometryHost;
+            _staticGeometryCacheKey = staticGeometryCacheKey;
+        }
         if (HasStaticGeometry(
                 visibleOutline.Count,
                 mapViewModel.Areas.Count,
@@ -907,9 +933,45 @@ public partial class EarthquakeMapView : UserControl
             $"build={Stopwatch.GetElapsedTime(elementBuildStarted).TotalMilliseconds:0.##}ms " +
             $"children={MapContentCanvas.Children.Count} " +
                     $"outline={visibleOutline.Count} areas={mapViewModel.Areas.Count} " +
-                    $"municipalities={mapViewModel.Municipalities.Count} " +
-                    $"boundaries={mapViewModel.BoundaryLayers.Count} markers={mapViewModel.Markers.Count} " +
-                    $"markerTypes={CountMarkerDrawingTypes(mapViewModel.Markers)}");
+            $"municipalities={mapViewModel.Municipalities.Count} " +
+            $"boundaries={mapViewModel.BoundaryLayers.Count} markers={mapViewModel.Markers.Count} " +
+            $"markerTypes={CountMarkerDrawingTypes(mapViewModel.Markers)} " +
+            $"staticCache={(staticGeometryCacheHit ? "hit" : "miss")}");
+    }
+
+    private StaticGeometryCacheKey CreateStaticGeometryCacheKey(
+        EarthquakeMapViewModel mapViewModel,
+        GeoCoordinate? selectedEventFocusCoordinate,
+        MapGeometryBounds? selectedEventBounds)
+    {
+        EarthquakeMapSelection? selection = mapViewModel.SelectedMapSelection;
+        return new StaticGeometryCacheKey(
+            mapViewModel.ViewedReportKey,
+            mapViewModel.DetailLevel,
+            mapViewModel.ViewedReportType,
+            mapViewModel.IsDistantEvent,
+            mapViewModel.ZoomLevel,
+            MapCanvas.ActualWidth,
+            MapCanvas.ActualHeight,
+            _viewportCenter,
+            mapViewModel.FocusedCoordinate,
+            selectedEventFocusCoordinate,
+            selectedEventBounds,
+            mapViewModel.Outline.Length,
+            mapViewModel.Areas.Count,
+            mapViewModel.Municipalities.Count,
+            mapViewModel.BoundaryLayers.Count,
+            mapViewModel.SelectedAreaHighlights.Count,
+            mapViewModel.SelectedMunicipalityHighlights.Count,
+            selection?.Kind,
+            selection?.Code);
+    }
+
+    internal static bool ShouldReuseStaticGeometry(
+        bool hasMatchingKey,
+        bool hasCachedHost)
+    {
+        return hasMatchingKey && hasCachedHost;
     }
 
     private void UpdateLegend()
@@ -1476,6 +1538,27 @@ public partial class EarthquakeMapView : UserControl
         JmaIntensity Intensity,
         bool ShowStationLabel,
         double PixelsPerDip);
+
+    private readonly record struct StaticGeometryCacheKey(
+        string? ReportKey,
+        MapDetailLevel DetailLevel,
+        EarthquakeReportType ReportType,
+        bool IsDistantEvent,
+        double ZoomLevel,
+        double Width,
+        double Height,
+        GeoCoordinate? ViewportCenter,
+        GeoCoordinate? FocusedCoordinate,
+        GeoCoordinate? SelectedEventFocusCoordinate,
+        MapGeometryBounds? SelectedEventBounds,
+        int OutlineCount,
+        int AreaCount,
+        int MunicipalityCount,
+        int BoundaryCount,
+        int SelectedAreaCount,
+        int SelectedMunicipalityCount,
+        EarthquakeMapSelectionKind? SelectionKind,
+        string? SelectionCode);
 
     private static Color GetIntensityBorderColor(JmaIntensity intensity, byte alpha)
     {

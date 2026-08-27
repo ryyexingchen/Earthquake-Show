@@ -425,6 +425,19 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Theory]
+    [InlineData(true, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    public void StaticGeometryReuseRequiresMatchingKeyAndCachedHost(
+        bool hasMatchingKey,
+        bool hasCachedHost,
+        bool expected)
+    {
+        Assert.Equal(expected,
+            EarthquakeMapView.ShouldReuseStaticGeometry(hasMatchingKey, hasCachedHost));
+    }
+
+    [Theory]
     [InlineData(true, true)]
     [InlineData(false, false)]
     public void PanCacheIsKeptOnlyWhileViewIsLoaded(bool isLoaded, bool expected)
