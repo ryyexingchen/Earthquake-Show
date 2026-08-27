@@ -675,7 +675,9 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             (desiredLevel != MapDetailLevel.High ||
                 (_pendingGeometryBounds is MapGeometryBounds pendingBounds &&
                     viewportBounds is MapGeometryBounds requestedBounds &&
-                    Contains(pendingBounds, requestedBounds))))
+                    Contains(
+                        pendingBounds,
+                        NormalizeHighViewportBounds(requestedBounds)!.Value))))
         {
             MapGeometrySet pendingGeometrySet = _pendingGeometrySet;
             MapGeometryBounds? deferredBounds = _pendingGeometryBounds;
@@ -694,6 +696,10 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             ClearPendingGeometry();
         }
 
+        MapGeometryBounds? normalizedHighViewportBounds = desiredLevel == MapDetailLevel.High
+            ? NormalizeHighViewportBounds(viewportBounds)
+            : viewportBounds;
+
         if (_isLoadingDetail && _loadingDetailLevel != desiredLevel)
         {
             TraceDetail(
@@ -703,6 +709,23 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             _detailLoadGeneration++;
         }
 
+        if (ShouldReuseInFlightDetailLoad(
+                _isLoadingDetail,
+                _loadingDetailLevel,
+                desiredLevel))
+        {
+            if (viewportCenter is not null)
+            {
+                _loadingViewportCenter = viewportCenter;
+            }
+
+            TraceDetail(
+                "EnsureReuseInFlight",
+                $"detail={desiredLevel} viewport={FormatBounds(viewportBounds)} " +
+                $"center={FormatCoordinate(_loadingViewportCenter)}");
+            return;
+        }
+
         // 连续缩放/拖动时复用仍在进行的高精度加载，避免重复解析大型 GeoJSON。
         // 视口中心单独更新，确保异步加载完成后使用用户最后看到的位置。
         if (ShouldReuseInFlightHighLoad(
@@ -710,7 +733,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 _loadingDetailLevel,
                 _loadingHighViewportBounds,
                 desiredLevel,
-                viewportBounds))
+                normalizedHighViewportBounds))
         {
             if (viewportCenter is not null)
             {
@@ -730,7 +753,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             if (!NeedsHighDetailReload(
                     desiredLevel,
                     _highLoadedViewportBounds,
-                    viewportBounds))
+                    normalizedHighViewportBounds))
             {
                 TraceDetail("EnsureReuseCurrent", $"detail={_detailLevel} viewport={FormatBounds(viewportBounds)}");
                 return;
@@ -738,7 +761,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         }
 
         if (desiredLevel == MapDetailLevel.High &&
-            viewportBounds is MapGeometryBounds highBounds &&
+            normalizedHighViewportBounds is MapGeometryBounds highBounds &&
             _retainedHighGeometrySet is not null &&
             _retainedHighViewportBounds is MapGeometryBounds retainedBounds &&
             Contains(retainedBounds, highBounds))
@@ -770,7 +793,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         _detailLoadErrorLevel = desiredLevel;
         _loadingDetailLevel = desiredLevel;
         _loadingHighViewportBounds = desiredLevel == MapDetailLevel.High
-            ? viewportBounds
+            ? normalizedHighViewportBounds
             : null;
         _loadingViewportCenter = viewportCenter;
         _lastHighLoadUsedCache = false;
@@ -799,7 +822,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             }
 
             if (desiredLevel == MapDetailLevel.High &&
-                _detailLevel != MapDetailLevel.Medium)
+                _detailLevel == MapDetailLevel.Overview)
             {
                 await Task.Yield();
                 if (loadGeneration != _detailLoadGeneration ||
@@ -830,7 +853,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 () => desiredLevel == MapDetailLevel.High
                     ? _lodResourceProvider.TryLoadHigh(
                         loadCancellation.Token,
-                        viewportBounds)
+                        normalizedHighViewportBounds)
                     : _lodResourceProvider.TryLoadMedium(loadCancellation.Token),
                 CancellationToken.None);
             if (geometrySet is null ||
@@ -853,7 +876,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             {
                 _pendingGeometrySet = geometrySet;
                 _pendingGeometryLevel = desiredLevel;
-                _pendingGeometryBounds = viewportBounds;
+                _pendingGeometryBounds = normalizedHighViewportBounds;
                 _pendingGeometryCenter = _loadingViewportCenter;
                 TraceDetail(
                     "LoadReadyDeferred",
@@ -863,7 +886,11 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 return;
             }
 
-            ApplyGeometrySet(geometrySet, desiredLevel, viewportBounds, _loadingViewportCenter);
+            ApplyGeometrySet(
+                geometrySet,
+                desiredLevel,
+                normalizedHighViewportBounds,
+                _loadingViewportCenter);
             TraceDetail(
                 "LoadApplied",
                 $"generation={loadGeneration} detail={desiredLevel} " +
@@ -1194,6 +1221,8 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         MapGeometryBounds? loadedBounds,
         MapGeometryBounds? requestedBounds)
     {
+        loadedBounds = NormalizeHighViewportBounds(loadedBounds);
+        requestedBounds = NormalizeHighViewportBounds(requestedBounds);
         return detailLevel == MapDetailLevel.High &&
             requestedBounds is MapGeometryBounds requested &&
             (loadedBounds is not MapGeometryBounds loaded ||
@@ -1207,12 +1236,32 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         MapDetailLevel desiredLevel,
         MapGeometryBounds? requestedBounds)
     {
+        loadingBounds = NormalizeHighViewportBounds(loadingBounds);
+        requestedBounds = NormalizeHighViewportBounds(requestedBounds);
         return isLoading &&
             desiredLevel == MapDetailLevel.High &&
             loadingLevel == MapDetailLevel.High &&
             loadingBounds is MapGeometryBounds loaded &&
             requestedBounds is MapGeometryBounds requested &&
             Contains(loaded, requested);
+    }
+
+    internal static bool ShouldReuseInFlightDetailLoad(
+        bool isLoading,
+        MapDetailLevel? loadingLevel,
+        MapDetailLevel desiredLevel)
+    {
+        return isLoading &&
+            desiredLevel != MapDetailLevel.High &&
+            loadingLevel == desiredLevel;
+    }
+
+    internal static MapGeometryBounds? NormalizeHighViewportBounds(
+        MapGeometryBounds? bounds)
+    {
+        return bounds is MapGeometryBounds value
+            ? MapLodResourceProvider.ExpandToHighCacheTile(value)
+            : null;
     }
 
     private MapDetailLevel GetDesiredDetailLevel()

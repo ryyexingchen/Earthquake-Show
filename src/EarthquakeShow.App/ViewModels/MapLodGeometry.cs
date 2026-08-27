@@ -26,6 +26,8 @@ public sealed class MapLodResourceProvider
     private readonly string? _highBoundariesPath;
     private readonly Dictionary<MapGeometryBounds, MapGeometrySet> _highGeometryCache = [];
     private readonly Queue<MapGeometryBounds> _highGeometryCacheOrder = [];
+    private readonly object _mediumCacheLock = new();
+    private MapGeometrySet? _mediumGeometryCache;
 
     public bool LastHighLoadUsedCache { get; private set; }
 
@@ -60,20 +62,29 @@ public sealed class MapLodResourceProvider
             return null;
         }
 
-        OfflineMapGeometry areas = OfflineMapGeometry.LoadFromFile(_areasPath);
-        if (cancellationToken.IsCancellationRequested)
+        lock (_mediumCacheLock)
         {
-            return null;
-        }
+            if (_mediumGeometryCache is not null)
+            {
+                return _mediumGeometryCache;
+            }
 
-        OfflineMapGeometry municipalities = OfflineMapGeometry.LoadFromFile(_municipalitiesPath);
-        if (cancellationToken.IsCancellationRequested)
-        {
-            return null;
-        }
+            OfflineMapGeometry areas = OfflineMapGeometry.LoadFromFile(_areasPath);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return null;
+            }
 
-        OfflineMapBoundaryGeometry boundaries = OfflineMapBoundaryGeometry.LoadFromFile(_boundariesPath);
-        return new MapGeometrySet(areas, municipalities, boundaries);
+            OfflineMapGeometry municipalities = OfflineMapGeometry.LoadFromFile(_municipalitiesPath);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return null;
+            }
+
+            OfflineMapBoundaryGeometry boundaries = OfflineMapBoundaryGeometry.LoadFromFile(_boundariesPath);
+            _mediumGeometryCache = new MapGeometrySet(areas, municipalities, boundaries);
+            return _mediumGeometryCache;
+        }
     }
 
     public MapGeometrySet LoadHigh(

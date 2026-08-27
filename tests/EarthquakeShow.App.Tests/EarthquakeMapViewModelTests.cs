@@ -972,20 +972,20 @@ public sealed class EarthquakeMapViewModelTests
             MapGeometryBounds secondBounds = new(140, 143, 35, 39);
 
             await map.EnsureDetailLevelForZoomAsync(viewportBounds: firstBounds);
-            Assert.Equal(firstBounds, map.HighLoadedViewportBounds);
+            Assert.Equal(MapLodResourceProvider.ExpandToHighCacheTile(firstBounds), map.HighLoadedViewportBounds);
             Assert.False(map.LastHighLoadUsedCache);
 
             detailLevelsBeforeChange.Clear();
             await map.EnsureDetailLevelForZoomAsync(viewportBounds: secondBounds);
             Assert.Equal(MapDetailLevel.High, map.DetailLevel);
-            Assert.Equal(secondBounds, map.HighLoadedViewportBounds);
+            Assert.Equal(MapLodResourceProvider.ExpandToHighCacheTile(secondBounds), map.HighLoadedViewportBounds);
             Assert.Contains(MapDetailLevel.High, detailLevelsBeforeChange);
-            Assert.Contains(MapDetailLevel.Medium, detailLevelsBeforeChange);
+            Assert.DoesNotContain(MapDetailLevel.Medium, detailLevelsBeforeChange);
             Assert.False(map.LastHighLoadUsedCache);
 
             await map.EnsureDetailLevelForZoomAsync(viewportBounds: firstBounds);
             Assert.Equal(MapDetailLevel.High, map.DetailLevel);
-            Assert.Equal(firstBounds, map.HighLoadedViewportBounds);
+            Assert.Equal(MapLodResourceProvider.ExpandToHighCacheTile(firstBounds), map.HighLoadedViewportBounds);
             Assert.True(map.LastHighLoadUsedCache);
         }
         finally

@@ -371,6 +371,21 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Fact]
+    public void HighDetailReloadUsesCacheTileBoundaries()
+    {
+        MapGeometryBounds loaded = new(130, 131, 32, 33);
+
+        Assert.False(EarthquakeMapViewModel.NeedsHighDetailReload(
+            MapDetailLevel.High,
+            loaded,
+            new MapGeometryBounds(130.05, 130.95, 32.05, 32.95)));
+        Assert.True(EarthquakeMapViewModel.NeedsHighDetailReload(
+            MapDetailLevel.High,
+            loaded,
+            new MapGeometryBounds(130.95, 131.05, 32.05, 32.95)));
+    }
+
+    [Fact]
     public void HighCacheTile_ContainsRequestedViewport()
     {
         MapGeometryBounds requested = new(130.2, 130.8, 32.2, 32.8);
@@ -410,6 +425,22 @@ public sealed class EarthquakeMapProjectionTests
             loading,
             MapDetailLevel.High,
             new MapGeometryBounds(130, 131, 32, 34)));
+    }
+
+    [Theory]
+    [InlineData(true, "Medium", "Medium", true)]
+    [InlineData(true, "Overview", "Medium", false)]
+    [InlineData(false, "Medium", "Medium", false)]
+    public void InFlightNonHighDetailLoadIsReused(
+        bool isLoading,
+        string loadingLevel,
+        string desiredLevel,
+        bool expected)
+    {
+        Assert.Equal(expected, EarthquakeMapViewModel.ShouldReuseInFlightDetailLoad(
+            isLoading,
+            Enum.Parse<MapDetailLevel>(loadingLevel),
+            Enum.Parse<MapDetailLevel>(desiredLevel)));
     }
 
     [Theory]
