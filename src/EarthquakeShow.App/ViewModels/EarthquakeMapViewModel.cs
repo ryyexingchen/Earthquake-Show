@@ -936,6 +936,11 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 viewportBounds);
     }
 
+    internal bool WillSwitchDetailLevel()
+    {
+        return GetDesiredDetailLevel() != DetailLevel;
+    }
+
     internal void SetMapPanning(bool isPanning)
     {
         _isMapPanning = isPanning;
@@ -1631,7 +1636,6 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     {
         string message = $"[MapDebug] {DateTimeOffset.Now:HH:mm:ss.fff} LOD {action} {detail}";
         Console.WriteLine(message);
-        Debug.WriteLine(message);
     }
 
     private static string FormatCoordinate(GeoCoordinate? coordinate) =>

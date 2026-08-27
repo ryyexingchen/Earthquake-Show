@@ -324,7 +324,7 @@ public partial class EarthquakeMapView : UserControl
         {
             _panOffset += delta;
             _lastPanPoint = currentPoint;
-            if (Environment.TickCount64 - _lastPanTraceAt >= 100)
+            if (Environment.TickCount64 - _lastPanTraceAt >= 250)
             {
                 _lastPanTraceAt = Environment.TickCount64;
                 TraceMap("MouseMove", GetViewportCenter(), $"delta={FormatVector(delta)}");
@@ -715,13 +715,10 @@ public partial class EarthquakeMapView : UserControl
             return false;
         }
 
-        MapGeometryBounds? viewportBounds = ViewModel.IsDistantEvent
-            ? null
-            : GetDetailViewportBounds();
         return ShouldReusePanVisual(
             _isPanning,
             _panContentChanged,
-            ViewModel.WillChangeDetailLevel(viewportBounds));
+            ViewModel.WillSwitchDetailLevel());
     }
 
     private void StopPanning()
@@ -1191,7 +1188,6 @@ public partial class EarthquakeMapView : UserControl
             $" cache={(MapContentCanvas.CacheMode is null ? "off" : "on")}" +
             (string.IsNullOrWhiteSpace(detail) ? string.Empty : $" {detail}");
         Console.WriteLine(message);
-        Debug.WriteLine(message);
     }
 
     private void ApplyPanTransform()
