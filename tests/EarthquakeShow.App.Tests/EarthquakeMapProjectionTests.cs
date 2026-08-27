@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Media;
 using EarthquakeShow.App.ViewModels;
 using EarthquakeShow.App.Views;
 using EarthquakeShow.Core.Models;
@@ -159,6 +160,49 @@ public sealed class EarthquakeMapProjectionTests
         string expected)
     {
         Assert.Equal(expected, EarthquakeMapView.GetIntensityLegendText(intensity));
+    }
+
+    [Theory]
+    [InlineData(7.99, false)]
+    [InlineData(8, true)]
+    [InlineData(12, true)]
+    public void StationLabels_UseZoomThreshold(double zoomLevel, bool expected)
+    {
+        Assert.Equal(expected, EarthquakeMapView.ShouldShowStationLabels(zoomLevel));
+    }
+
+    [Theory]
+    [InlineData(JmaIntensity.One, "1")]
+    [InlineData(JmaIntensity.FiveLower, "5-")]
+    [InlineData(JmaIntensity.FiveUpper, "5+")]
+    [InlineData(JmaIntensity.SixLower, "6-")]
+    [InlineData(JmaIntensity.SixUpper, "6+")]
+    [InlineData(JmaIntensity.Seven, "7")]
+    public void StationMarkerText_UsesStandardIntensityLabels(
+        JmaIntensity intensity,
+        string expected)
+    {
+        Assert.Equal(expected, EarthquakeMapView.GetStationMarkerText(intensity));
+    }
+
+    [Fact]
+    public void StationMarkerText_UnknownIntensityIsHidden()
+    {
+        Assert.Null(EarthquakeMapView.GetStationMarkerText(JmaIntensity.Unknown));
+    }
+
+    [Theory]
+    [InlineData(JmaIntensity.One, 0, 0, 0)]
+    [InlineData(JmaIntensity.Three, 0, 0, 0)]
+    [InlineData(JmaIntensity.SixUpper, 255, 255, 255)]
+    public void StationMarkerTextColor_ContrastsWithIntensityFill(
+        JmaIntensity intensity,
+        byte red,
+        byte green,
+        byte blue)
+    {
+        Assert.Equal(Color.FromRgb(red, green, blue),
+            EarthquakeMapView.GetIntensityTextColor(intensity));
     }
 
     [Theory]

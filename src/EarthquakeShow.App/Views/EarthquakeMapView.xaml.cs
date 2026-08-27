@@ -12,6 +12,8 @@ namespace EarthquakeShow.App.Views;
 
 public partial class EarthquakeMapView : UserControl
 {
+    internal const double StationLabelZoomThreshold = 8;
+
     private static readonly Color OutlineFill = Color.FromRgb(243, 239, 228);
     private static readonly Color OutlineStroke = Color.FromRgb(121, 143, 153);
     private bool _renderPending;
@@ -888,7 +890,12 @@ public partial class EarthquakeMapView : UserControl
     private void DrawMarker(EarthquakeMapMarker marker, MapProjection projection)
     {
         Point point = projection.Project(marker.Coordinate);
-        double size = marker.Kind == EarthquakeMapMarkerKind.Hypocenter ? 15 : 8;
+        bool showStationLabel = marker.Kind == EarthquakeMapMarkerKind.Station &&
+            ShouldShowStationLabels(ViewModel!.ZoomLevel) &&
+            IsKnownIntensity(marker.Intensity);
+        double size = marker.Kind == EarthquakeMapMarkerKind.Hypocenter
+            ? 15
+            : showStationLabel ? 20 : 8;
         var shape = new Ellipse
         {
             Width = size,
@@ -905,6 +912,43 @@ public partial class EarthquakeMapView : UserControl
         Canvas.SetLeft(shape, point.X - size / 2);
         Canvas.SetTop(shape, point.Y - size / 2);
         MapContentCanvas.Children.Add(shape);
+
+        if (showStationLabel)
+        {
+            var label = new TextBlock
+            {
+                Width = size,
+                Height = size,
+                Text = GetStationMarkerText(marker.Intensity),
+                TextAlignment = TextAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                FontSize = 10,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(GetIntensityTextColor(marker.Intensity)),
+                IsHitTestVisible = false,
+            };
+            Canvas.SetLeft(label, point.X - size / 2);
+            Canvas.SetTop(label, point.Y - size / 2);
+            MapContentCanvas.Children.Add(label);
+        }
+    }
+
+    internal static bool ShouldShowStationLabels(double zoomLevel)
+    {
+        return double.IsFinite(zoomLevel) && zoomLevel >= StationLabelZoomThreshold;
+    }
+
+    internal static string? GetStationMarkerText(JmaIntensity intensity)
+    {
+        return IsKnownIntensity(intensity) ? GetIntensityLegendText(intensity) : null;
+    }
+
+    internal static Color GetIntensityTextColor(JmaIntensity intensity)
+    {
+        Color fill = GetIntensityColor(intensity, 255);
+        double luminance =
+            (0.299 * fill.R + 0.587 * fill.G + 0.114 * fill.B) / 255;
+        return luminance > 0.58 ? Colors.Black : Colors.White;
     }
 
     private void DrawSelectionGlow(
