@@ -196,6 +196,39 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public async Task SelectedEvent_DoesNotBuildMapMarkersForUnknownIntensityStations()
+    {
+        EarthquakeReport report = CreateReport() with
+        {
+            IntensityStations =
+            [
+                new IntensityStation(
+                    "KMM001",
+                    "有震度观测点",
+                    "741",
+                    JmaIntensity.Four,
+                    new GeoCoordinate(32.81, 130.71)),
+                new IntensityStation(
+                    "KMM004",
+                    "未知震度观测点",
+                    "741",
+                    JmaIntensity.Unknown,
+                    new GeoCoordinate(32.82, 130.72)),
+            ],
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+
+        Assert.Single(map.Markers, marker => marker.Kind == EarthquakeMapMarkerKind.Station);
+        Assert.DoesNotContain(map.Markers, marker => marker.Label == "未知震度观测点");
+        Assert.Contains(map.Markers, marker => marker.Label == "有震度观测点");
+    }
+
+    [Fact]
     public async Task HypocenterReport_InheritsPreviousIntensityAreaLayer()
     {
         EarthquakeReport intensity = CreateReport() with

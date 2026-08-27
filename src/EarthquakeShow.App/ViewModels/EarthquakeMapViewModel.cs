@@ -1354,7 +1354,8 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         }
 
         markers.AddRange(report.IntensityStations
-            .Where(station => station.Coordinate is not null)
+            .Where(station => station.Coordinate is not null &&
+                IsKnownIntensity(station.Intensity))
             .OrderBy(station => station.Intensity == JmaIntensity.Unknown
                 ? int.MaxValue
                 : (int)station.Intensity)

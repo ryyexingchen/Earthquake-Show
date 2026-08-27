@@ -109,7 +109,7 @@ public sealed class MainWindowViewModelTests
                 item => item.EventId == "20260728162718");
 
             Assert.True(viewModel.EarthquakePage.SelectEvent("20260728162718"));
-            Assert.Equal(1248, viewModel.Map.Markers.Count - 1);
+            Assert.Equal(1244, viewModel.Map.Markers.Count - 1);
         }
         finally
         {

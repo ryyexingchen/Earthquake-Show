@@ -759,7 +759,9 @@ public partial class EarthquakeMapView : UserControl
         _renderedPanOffset = _panOffset;
         MapContentCanvas.Children.Clear();
         long elementBuildStarted = Stopwatch.GetTimestamp();
+        long legendStarted = Stopwatch.GetTimestamp();
         UpdateLegend();
+        double legendElapsed = Stopwatch.GetElapsedTime(legendStarted).TotalMilliseconds;
         GeoCoordinate? selectedEventFocusCoordinate =
             mapViewModel.TryGetSelectedEventFocusCoordinate(out GeoCoordinate eventFocus)
                 ? eventFocus
@@ -791,6 +793,7 @@ public partial class EarthquakeMapView : UserControl
                 _staticGeometryCacheKey is StaticGeometryCacheKey cachedKey &&
                 cachedKey.Equals(staticGeometryCacheKey),
                 _staticGeometryHost is not null);
+        long staticStarted = Stopwatch.GetTimestamp();
         MapDrawingHost staticGeometryHost;
         if (staticGeometryCacheHit)
         {
@@ -891,6 +894,7 @@ public partial class EarthquakeMapView : UserControl
             _staticGeometryHost = staticGeometryHost;
             _staticGeometryCacheKey = staticGeometryCacheKey;
         }
+        double staticElapsed = Stopwatch.GetElapsedTime(staticStarted).TotalMilliseconds;
         if (HasStaticGeometry(
                 visibleOutline.Count,
                 mapViewModel.Areas.Count,
@@ -902,6 +906,7 @@ public partial class EarthquakeMapView : UserControl
             MapContentCanvas.Children.Add(staticGeometryHost);
         }
 
+        long markerStarted = Stopwatch.GetTimestamp();
         if (ShouldRenderMarkerHost(mapViewModel.Markers.Count, mapViewModel.SelectedStationHighlight is not null))
         {
             // 将观测点和震源统一绘制到一个 DrawingVisual，避免每个点创建多个控件。
@@ -925,6 +930,7 @@ public partial class EarthquakeMapView : UserControl
                 });
             MapContentCanvas.Children.Add(markerHost);
         }
+        double markerElapsed = Stopwatch.GetElapsedTime(markerStarted).TotalMilliseconds;
 
         TraceMap(
             "RenderComplete",
@@ -936,7 +942,9 @@ public partial class EarthquakeMapView : UserControl
             $"municipalities={mapViewModel.Municipalities.Count} " +
             $"boundaries={mapViewModel.BoundaryLayers.Count} markers={mapViewModel.Markers.Count} " +
             $"markerTypes={CountMarkerDrawingTypes(mapViewModel.Markers)} " +
-            $"staticCache={(staticGeometryCacheHit ? "hit" : "miss")}");
+            $"staticCache={(staticGeometryCacheHit ? "hit" : "miss")} " +
+            $"stages=legend:{legendElapsed:0.##}ms,static:{staticElapsed:0.##}ms," +
+            $"markers:{markerElapsed:0.##}ms");
     }
 
     private StaticGeometryCacheKey CreateStaticGeometryCacheKey(
