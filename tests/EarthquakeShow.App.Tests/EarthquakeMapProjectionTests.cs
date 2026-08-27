@@ -171,6 +171,26 @@ public sealed class EarthquakeMapProjectionTests
         Assert.Equal(expected, EarthquakeMapView.ShouldShowStationLabels(zoomLevel));
     }
 
+    [Fact]
+    public void MarkerRendering_DrawsHypocenterAfterStationLabels()
+    {
+        EarthquakeMapMarker station = new(
+            EarthquakeMapMarkerKind.Station,
+            "观测点",
+            new GeoCoordinate(35, 139),
+            JmaIntensity.Three);
+        EarthquakeMapMarker hypocenter = new(
+            EarthquakeMapMarkerKind.Hypocenter,
+            "震源",
+            new GeoCoordinate(35, 139),
+            JmaIntensity.Three);
+
+        Assert.Equal(
+            [EarthquakeMapMarkerKind.Station, EarthquakeMapMarkerKind.Hypocenter],
+            EarthquakeMapView.OrderMarkersForRendering([hypocenter, station])
+                .Select(marker => marker.Kind));
+    }
+
     [Theory]
     [InlineData(JmaIntensity.One, "1")]
     [InlineData(JmaIntensity.FiveLower, "5-")]

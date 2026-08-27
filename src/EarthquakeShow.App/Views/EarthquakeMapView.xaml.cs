@@ -16,6 +16,8 @@ public partial class EarthquakeMapView : UserControl
 
     private static readonly Color OutlineFill = Color.FromRgb(243, 239, 228);
     private static readonly Color OutlineStroke = Color.FromRgb(121, 143, 153);
+    private static readonly FontFamily StationLabelFont = new("Segoe UI");
+    private static readonly Dictionary<int, SolidColorBrush> BrushCache = [];
     private bool _renderPending;
     private bool _isPanning;
     private Point _lastPanPoint;
@@ -493,6 +495,7 @@ public partial class EarthquakeMapView : UserControl
             return;
         }
 
+        long renderStarted = Stopwatch.GetTimestamp();
         MapPanTransform.X = 0;
         MapPanTransform.Y = 0;
         _renderedPanOffset = _panOffset;
@@ -525,9 +528,9 @@ public partial class EarthquakeMapView : UserControl
             var shape = new Path
             {
                 Data = ToPathGeometry(GetRings(polygon.Rings, polygon.Coordinates), projection),
-                Fill = new SolidColorBrush(OutlineFill),
+                Fill = GetBrush(OutlineFill),
                 Stroke = drawBaseOutlineStroke
-                    ? new SolidColorBrush(OutlineStroke)
+                    ? GetBrush(OutlineStroke)
                     : null,
                 StrokeThickness = 1,
                 StrokeLineJoin = PenLineJoin.Round,
@@ -550,8 +553,8 @@ public partial class EarthquakeMapView : UserControl
                 var shape = new Path
                 {
                     Data = ToPathGeometry(GetRings(area.Rings, area.Coordinates), projection),
-                    Fill = new SolidColorBrush(GetIntensityColor(area.Intensity, 150)),
-                    Stroke = new SolidColorBrush(GetIntensityBorderColor(area.Intensity, 235)),
+                    Fill = GetBrush(GetIntensityColor(area.Intensity, 150)),
+                    Stroke = GetBrush(GetIntensityBorderColor(area.Intensity, 235)),
                     StrokeThickness = 1.1,
                     StrokeLineJoin = PenLineJoin.Round,
                     StrokeStartLineCap = PenLineCap.Round,
@@ -572,11 +575,11 @@ public partial class EarthquakeMapView : UserControl
                     GetRings(municipality.Rings, municipality.Coordinates),
                     projection),
                 Fill = hasIntensity
-                    ? new SolidColorBrush(GetIntensityColor(municipality.Intensity, 150))
+                    ? GetBrush(GetIntensityColor(municipality.Intensity, 150))
                     : null,
                 Stroke = hasIntensity
-                    ? new SolidColorBrush(Color.FromArgb(225, 42, 50, 55))
-                    : new SolidColorBrush(OutlineStroke),
+                    ? GetBrush(Color.FromArgb(225, 42, 50, 55))
+                    : GetBrush(OutlineStroke),
                 StrokeThickness = 0.8,
                 StrokeLineJoin = PenLineJoin.Round,
                 StrokeStartLineCap = PenLineCap.Round,
@@ -599,7 +602,7 @@ public partial class EarthquakeMapView : UserControl
             var shape = new Path
             {
                 Data = ToBoundaryPathGeometry(layer.Boundaries, projection),
-                Stroke = new SolidColorBrush(fillIntensityAreas
+                Stroke = GetBrush(fillIntensityAreas
                     ? GetIntensityBorderColor(layer.Intensity, 245)
                     : GetIntensityColor(layer.Intensity, 245)),
                 StrokeThickness = 1.8,
@@ -634,10 +637,18 @@ public partial class EarthquakeMapView : UserControl
             DrawSelectedMarkerGlow(selectedStation, projection);
         }
 
-        foreach (EarthquakeMapMarker marker in ViewModel.Markers)
+        foreach (EarthquakeMapMarker marker in OrderMarkersForRendering(ViewModel.Markers))
         {
             DrawMarker(marker, projection);
         }
+
+        TraceMap(
+            "RenderComplete",
+            projection.Unproject(new Point(MapCanvas.ActualWidth / 2, MapCanvas.ActualHeight / 2)),
+            $"elapsed={Stopwatch.GetElapsedTime(renderStarted).TotalMilliseconds:0.##}ms " +
+            $"outline={visibleOutline.Count} areas={ViewModel.Areas.Count} " +
+            $"municipalities={ViewModel.Municipalities.Count} " +
+            $"boundaries={ViewModel.BoundaryLayers.Count} markers={ViewModel.Markers.Count}");
     }
 
     private void UpdateLegend()
@@ -667,7 +678,7 @@ public partial class EarthquakeMapView : UserControl
             {
                 Width = 14,
                 Height = 10,
-                Background = new SolidColorBrush(GetIntensityColor(intensity, 255)),
+                Background = GetBrush(GetIntensityColor(intensity, 255)),
                 CornerRadius = new CornerRadius(2),
             });
             row.Children.Add(new TextBlock
@@ -901,11 +912,11 @@ public partial class EarthquakeMapView : UserControl
             Width = size,
             Height = size,
             Fill = marker.Kind == EarthquakeMapMarkerKind.Hypocenter
-                ? new SolidColorBrush(Color.FromRgb(190, 61, 52))
-                : new SolidColorBrush(GetIntensityColor(marker.Intensity, 245)),
+                ? GetBrush(Color.FromRgb(190, 61, 52))
+                : GetBrush(GetIntensityColor(marker.Intensity, 245)),
             Stroke = marker.Kind == EarthquakeMapMarkerKind.Hypocenter
-                ? new SolidColorBrush(Colors.White)
-                : new SolidColorBrush(GetIntensityBorderColor(marker.Intensity, 245)),
+                ? GetBrush(Colors.White)
+                : GetBrush(GetIntensityBorderColor(marker.Intensity, 245)),
             StrokeThickness = 1.5,
             ToolTip = $"{marker.Label} · 震度 {GetIntensityText(marker.Intensity)}",
         };
@@ -922,11 +933,11 @@ public partial class EarthquakeMapView : UserControl
                 Content = GetStationMarkerText(marker.Intensity),
                 HorizontalContentAlignment = HorizontalAlignment.Center,
                 VerticalContentAlignment = VerticalAlignment.Center,
-                FontFamily = new FontFamily("Segoe UI"),
+                FontFamily = StationLabelFont,
                 FontSize = 10,
                 FontWeight = FontWeights.Bold,
                 Padding = new Thickness(0),
-                Foreground = new SolidColorBrush(GetIntensityTextColor(marker.Intensity)),
+                Foreground = GetBrush(GetIntensityTextColor(marker.Intensity)),
                 IsHitTestVisible = false,
             };
             Canvas.SetLeft(label, point.X - size / 2);
@@ -973,7 +984,7 @@ public partial class EarthquakeMapView : UserControl
         {
             Data = geometry,
             Fill = intensity is JmaIntensity known && IsKnownIntensity(known)
-                ? new SolidColorBrush(GetIntensityColor(known, 150))
+                ? GetBrush(GetIntensityColor(known, 150))
                 : null,
             IsHitTestVisible = false,
         };
@@ -983,7 +994,7 @@ public partial class EarthquakeMapView : UserControl
         {
             Data = geometry,
             Fill = null,
-            Stroke = new SolidColorBrush(outerColor),
+            Stroke = GetBrush(outerColor),
             StrokeThickness = 8,
             StrokeLineJoin = PenLineJoin.Round,
             StrokeStartLineCap = PenLineCap.Round,
@@ -997,7 +1008,7 @@ public partial class EarthquakeMapView : UserControl
         {
             Data = geometry,
             Fill = null,
-            Stroke = new SolidColorBrush(innerColor),
+            Stroke = GetBrush(innerColor),
             StrokeThickness = 2.4,
             StrokeLineJoin = PenLineJoin.Round,
             StrokeStartLineCap = PenLineCap.Round,
@@ -1033,7 +1044,7 @@ public partial class EarthquakeMapView : UserControl
             Width = 24,
             Height = 24,
             Fill = null,
-            Stroke = new SolidColorBrush(outerColor),
+            Stroke = GetBrush(outerColor),
             StrokeThickness = 5,
             IsHitTestVisible = false,
         };
@@ -1046,7 +1057,7 @@ public partial class EarthquakeMapView : UserControl
             Width = 13,
             Height = 13,
             Fill = null,
-            Stroke = new SolidColorBrush(innerColor),
+            Stroke = GetBrush(innerColor),
             StrokeThickness = 2,
             IsHitTestVisible = false,
         };
@@ -1072,6 +1083,29 @@ public partial class EarthquakeMapView : UserControl
         };
         color.A = alpha;
         return color;
+    }
+
+    private static SolidColorBrush GetBrush(Color color)
+    {
+        int key = color.A << 24 | color.R << 16 | color.G << 8 | color.B;
+        if (BrushCache.TryGetValue(key, out SolidColorBrush? brush))
+        {
+            return brush;
+        }
+
+        brush = new SolidColorBrush(color);
+        brush.Freeze();
+        BrushCache[key] = brush;
+        return brush;
+    }
+
+    internal static IEnumerable<EarthquakeMapMarker> OrderMarkersForRendering(
+        IEnumerable<EarthquakeMapMarker> markers)
+    {
+        ArgumentNullException.ThrowIfNull(markers);
+        return markers
+            .Where(marker => marker.Kind != EarthquakeMapMarkerKind.Hypocenter)
+            .Concat(markers.Where(marker => marker.Kind == EarthquakeMapMarkerKind.Hypocenter));
     }
 
     private static bool IsKnownIntensity(JmaIntensity intensity)
