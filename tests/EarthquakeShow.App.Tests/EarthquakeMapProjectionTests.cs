@@ -339,6 +339,35 @@ public sealed class EarthquakeMapProjectionTests
         Assert.Equal(expected, EarthquakeMapView.ShouldKeepPanCacheAfterInteraction(isLoaded));
     }
 
+    [Theory]
+    [InlineData(true, false, true)]
+    [InlineData(false, true, true)]
+    [InlineData(false, false, false)]
+    public void RenderIsDeferredDuringPanOrWheelZoom(
+        bool isPanning,
+        bool isWheelZooming,
+        bool expected)
+    {
+        Assert.Equal(expected, EarthquakeMapView.ShouldDeferRenderDuringInteraction(
+            isPanning,
+            isWheelZooming));
+    }
+
+    [Theory]
+    [InlineData(1, 1, 1)]
+    [InlineData(1, 2, 1.25)]
+    [InlineData(2, 1, 0.8)]
+    public void WheelPreviewScaleFollowsGlobalZoomLevel(
+        double baseZoomLevel,
+        double currentZoomLevel,
+        double expected)
+    {
+        Assert.Equal(
+            expected,
+            EarthquakeMapView.GetWheelPreviewScale(baseZoomLevel, currentZoomLevel),
+            precision: 6);
+    }
+
     [Fact]
     public void GlobalZoomLevelUsesOverviewScaleAndProgressesByOnePointTwentyFive()
     {

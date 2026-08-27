@@ -17,12 +17,16 @@ public partial class EarthquakeMapView : UserControl
 
     private static readonly Color OutlineFill = Color.FromRgb(243, 239, 228);
     private static readonly Color OutlineStroke = Color.FromRgb(121, 143, 153);
-    private static readonly FontFamily StationLabelFont = new("Segoe UI");
+    private static readonly FontFamily StationLabelFont = new("BIZ UDPGothic");
     private static readonly Dictionary<int, SolidColorBrush> BrushCache = [];
     private static readonly Dictionary<(int Color, double Thickness), Pen> PenCache = [];
     private readonly DispatcherTimer _renderThrottleTimer;
+    private readonly DispatcherTimer _wheelZoomTimer;
     private bool _renderPending;
     private bool _isPanning;
+    private bool _isWheelZooming;
+    private double _wheelBaseZoomLevel;
+    private Point _wheelAnchor;
     private Point _lastPanPoint;
     private Vector _panOffset;
     private Vector _renderedPanOffset;
@@ -38,6 +42,11 @@ public partial class EarthquakeMapView : UserControl
             Interval = TimeSpan.FromMilliseconds(32),
         };
         _renderThrottleTimer.Tick += OnRenderThrottleTimerTick;
+        _wheelZoomTimer = new DispatcherTimer(DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromMilliseconds(120),
+        };
+        _wheelZoomTimer.Tick += OnWheelZoomTimerTick;
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
         SizeChanged += OnSizeChanged;
@@ -75,6 +84,9 @@ public partial class EarthquakeMapView : UserControl
         MapPanTransform.X = 0;
         MapPanTransform.Y = 0;
         _viewportCenter = null;
+        _isWheelZooming = false;
+        ResetWheelZoomTransform();
+        _wheelZoomTimer.Stop();
         MapContentCanvas.CacheMode = null;
         _renderThrottleTimer.Stop();
         _renderPending = false;
@@ -109,6 +121,7 @@ public partial class EarthquakeMapView : UserControl
 
         if (e.PropertyName == nameof(EarthquakeMapViewModel.ViewedReportKey))
         {
+            CancelWheelZoomPreview();
             _panOffset = default;
             _viewportCenter = null;
             ViewModel?.AutoScale(GetAutomaticZoomLevel());
@@ -149,7 +162,8 @@ public partial class EarthquakeMapView : UserControl
             RequestRender();
         }
 
-        if (e.PropertyName == nameof(EarthquakeMapViewModel.ZoomLevel))
+        if (e.PropertyName == nameof(EarthquakeMapViewModel.ZoomLevel) &&
+            !_isWheelZooming)
         {
             _ = EnsureMapDetailLevelAsync();
         }
@@ -178,7 +192,7 @@ public partial class EarthquakeMapView : UserControl
     private void RequestRender()
     {
         _renderPending = true;
-        if (ShouldDeferRenderDuringPan(_isPanning))
+        if (ShouldDeferRenderDuringInteraction(_isPanning, _isWheelZooming))
         {
             return;
         }
@@ -198,7 +212,7 @@ public partial class EarthquakeMapView : UserControl
             return;
         }
 
-        if (ShouldDeferRenderDuringPan(_isPanning))
+        if (ShouldDeferRenderDuringInteraction(_isPanning, _isWheelZooming))
         {
             return;
         }
@@ -223,6 +237,7 @@ public partial class EarthquakeMapView : UserControl
 
     private void OnResetViewClick(object sender, RoutedEventArgs e)
     {
+        CancelWheelZoomPreview();
         _panOffset = default;
         _viewportCenter = null;
         ViewModel?.ResetView();
@@ -230,6 +245,7 @@ public partial class EarthquakeMapView : UserControl
 
     private async void OnFocusSelectedClick(object sender, RoutedEventArgs e)
     {
+        CancelWheelZoomPreview();
         _panOffset = default;
         _viewportCenter = null;
         ViewModel?.FocusSelectedEvent();
@@ -242,6 +258,12 @@ public partial class EarthquakeMapView : UserControl
         if (e.ChangedButton != MouseButton.Left || ViewModel is null)
         {
             return;
+        }
+
+        if (_isWheelZooming)
+        {
+            CommitWheelZoom();
+            _ = EnsureMapDetailLevelAsync();
         }
 
         ViewModel.BeginManualInteraction();
@@ -305,18 +327,26 @@ public partial class EarthquakeMapView : UserControl
         }
     }
 
-    private async void OnMapMouseWheel(object sender, MouseWheelEventArgs e)
+    private void OnMapMouseWheel(object sender, MouseWheelEventArgs e)
     {
         if (ViewModel is null || MapCanvas.ActualWidth < 10 || MapCanvas.ActualHeight < 10)
         {
             return;
         }
 
-        Point anchor = e.GetPosition(MapCanvas);
+        Point inputAnchor = e.GetPosition(MapCanvas);
         ViewModel.BeginManualInteraction();
+        double previousZoom = ViewModel.ZoomLevel;
+        if (!_isWheelZooming)
+        {
+            _isWheelZooming = true;
+            _wheelBaseZoomLevel = previousZoom;
+            _wheelAnchor = inputAnchor;
+        }
+
+        Point anchor = _wheelAnchor;
         MapProjection before = CreateProjection();
         GeoCoordinate anchorCoordinate = before.Unproject(anchor);
-        double previousZoom = ViewModel.ZoomLevel;
         if (e.Delta > 0)
         {
             ViewModel.ZoomIn();
@@ -333,12 +363,59 @@ public partial class EarthquakeMapView : UserControl
             _panOffset += new Vector(
                 anchor.X - projectedAnchor.X,
                 anchor.Y - projectedAnchor.Y);
-            CommitViewportCenter("MouseWheel");
+            MapZoomTransform.CenterX = _wheelAnchor.X;
+            MapZoomTransform.CenterY = _wheelAnchor.Y;
+            double previewScale = GetWheelPreviewScale(
+                _wheelBaseZoomLevel,
+                ViewModel.ZoomLevel);
+            MapZoomTransform.ScaleX = previewScale;
+            MapZoomTransform.ScaleY = previewScale;
+            TraceMap(
+                "WheelPreview",
+                GetViewportCenter(),
+                $"anchor={FormatVector(new Vector(_wheelAnchor.X, _wheelAnchor.Y))} scale={previewScale:0.###}");
         }
 
-        await EnsureMapDetailLevelAsync();
+        _wheelZoomTimer.Stop();
+        _wheelZoomTimer.Start();
 
         e.Handled = true;
+    }
+
+    private async void OnWheelZoomTimerTick(object? sender, EventArgs e)
+    {
+        _wheelZoomTimer.Stop();
+        if (!_isWheelZooming)
+        {
+            return;
+        }
+
+        CommitWheelZoom();
+        await EnsureMapDetailLevelAsync();
+    }
+
+    private void CommitWheelZoom()
+    {
+        if (!_isWheelZooming)
+        {
+            return;
+        }
+
+        _isWheelZooming = false;
+        CommitViewportCenter("MouseWheel");
+        TraceMap("WheelCommit", GetViewportCenter());
+    }
+
+    internal static double GetWheelPreviewScale(
+        double baseZoomLevel,
+        double currentZoomLevel)
+    {
+        if (!double.IsFinite(baseZoomLevel) || !double.IsFinite(currentZoomLevel))
+        {
+            return 1;
+        }
+
+        return Math.Pow(1.25, currentZoomLevel - baseZoomLevel);
     }
 
     private async Task EnsureMapDetailLevelAsync()
@@ -536,6 +613,10 @@ public partial class EarthquakeMapView : UserControl
 
     internal static bool ShouldDeferRenderDuringPan(bool isPanning) => isPanning;
 
+    internal static bool ShouldDeferRenderDuringInteraction(
+        bool isPanning,
+        bool isWheelZooming) => isPanning || isWheelZooming;
+
     internal static bool HasStaticGeometry(
         int outlineCount,
         int areaCount,
@@ -556,6 +637,26 @@ public partial class EarthquakeMapView : UserControl
 
     private static BitmapCache CreatePanCache() => new() { RenderAtScale = 1.0 };
 
+    private void CancelWheelZoomPreview()
+    {
+        if (!_isWheelZooming)
+        {
+            return;
+        }
+
+        _wheelZoomTimer.Stop();
+        _isWheelZooming = false;
+        ResetWheelZoomTransform();
+    }
+
+    private void ResetWheelZoomTransform()
+    {
+        MapZoomTransform.CenterX = 0;
+        MapZoomTransform.CenterY = 0;
+        MapZoomTransform.ScaleX = 1;
+        MapZoomTransform.ScaleY = 1;
+    }
+
     private void RenderMap()
     {
         if (!IsLoaded || ViewModel is null || MapCanvas.ActualWidth < 10 || MapCanvas.ActualHeight < 10)
@@ -565,6 +666,7 @@ public partial class EarthquakeMapView : UserControl
 
         EarthquakeMapViewModel mapViewModel = ViewModel;
         long renderStarted = Stopwatch.GetTimestamp();
+        ResetWheelZoomTransform();
         MapPanTransform.X = 0;
         MapPanTransform.Y = 0;
         _renderedPanOffset = _panOffset;

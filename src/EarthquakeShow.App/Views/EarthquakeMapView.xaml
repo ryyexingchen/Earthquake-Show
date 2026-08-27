@@ -17,7 +17,10 @@
               LostMouseCapture="OnMapLostMouseCapture">
             <Canvas x:Name="MapContentCanvas">
                 <Canvas.RenderTransform>
-                    <TranslateTransform x:Name="MapPanTransform" />
+                    <TransformGroup>
+                        <ScaleTransform x:Name="MapZoomTransform" />
+                        <TranslateTransform x:Name="MapPanTransform" />
+                    </TransformGroup>
                 </Canvas.RenderTransform>
             </Canvas>
         </Grid>
