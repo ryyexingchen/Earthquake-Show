@@ -26,6 +26,10 @@ public partial class EarthquakeMapView : UserControl
         StationLabelTextCache = [];
     private readonly DispatcherTimer _renderThrottleTimer;
     private readonly DispatcherTimer _wheelZoomTimer;
+    private readonly Dictionary<MarkerDrawingKey, DrawingGroup> _markerDrawingCache = [];
+    private string? _markerCacheReportKey;
+    private bool _markerCacheShowLabels;
+    private double _markerCachePixelsPerDip;
     private bool _renderPending;
     private bool _isPanning;
     private bool _isWheelZooming;
@@ -94,6 +98,8 @@ public partial class EarthquakeMapView : UserControl
         ResetWheelZoomTransform();
         _wheelZoomTimer.Stop();
         _detailEnsureRequested = false;
+        _markerDrawingCache.Clear();
+        _markerCacheReportKey = null;
         MapContentCanvas.CacheMode = null;
         _renderThrottleTimer.Stop();
         _renderPending = false;
@@ -874,6 +880,8 @@ public partial class EarthquakeMapView : UserControl
         {
             // 将观测点和震源统一绘制到一个 DrawingVisual，避免每个点创建多个控件。
             double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+            bool showStationLabels = ShouldShowStationLabels(mapViewModel.ZoomLevel);
+            PrepareMarkerDrawingCache(mapViewModel.Markers, showStationLabels, pixelsPerDip);
             var markerHost = new MapDrawingHost(
                 MapCanvas.ActualWidth,
                 MapCanvas.ActualHeight,
@@ -898,9 +906,10 @@ public partial class EarthquakeMapView : UserControl
             $"elapsed={Stopwatch.GetElapsedTime(renderStarted).TotalMilliseconds:0.##}ms " +
             $"build={Stopwatch.GetElapsedTime(elementBuildStarted).TotalMilliseconds:0.##}ms " +
             $"children={MapContentCanvas.Children.Count} " +
-            $"outline={visibleOutline.Count} areas={mapViewModel.Areas.Count} " +
-            $"municipalities={mapViewModel.Municipalities.Count} " +
-            $"boundaries={mapViewModel.BoundaryLayers.Count} markers={mapViewModel.Markers.Count}");
+                    $"outline={visibleOutline.Count} areas={mapViewModel.Areas.Count} " +
+                    $"municipalities={mapViewModel.Municipalities.Count} " +
+                    $"boundaries={mapViewModel.BoundaryLayers.Count} markers={mapViewModel.Markers.Count} " +
+                    $"markerTypes={CountMarkerDrawingTypes(mapViewModel.Markers)}");
     }
 
     private void UpdateLegend()
@@ -1161,6 +1170,32 @@ public partial class EarthquakeMapView : UserControl
         Point point = projection.Project(marker.Coordinate);
         bool showStationLabel = marker.Kind == EarthquakeMapMarkerKind.Station &&
             ShouldShowStationLabels(zoomLevel);
+        DrawingGroup drawing = GetMarkerDrawing(
+            marker,
+            showStationLabel,
+            pixelsPerDip);
+        context.PushTransform(new TranslateTransform(point.X, point.Y));
+        context.DrawDrawing(drawing);
+        context.Pop();
+    }
+
+    private DrawingGroup GetMarkerDrawing(
+        EarthquakeMapMarker marker,
+        bool showStationLabel,
+        double pixelsPerDip)
+    {
+        var key = new MarkerDrawingKey(
+            marker.Kind,
+            marker.Kind == EarthquakeMapMarkerKind.Hypocenter
+                ? JmaIntensity.Unknown
+                : marker.Intensity,
+            showStationLabel,
+            pixelsPerDip);
+        if (_markerDrawingCache.TryGetValue(key, out DrawingGroup? cachedDrawing))
+        {
+            return cachedDrawing;
+        }
+
         double size = GetMarkerSize(marker.Kind, showStationLabel);
         Brush fill = marker.Kind == EarthquakeMapMarkerKind.Hypocenter
             ? GetBrush(Color.FromRgb(190, 61, 52))
@@ -1170,14 +1205,50 @@ public partial class EarthquakeMapView : UserControl
                 ? Colors.White
                 : GetIntensityBorderColor(marker.Intensity, 245),
             1.5);
-        context.DrawEllipse(fill, stroke, point, size / 2, size / 2);
-
-        if (showStationLabel)
+        var drawing = new DrawingGroup();
+        using (DrawingContext context = drawing.Open())
         {
-            FormattedText formattedText = GetStationLabelText(marker.Intensity, pixelsPerDip);
-            context.DrawText(
-                formattedText,
-                new Point(point.X - formattedText.Width / 2, point.Y - formattedText.Height / 2));
+            context.DrawEllipse(fill, stroke, new Point(), size / 2, size / 2);
+            if (showStationLabel)
+            {
+                FormattedText formattedText = GetStationLabelText(marker.Intensity, pixelsPerDip);
+                context.DrawText(
+                    formattedText,
+                    new Point(-formattedText.Width / 2, -formattedText.Height / 2));
+            }
+        }
+
+        drawing.Freeze();
+        _markerDrawingCache[key] = drawing;
+        return drawing;
+    }
+
+    private void PrepareMarkerDrawingCache(
+        IReadOnlyList<EarthquakeMapMarker> markers,
+        bool showStationLabels,
+        double pixelsPerDip)
+    {
+        string? reportKey = ViewModel?.ViewedReportKey;
+        if (string.Equals(_markerCacheReportKey, reportKey, StringComparison.Ordinal) &&
+            _markerCacheShowLabels == showStationLabels &&
+            _markerCachePixelsPerDip.Equals(pixelsPerDip))
+        {
+            return;
+        }
+
+        _markerDrawingCache.Clear();
+        _markerCacheReportKey = reportKey;
+        _markerCacheShowLabels = showStationLabels;
+        _markerCachePixelsPerDip = pixelsPerDip;
+        foreach (EarthquakeMapMarker marker in markers
+                     .GroupBy(marker => (
+                         marker.Kind,
+                         Intensity: marker.Kind == EarthquakeMapMarkerKind.Hypocenter
+                             ? JmaIntensity.Unknown
+                             : marker.Intensity))
+                     .Select(group => group.First()))
+        {
+            GetMarkerDrawing(marker, showStationLabels, pixelsPerDip);
         }
     }
 
@@ -1213,6 +1284,19 @@ public partial class EarthquakeMapView : UserControl
     internal static bool ShouldRenderMarkerHost(int markerCount, bool hasSelectedStation)
     {
         return markerCount > 0 || hasSelectedStation;
+    }
+
+    internal static int CountMarkerDrawingTypes(IEnumerable<EarthquakeMapMarker> markers)
+    {
+        ArgumentNullException.ThrowIfNull(markers);
+        return markers
+            .Select(marker => (
+                marker.Kind,
+                Intensity: marker.Kind == EarthquakeMapMarkerKind.Hypocenter
+                    ? JmaIntensity.Unknown
+                    : marker.Intensity))
+            .Distinct()
+            .Count();
     }
 
     internal static bool ShouldShowStationLabels(double zoomLevel)
@@ -1386,6 +1470,12 @@ public partial class EarthquakeMapView : UserControl
             return _visual;
         }
     }
+
+    private readonly record struct MarkerDrawingKey(
+        EarthquakeMapMarkerKind Kind,
+        JmaIntensity Intensity,
+        bool ShowStationLabel,
+        double PixelsPerDip);
 
     private static Color GetIntensityBorderColor(JmaIntensity intensity, byte alpha)
     {

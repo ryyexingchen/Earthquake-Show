@@ -239,6 +239,20 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Fact]
+    public void MarkerDrawingTypes_OnlyIncludesTypesPresentInCurrentReport()
+    {
+        EarthquakeMapMarker[] markers =
+        [
+            new(EarthquakeMapMarkerKind.Station, "一", new GeoCoordinate(35, 139), JmaIntensity.Three),
+            new(EarthquakeMapMarkerKind.Station, "二", new GeoCoordinate(35.1, 139.1), JmaIntensity.Three),
+            new(EarthquakeMapMarkerKind.Station, "不明", new GeoCoordinate(35.2, 139.2), JmaIntensity.Unknown),
+            new(EarthquakeMapMarkerKind.Hypocenter, "震源", new GeoCoordinate(35.3, 139.3), JmaIntensity.Unknown),
+        ];
+
+        Assert.Equal(3, EarthquakeMapView.CountMarkerDrawingTypes(markers));
+    }
+
+    [Fact]
     public void MarkerRendering_DrawsHypocenterAfterStationLabels()
     {
         EarthquakeMapMarker station = new(
