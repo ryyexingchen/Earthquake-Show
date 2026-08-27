@@ -16,12 +16,18 @@ public sealed record MapGeometrySet(
 
 public sealed class MapLodResourceProvider
 {
+    internal const double HighCacheTileSizeDegrees = 1.0;
+    internal const int MaxHighCacheEntries = 3;
     private readonly string _areasPath;
     private readonly string _municipalitiesPath;
     private readonly string _boundariesPath;
     private readonly string? _highAreasPath;
     private readonly string? _highMunicipalitiesPath;
     private readonly string? _highBoundariesPath;
+    private readonly Dictionary<MapGeometryBounds, MapGeometrySet> _highGeometryCache = [];
+    private readonly Queue<MapGeometryBounds> _highGeometryCacheOrder = [];
+
+    public bool LastHighLoadUsedCache { get; private set; }
 
     public MapLodResourceProvider(
         string areasPath,
@@ -93,9 +99,20 @@ public sealed class MapLodResourceProvider
             return null;
         }
 
+        LastHighLoadUsedCache = false;
+        MapGeometryBounds? cacheBounds = viewportBounds is MapGeometryBounds requestedBounds
+            ? ExpandToHighCacheTile(requestedBounds)
+            : null;
+        if (cacheBounds is MapGeometryBounds cachedBounds &&
+            _highGeometryCache.TryGetValue(cachedBounds, out MapGeometrySet? cachedGeometry))
+        {
+            LastHighLoadUsedCache = true;
+            return cachedGeometry;
+        }
+
         OfflineMapGeometry? areas = OfflineMapGeometry.TryLoadFromFile(
             _highAreasPath,
-            viewportBounds,
+            cacheBounds ?? viewportBounds,
             cancellationToken);
         if (areas is null || cancellationToken.IsCancellationRequested)
         {
@@ -104,7 +121,7 @@ public sealed class MapLodResourceProvider
 
         OfflineMapGeometry? municipalities = OfflineMapGeometry.TryLoadFromFile(
             _highMunicipalitiesPath,
-            viewportBounds,
+            cacheBounds ?? viewportBounds,
             cancellationToken);
         if (municipalities is null || cancellationToken.IsCancellationRequested)
         {
@@ -113,7 +130,32 @@ public sealed class MapLodResourceProvider
 
         OfflineMapBoundaryGeometry boundaries = string.IsNullOrWhiteSpace(_highBoundariesPath)
             ? OfflineMapBoundaryGeometry.FromPolygons(areas)
-            : OfflineMapBoundaryGeometry.LoadFromFile(_highBoundariesPath, viewportBounds);
-        return new MapGeometrySet(areas, municipalities, boundaries);
+            : OfflineMapBoundaryGeometry.LoadFromFile(_highBoundariesPath, cacheBounds ?? viewportBounds);
+        MapGeometrySet geometrySet = new(areas, municipalities, boundaries);
+        if (cacheBounds is MapGeometryBounds loadedBounds)
+        {
+            _highGeometryCache[loadedBounds] = geometrySet;
+            _highGeometryCacheOrder.Enqueue(loadedBounds);
+            while (_highGeometryCacheOrder.Count > MaxHighCacheEntries)
+            {
+                MapGeometryBounds oldestBounds = _highGeometryCacheOrder.Dequeue();
+                if (!oldestBounds.Equals(loadedBounds))
+                {
+                    _highGeometryCache.Remove(oldestBounds);
+                }
+            }
+        }
+
+        return geometrySet;
+    }
+
+    internal static MapGeometryBounds ExpandToHighCacheTile(MapGeometryBounds bounds)
+    {
+        double size = HighCacheTileSizeDegrees;
+        return new MapGeometryBounds(
+            Math.Floor(bounds.MinLongitude / size) * size,
+            Math.Ceiling(bounds.MaxLongitude / size) * size,
+            Math.Floor(bounds.MinLatitude / size) * size,
+            Math.Ceiling(bounds.MaxLatitude / size) * size);
     }
 }

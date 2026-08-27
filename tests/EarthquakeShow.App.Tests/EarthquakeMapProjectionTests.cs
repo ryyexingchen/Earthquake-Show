@@ -371,6 +371,23 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Fact]
+    public void HighCacheTile_ContainsRequestedViewport()
+    {
+        MapGeometryBounds requested = new(130.2, 130.8, 32.2, 32.8);
+
+        MapGeometryBounds cached = MapLodResourceProvider.ExpandToHighCacheTile(requested);
+
+        Assert.Equal(130, cached.MinLongitude);
+        Assert.Equal(131, cached.MaxLongitude);
+        Assert.Equal(32, cached.MinLatitude);
+        Assert.Equal(33, cached.MaxLatitude);
+        Assert.True(cached.MinLongitude <= requested.MinLongitude);
+        Assert.True(cached.MaxLongitude >= requested.MaxLongitude);
+        Assert.True(cached.MinLatitude <= requested.MinLatitude);
+        Assert.True(cached.MaxLatitude >= requested.MaxLatitude);
+    }
+
+    [Fact]
     public void InFlightHighDetailLoadIsReusedForContainedViewport()
     {
         MapGeometryBounds loading = new(129, 132, 31, 35);

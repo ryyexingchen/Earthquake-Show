@@ -841,6 +841,14 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 return;
             }
 
+            if (desiredLevel == MapDetailLevel.High &&
+                _lodResourceProvider.LastHighLoadUsedCache)
+            {
+                TraceDetail(
+                    "HighResourceCacheHit",
+                    $"generation={loadGeneration} viewport={FormatBounds(viewportBounds)}");
+            }
+
             if (_isMapPanning)
             {
                 _pendingGeometrySet = geometrySet;
