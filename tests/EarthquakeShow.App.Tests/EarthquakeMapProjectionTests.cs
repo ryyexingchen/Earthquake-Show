@@ -395,6 +395,16 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public void DetailLevelCheckIsDeferredDuringPan(bool isPanning, bool expected)
+    {
+        Assert.Equal(
+            expected,
+            EarthquakeMapView.ShouldDeferDetailCheckDuringPan(isPanning));
+    }
+
+    [Theory]
     [InlineData(1, 1, 1)]
     [InlineData(1, 2, 1.25)]
     [InlineData(2, 1, 0.8)]

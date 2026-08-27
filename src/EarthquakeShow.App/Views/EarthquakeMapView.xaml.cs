@@ -33,6 +33,8 @@ public partial class EarthquakeMapView : UserControl
     private GeoCoordinate? _viewportCenter;
     private GeoCoordinate? _lastFocusedCoordinate;
     private long _lastPanTraceAt;
+    private Task? _detailEnsureTask;
+    private bool _detailEnsureRequested;
 
     public EarthquakeMapView()
     {
@@ -87,6 +89,7 @@ public partial class EarthquakeMapView : UserControl
         _isWheelZooming = false;
         ResetWheelZoomTransform();
         _wheelZoomTimer.Stop();
+        _detailEnsureRequested = false;
         MapContentCanvas.CacheMode = null;
         _renderThrottleTimer.Stop();
         _renderPending = false;
@@ -276,9 +279,9 @@ public partial class EarthquakeMapView : UserControl
             _ = EnsureMapDetailLevelAsync();
         }
 
-        ViewModel.BeginManualInteraction();
-        ViewModel.SetMapPanning(true);
         _isPanning = true;
+        ViewModel.SetMapPanning(true);
+        ViewModel.BeginManualInteraction();
         _lastPanPoint = e.GetPosition(MapCanvas);
         TraceMap("MouseDown", GetViewportCenter());
         MapCanvas.CaptureMouse();
@@ -428,7 +431,44 @@ public partial class EarthquakeMapView : UserControl
         return Math.Pow(1.25, currentZoomLevel - baseZoomLevel);
     }
 
-    private async Task EnsureMapDetailLevelAsync()
+    private Task EnsureMapDetailLevelAsync()
+    {
+        if (ViewModel is null || !IsLoaded)
+        {
+            return Task.CompletedTask;
+        }
+
+        _detailEnsureRequested = true;
+        if (ShouldDeferDetailCheckDuringPan(_isPanning))
+        {
+            TraceMap("EnsureDetailDeferred", GetViewportCenter(), "reason=manual-pan");
+            return Task.CompletedTask;
+        }
+
+        if (_detailEnsureTask is { IsCompleted: false })
+        {
+            return _detailEnsureTask;
+        }
+
+        _detailEnsureTask = ProcessDetailChecksAsync();
+        return _detailEnsureTask;
+    }
+
+    private async Task ProcessDetailChecksAsync()
+    {
+        while (_detailEnsureRequested && IsLoaded)
+        {
+            if (ShouldDeferDetailCheckDuringPan(_isPanning))
+            {
+                return;
+            }
+
+            _detailEnsureRequested = false;
+            await EnsureMapDetailLevelCoreAsync();
+        }
+    }
+
+    private async Task EnsureMapDetailLevelCoreAsync()
     {
         if (ViewModel is null || !IsLoaded)
         {
@@ -466,6 +506,8 @@ public partial class EarthquakeMapView : UserControl
             // 视图事件中的过期 LOD 请求不应成为未观察异常。
         }
     }
+
+    internal static bool ShouldDeferDetailCheckDuringPan(bool isPanning) => isPanning;
 
     private GeoCoordinate? GetViewportCenter()
     {
