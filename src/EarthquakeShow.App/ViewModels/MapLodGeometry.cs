@@ -43,11 +43,29 @@ public sealed class MapLodResourceProvider
 
     public MapGeometrySet LoadMedium(CancellationToken cancellationToken = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        MapGeometrySet? geometrySet = TryLoadMedium(cancellationToken);
+        return geometrySet ?? throw new OperationCanceledException(cancellationToken);
+    }
+
+    public MapGeometrySet? TryLoadMedium(CancellationToken cancellationToken = default)
+    {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+
         OfflineMapGeometry areas = OfflineMapGeometry.LoadFromFile(_areasPath);
-        cancellationToken.ThrowIfCancellationRequested();
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+
         OfflineMapGeometry municipalities = OfflineMapGeometry.LoadFromFile(_municipalitiesPath);
-        cancellationToken.ThrowIfCancellationRequested();
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+
         OfflineMapBoundaryGeometry boundaries = OfflineMapBoundaryGeometry.LoadFromFile(_boundariesPath);
         return new MapGeometrySet(areas, municipalities, boundaries);
     }

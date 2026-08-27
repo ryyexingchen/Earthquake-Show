@@ -109,6 +109,47 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Fact]
+    public void GeometryCenter_UsesProjectedCenterAfterLoad()
+    {
+        GeoCoordinate projected = new(35.2, 139.7);
+
+        Assert.Equal(
+            projected,
+            EarthquakeMapView.SelectGeometryCenter(
+                new GeoCoordinate(35, 139),
+                new GeoCoordinate(34, 138),
+                projected));
+    }
+
+    [Fact]
+    public void GeometryCenter_UsesCommittedCenterDuringPan()
+    {
+        GeoCoordinate committed = new(35, 139);
+
+        Assert.Equal(
+            committed,
+            EarthquakeMapView.SelectGeometryCenter(
+                committed,
+                new GeoCoordinate(34, 138),
+                new GeoCoordinate(35.2, 139.7),
+                isPanning: true));
+    }
+
+    [Fact]
+    public void GeometryCenter_FallsBackToPreferredWhenPanHasNoCommittedCenter()
+    {
+        GeoCoordinate preferred = new(34, 138);
+
+        Assert.Equal(
+            preferred,
+            EarthquakeMapView.SelectGeometryCenter(
+                null,
+                preferred,
+                new GeoCoordinate(35.2, 139.7),
+                isPanning: true));
+    }
+
+    [Fact]
     public void FollowStateResetOnlyMatchesFollowStateProperties()
     {
         Assert.True(EarthquakeMapView.ShouldResetPanForFollowState(
@@ -366,6 +407,21 @@ public sealed class EarthquakeMapProjectionTests
             expected,
             EarthquakeMapView.GetWheelPreviewScale(baseZoomLevel, currentZoomLevel),
             precision: 6);
+    }
+
+    [Theory]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(true, false, false)]
+    public void ReportChangeAutoscaleIsSkippedDuringManualPan(
+        bool isApplyingAutoScale,
+        bool isMapPanning,
+        bool expected)
+    {
+        Assert.Equal(expected, EarthquakeMapViewModel.ShouldAutoScaleAfterReportChange(
+            isApplyingAutoScale,
+            isMapPanning,
+            reportChanged: true));
     }
 
     [Fact]

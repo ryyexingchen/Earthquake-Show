@@ -99,7 +99,8 @@ public partial class EarthquakeMapView : UserControl
 
     private void OnSizeChanged(object sender, SizeChangedEventArgs e)
     {
-        if (ViewModel?.FollowSelection == true &&
+        if (!_isPanning &&
+            ViewModel?.FollowSelection == true &&
             ViewModel.HasSelectedEvent &&
             ViewModel.EffectiveFocusMode == EarthquakeMapFocusMode.SelectedEvent)
         {
@@ -112,7 +113,8 @@ public partial class EarthquakeMapView : UserControl
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(EarthquakeMapViewModel.FocusedCoordinate) &&
+        if (!_isPanning &&
+            e.PropertyName == nameof(EarthquakeMapViewModel.FocusedCoordinate) &&
             ShouldResetPanForFocusedCoordinate(_lastFocusedCoordinate, ViewModel?.FocusedCoordinate))
         {
             _lastFocusedCoordinate = ViewModel?.FocusedCoordinate;
@@ -122,9 +124,17 @@ public partial class EarthquakeMapView : UserControl
         if (e.PropertyName == nameof(EarthquakeMapViewModel.ViewedReportKey))
         {
             CancelWheelZoomPreview();
-            _panOffset = default;
-            _viewportCenter = null;
-            ViewModel?.AutoScale(GetAutomaticZoomLevel());
+            if (!_isPanning)
+            {
+                _panOffset = default;
+                _viewportCenter = null;
+                ViewModel?.AutoScale(GetAutomaticZoomLevel());
+            }
+            else
+            {
+                TraceMap("AutoScaleSkipped", GetViewportCenter(), "reason=manual-pan-report-update");
+            }
+
             RequestRender();
             _ = EnsureMapDetailLevelAsync();
         }
@@ -451,6 +461,10 @@ public partial class EarthquakeMapView : UserControl
         {
             // 控件卸载期间忽略异步加载竞态。
         }
+        catch (OperationCanceledException)
+        {
+            // 视图事件中的过期 LOD 请求不应成为未观察异常。
+        }
     }
 
     private GeoCoordinate? GetViewportCenter()
@@ -558,17 +572,34 @@ public partial class EarthquakeMapView : UserControl
         GeoCoordinate? previousCommittedCenter = _viewportCenter;
         GeoCoordinate projectedCenter = CreateProjection().Unproject(
             new Point(MapCanvas.ActualWidth / 2, MapCanvas.ActualHeight / 2));
-        // 几何替换前的画布中心代表用户此刻实际看到的位置；异步请求携带的中心可能已经过期。
-        _viewportCenter = projectedCenter;
+        // 非拖动时以几何替换前画布实际中心为准，避免异步请求快照覆盖当前视口。
+        GeoCoordinate preservedCenter = SelectGeometryCenter(
+            _viewportCenter,
+            e.PreferredCenter,
+            projectedCenter,
+            _isPanning);
+        _viewportCenter = preservedCenter;
         if (!_isPanning)
         {
             _panOffset = default;
         }
         TraceMap(
             "GeometryChanging",
-            projectedCenter,
+            preservedCenter,
             $"previousCommitted={FormatCoordinate(previousCommittedCenter)}, " +
-            $"preferred={FormatCoordinate(e.PreferredCenter)}, projected={FormatCoordinate(projectedCenter)}");
+            $"preferred={FormatCoordinate(e.PreferredCenter)}, projected={FormatCoordinate(projectedCenter)}, " +
+            $"centerSource={(_isPanning ? "committed-or-preferred" : "projected")}");
+    }
+
+    internal static GeoCoordinate SelectGeometryCenter(
+        GeoCoordinate? committedCenter,
+        GeoCoordinate? preferredCenter,
+        GeoCoordinate projectedCenter,
+        bool isPanning = false)
+    {
+        return isPanning
+            ? committedCenter ?? preferredCenter ?? projectedCenter
+            : projectedCenter;
     }
 
     private void CommitViewportCenter(string reason)

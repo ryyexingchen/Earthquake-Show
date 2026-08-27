@@ -781,11 +781,13 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             if (desiredLevel == MapDetailLevel.High &&
                 _mediumGeometrySet is null)
             {
-                MapGeometrySet mediumGeometrySet = await Task.Run(
-                    () => _lodResourceProvider.LoadMedium(loadCancellation.Token),
-                    loadCancellation.Token);
-                loadCancellation.Token.ThrowIfCancellationRequested();
-                if (loadGeneration != _detailLoadGeneration || _isDisposed)
+                MapGeometrySet? mediumGeometrySet = await Task.Run(
+                    () => _lodResourceProvider.TryLoadMedium(loadCancellation.Token),
+                    CancellationToken.None);
+                if (mediumGeometrySet is null ||
+                    loadCancellation.IsCancellationRequested ||
+                    loadGeneration != _detailLoadGeneration ||
+                    _isDisposed)
                 {
                     return;
                 }
@@ -824,15 +826,17 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 }
             }
 
-            MapGeometrySet geometrySet = await Task.Run(
+            MapGeometrySet? geometrySet = await Task.Run(
                 () => desiredLevel == MapDetailLevel.High
                     ? _lodResourceProvider.LoadHigh(
                         loadCancellation.Token,
                         viewportBounds)
-                    : _lodResourceProvider.LoadMedium(loadCancellation.Token),
-                loadCancellation.Token);
-            loadCancellation.Token.ThrowIfCancellationRequested();
-            if (_isDisposed || loadGeneration != _detailLoadGeneration)
+                    : _lodResourceProvider.TryLoadMedium(loadCancellation.Token),
+                CancellationToken.None);
+            if (geometrySet is null ||
+                loadCancellation.IsCancellationRequested ||
+                _isDisposed ||
+                loadGeneration != _detailLoadGeneration)
             {
                 return;
             }
@@ -925,6 +929,10 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     public void AutoScale(double automaticZoomLevel = 1)
     {
         ThrowIfDisposed();
+        TraceDetail(
+            "AutoScale",
+            $"requested={automaticZoomLevel:0.###} current={ZoomLevel:0.###} " +
+            $"manualPan={_isMapPanning} event={_page.State.ViewedReport?.EventId ?? "null"}");
         ZoomLevel = Math.Clamp(
             automaticZoomLevel,
             MaxSmallZoomLevel,
@@ -1059,7 +1067,11 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     {
         if (eventArgs.PropertyName == nameof(EarthquakePageViewModel.State))
         {
-            if (!_isApplyingAutoScale && IsViewedReportChanged(_page.State.ViewedReport))
+            bool reportChanged = IsViewedReportChanged(_page.State.ViewedReport);
+            if (ShouldAutoScaleAfterReportChange(
+                    _isApplyingAutoScale,
+                    _isMapPanning,
+                    reportChanged))
             {
                 _isApplyingAutoScale = true;
                 try
@@ -1071,9 +1083,21 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                     _isApplyingAutoScale = false;
                 }
             }
+            else if (reportChanged && _isMapPanning)
+            {
+                TraceDetail("AutoScaleSkipped", "reason=manual-pan");
+            }
 
             RebuildLayers();
         }
+    }
+
+    internal static bool ShouldAutoScaleAfterReportChange(
+        bool isApplyingAutoScale,
+        bool isMapPanning,
+        bool reportChanged)
+    {
+        return !isApplyingAutoScale && !isMapPanning && reportChanged;
     }
 
     private bool IsViewedReportChanged(EarthquakeReport? report)

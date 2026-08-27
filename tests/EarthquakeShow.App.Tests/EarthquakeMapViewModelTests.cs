@@ -26,6 +26,43 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public void TryLoadMedium_ReturnsNullWhenCancellationWasRequested()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var provider = new MapLodResourceProvider(
+            "missing-areas.geojson",
+            "missing-municipalities.geojson",
+            "missing-boundaries.geojson");
+
+        Assert.Null(provider.TryLoadMedium(cancellation.Token));
+    }
+
+    [Fact]
+    public async Task CancelledLodRequestLeavesCurrentGeometryAndErrorStateUntouched()
+    {
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository());
+        await page.LoadAsync();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson),
+            lodResourceProvider: new MapLodResourceProvider(
+                "missing-areas.geojson",
+                "missing-municipalities.geojson",
+                "missing-boundaries.geojson"));
+
+        map.AutoScale(3);
+        await map.EnsureDetailLevelForZoomAsync(cancellation.Token);
+
+        Assert.Equal(MapDetailLevel.Overview, map.DetailLevel);
+        Assert.Null(map.DetailLoadError);
+        Assert.False(map.IsLoadingDetail);
+    }
+
+    [Fact]
     public void LoadFromJson_RejectsUnsupportedGeometry()
     {
         const string json = """
