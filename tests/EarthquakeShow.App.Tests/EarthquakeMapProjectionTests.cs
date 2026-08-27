@@ -331,6 +331,14 @@ public sealed class EarthquakeMapProjectionTests
             selectedMunicipalityCount));
     }
 
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public void PanCacheIsKeptOnlyWhileViewIsLoaded(bool isLoaded, bool expected)
+    {
+        Assert.Equal(expected, EarthquakeMapView.ShouldKeepPanCacheAfterInteraction(isLoaded));
+    }
+
     [Fact]
     public void GlobalZoomLevelUsesOverviewScaleAndProgressesByOnePointTwentyFive()
     {

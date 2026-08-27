@@ -60,6 +60,7 @@ public partial class EarthquakeMapView : UserControl
         MapPanTransform.Y = 0;
         _viewportCenter = null;
         _lastFocusedCoordinate = ViewModel?.FocusedCoordinate;
+        MapContentCanvas.CacheMode = CreatePanCache();
         _renderThrottleTimer.Stop();
         _renderPending = false;
         RenderMap();
@@ -245,7 +246,6 @@ public partial class EarthquakeMapView : UserControl
 
         ViewModel.BeginManualInteraction();
         ViewModel.SetMapPanning(true);
-        MapContentCanvas.CacheMode = new BitmapCache { RenderAtScale = 1.0 };
         _isPanning = true;
         _lastPanPoint = e.GetPosition(MapCanvas);
         TraceMap("MouseDown", GetViewportCenter());
@@ -521,7 +521,11 @@ public partial class EarthquakeMapView : UserControl
             MapCanvas.ReleaseMouseCapture();
         }
 
-        MapContentCanvas.CacheMode = null;
+        if (!ShouldKeepPanCacheAfterInteraction(IsLoaded))
+        {
+            MapContentCanvas.CacheMode = null;
+        }
+
         Cursor = null;
 
         if (_renderPending && IsLoaded && !_renderThrottleTimer.IsEnabled)
@@ -547,6 +551,10 @@ public partial class EarthquakeMapView : UserControl
             selectedAreaCount > 0 ||
             selectedMunicipalityCount > 0;
     }
+
+    internal static bool ShouldKeepPanCacheAfterInteraction(bool isLoaded) => isLoaded;
+
+    private static BitmapCache CreatePanCache() => new() { RenderAtScale = 1.0 };
 
     private void RenderMap()
     {
@@ -848,6 +856,7 @@ public partial class EarthquakeMapView : UserControl
             $"zoom={ViewModel?.ZoomLevel:0.###} detail={ViewModel?.DetailLevel} " +
             $"center={FormatCoordinate(center)} committed={FormatCoordinate(_viewportCenter)} " +
             $"pan={FormatVector(_panOffset)} panning={_isPanning} follow={ViewModel?.FollowSelection}" +
+            $" cache={(MapContentCanvas.CacheMode is null ? "off" : "on")}" +
             (string.IsNullOrWhiteSpace(detail) ? string.Empty : $" {detail}");
         Console.WriteLine(message);
         Debug.WriteLine(message);
