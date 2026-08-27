@@ -336,17 +336,16 @@ public sealed class SqliteEarthquakeEventRepository :
         JmaXmlLocalFileImportResult result = await importer
             .ImportAsync(directoryPath, cancellationToken)
             .ConfigureAwait(false);
-        if (!result.Reports.IsDefaultOrEmpty)
-        {
-            await SaveReportsAsync(result.Reports, cancellationToken).ConfigureAwait(false);
-        }
-
         int savedReportCount = result.Reports.Length;
         JmaXmlLocalFileImportHistory history = CreateImportHistory(
             directoryPath,
             savedReportCount,
             result);
-        await SaveLocalXmlImportHistoryAsync(history, cancellationToken).ConfigureAwait(false);
+        await SaveReportsAndImportHistoryAsync(
+            result.Reports,
+            history,
+            $"缓存：本地 XML 已导入 {savedReportCount} 条报文",
+            cancellationToken).ConfigureAwait(false);
         lock (_syncRoot)
         {
             _latestLocalXmlImport = history;
@@ -419,6 +418,52 @@ public sealed class SqliteEarthquakeEventRepository :
                 statuses = ReplaceSourceStatus(statuses, sourceStatus);
             }
 
+            await SaveSourceStatusesToConnectionAsync(connection, statuses, cancellationToken)
+                .ConfigureAwait(false);
+            SetSnapshot(allReports, statuses, cacheStatus);
+        }
+        finally
+        {
+            _writeGate.Release();
+        }
+    }
+
+    private async Task SaveReportsAndImportHistoryAsync(
+        ImmutableArray<EarthquakeReport> reports,
+        JmaXmlLocalFileImportHistory history,
+        string cacheStatus,
+        CancellationToken cancellationToken)
+    {
+        await _writeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            string? directory = Path.GetDirectoryName(_databasePath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            await using var connection = CreateConnection();
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+            await EnsureSchemaAsync(connection, cancellationToken).ConfigureAwait(false);
+            await using SqliteTransaction transaction = (SqliteTransaction)await connection
+                .BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+            await SaveReportsToTransactionAsync(connection, transaction, reports, cancellationToken)
+                .ConfigureAwait(false);
+            await SaveLocalXmlImportHistoryToTransactionAsync(
+                connection,
+                transaction,
+                history,
+                cancellationToken).ConfigureAwait(false);
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+
+            ImmutableArray<EarthquakeReport> allReports =
+                await ReadReportsAsync(connection, cancellationToken).ConfigureAwait(false);
+            ImmutableArray<SourceStatus> existingStatuses =
+                await ReadSourceStatusesAsync(connection, cancellationToken).ConfigureAwait(false);
+            ImmutableArray<SourceStatus> statuses = EnsureSourceStatuses(
+                allReports,
+                MergeTransientSourceStatuses(existingStatuses, GetSourceStatusesSnapshot()));
             await SaveSourceStatusesToConnectionAsync(connection, statuses, cancellationToken)
                 .ConfigureAwait(false);
             SetSnapshot(allReports, statuses, cacheStatus);
@@ -633,6 +678,17 @@ public sealed class SqliteEarthquakeEventRepository :
         await using SqliteTransaction transaction = (SqliteTransaction)await connection
             .BeginTransactionAsync(cancellationToken)
             .ConfigureAwait(false);
+        await SaveReportsToTransactionAsync(connection, transaction, reports, cancellationToken)
+            .ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task SaveReportsToTransactionAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        ImmutableArray<EarthquakeReport> reports,
+        CancellationToken cancellationToken)
+    {
         foreach (EarthquakeReport report in reports)
         {
             ReportPayloadDto payload = ReportPayloadDto.FromDomain(report);
@@ -675,7 +731,6 @@ public sealed class SqliteEarthquakeEventRepository :
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private static JmaXmlLocalFileImportHistory CreateImportHistory(
@@ -696,48 +751,35 @@ public sealed class SqliteEarthquakeEventRepository :
             items.ToImmutable());
     }
 
-    private async Task SaveLocalXmlImportHistoryAsync(
+    private static async Task SaveLocalXmlImportHistoryToTransactionAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
         JmaXmlLocalFileImportHistory history,
         CancellationToken cancellationToken)
     {
-        await _writeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
+        await using (SqliteCommand batch = connection.CreateCommand())
         {
-            await using var connection = CreateConnection();
-            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
-            await EnsureSchemaAsync(connection, cancellationToken).ConfigureAwait(false);
-            await using SqliteTransaction transaction = (SqliteTransaction)await connection
-                .BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-            await using (SqliteCommand batch = connection.CreateCommand())
-            {
-                batch.Transaction = transaction;
-                batch.CommandText = "INSERT INTO local_xml_import_batches(batch_id, directory_path, completed_at, saved_report_count) VALUES ($id, $path, $completed, $count);";
-                batch.Parameters.AddWithValue("$id", history.BatchId);
-                batch.Parameters.AddWithValue("$path", history.DirectoryPath);
-                batch.Parameters.AddWithValue("$completed", history.CompletedAt.ToString("O", CultureInfo.InvariantCulture));
-                batch.Parameters.AddWithValue("$count", history.SavedReportCount);
-                await batch.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-            }
-
-            for (int index = 0; index < history.Items.Length; index++)
-            {
-                JmaXmlLocalFileImportHistoryItem item = history.Items[index];
-                await using SqliteCommand detail = connection.CreateCommand();
-                detail.Transaction = transaction;
-                detail.CommandText = "INSERT INTO local_xml_import_items(batch_id, item_index, file_path, is_skipped, error) VALUES ($id, $index, $path, $skipped, $error);";
-                detail.Parameters.AddWithValue("$id", history.BatchId);
-                detail.Parameters.AddWithValue("$index", index);
-                detail.Parameters.AddWithValue("$path", item.FilePath);
-                detail.Parameters.AddWithValue("$skipped", item.IsSkipped ? 1 : 0);
-                detail.Parameters.AddWithValue("$error", (object?)item.Error ?? DBNull.Value);
-                await detail.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-            }
-
-            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            batch.Transaction = transaction;
+            batch.CommandText = "INSERT INTO local_xml_import_batches(batch_id, directory_path, completed_at, saved_report_count) VALUES ($id, $path, $completed, $count);";
+            batch.Parameters.AddWithValue("$id", history.BatchId);
+            batch.Parameters.AddWithValue("$path", history.DirectoryPath);
+            batch.Parameters.AddWithValue("$completed", history.CompletedAt.ToString("O", CultureInfo.InvariantCulture));
+            batch.Parameters.AddWithValue("$count", history.SavedReportCount);
+            await batch.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
-        finally
+
+        for (int index = 0; index < history.Items.Length; index++)
         {
-            _writeGate.Release();
+            JmaXmlLocalFileImportHistoryItem item = history.Items[index];
+            await using SqliteCommand detail = connection.CreateCommand();
+            detail.Transaction = transaction;
+            detail.CommandText = "INSERT INTO local_xml_import_items(batch_id, item_index, file_path, is_skipped, error) VALUES ($id, $index, $path, $skipped, $error);";
+            detail.Parameters.AddWithValue("$id", history.BatchId);
+            detail.Parameters.AddWithValue("$index", index);
+            detail.Parameters.AddWithValue("$path", item.FilePath);
+            detail.Parameters.AddWithValue("$skipped", item.IsSkipped ? 1 : 0);
+            detail.Parameters.AddWithValue("$error", (object?)item.Error ?? DBNull.Value);
+            await detail.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 

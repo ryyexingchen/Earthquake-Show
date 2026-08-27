@@ -1,6 +1,7 @@
 using EarthquakeShow.Core.Models;
 using EarthquakeShow.Infrastructure.Persistence;
 using EarthquakeShow.Infrastructure.Sources;
+using Microsoft.Data.Sqlite;
 using Xunit;
 
 namespace EarthquakeShow.Infrastructure.Tests;
@@ -38,6 +39,9 @@ public sealed partial class SqliteEarthquakeEventRepositoryTests
         using TemporaryDirectory directory = TemporaryDirectory.Create();
         string sourcePath = OfficialFixture("20260818221432_0_VXSE53_270000.xml");
         File.Copy(sourcePath, Path.Combine(directory.Path, Path.GetFileName(sourcePath)));
+        await File.WriteAllTextAsync(
+            Path.Combine(directory.Path, "ignored.xml"),
+            "not a JMA earthquake report");
         var repository = new SqliteEarthquakeEventRepository(database.Path);
         await repository.InitializeAsync([]);
 
@@ -93,6 +97,40 @@ public sealed partial class SqliteEarthquakeEventRepositoryTests
         Assert.Equal(Path.GetFullPath(directory.Path), history.DirectoryPath);
         Assert.Equal(1, history.SavedReportCount);
         Assert.Contains(history.Items, item => item.IsSkipped && item.FilePath.EndsWith("ignored.xml", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ImportLocalXmlAsync_RollsBackReportsWhenHistoryWriteFails()
+    {
+        using var database = new TemporaryDatabase();
+        using TemporaryDirectory directory = TemporaryDirectory.Create();
+        string sourcePath = OfficialFixture("20260818221432_0_VXSE53_270000.xml");
+        File.Copy(sourcePath, Path.Combine(directory.Path, Path.GetFileName(sourcePath)));
+        await File.WriteAllTextAsync(
+            Path.Combine(directory.Path, "ignored.xml"),
+            "not a JMA earthquake report");
+        var repository = new SqliteEarthquakeEventRepository(database.Path);
+        await repository.InitializeAsync([]);
+
+        var connectionString = new SqliteConnectionStringBuilder
+        {
+            DataSource = database.Path,
+            Pooling = false,
+        }.ConnectionString;
+        await using (var connection = new SqliteConnection(connectionString))
+        {
+            await connection.OpenAsync();
+            await using SqliteCommand command = connection.CreateCommand();
+            command.CommandText = "CREATE TRIGGER fail_local_xml_detail AFTER INSERT ON local_xml_import_items BEGIN SELECT RAISE(ABORT, 'test failure'); END;";
+            await command.ExecuteNonQueryAsync();
+        }
+
+        await Assert.ThrowsAsync<SqliteException>(() => repository.ImportLocalXmlAsync(
+            new JmaXmlLocalFileImporter(),
+            directory.Path));
+
+        Assert.Empty((await repository.ListEventsAsync()).SelectMany(item => item.Reports));
+        Assert.Null(await repository.GetLatestLocalXmlImportAsync());
     }
 
     private static string OfficialFixture(string fileName) => Path.Combine(
