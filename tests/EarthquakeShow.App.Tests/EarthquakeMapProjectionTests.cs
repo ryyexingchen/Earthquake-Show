@@ -518,6 +518,25 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Theory]
+    [InlineData(0.4, 0.3, false, 0.65, false)]
+    [InlineData(0.4, 0.3, true, 0.65, true)]
+    [InlineData(0.8, 0, false, 0.65, true)]
+    [InlineData(0.1, 0.1, false, 0, true)]
+    public void BoundaryPointSimplificationKeepsVisibleDistanceAndEndpoints(
+        double deltaX,
+        double deltaY,
+        bool isLastPoint,
+        double minimumPixelDistance,
+        bool expected)
+    {
+        Assert.Equal(expected, EarthquakeMapView.ShouldKeepBoundaryPoint(
+            new Point(0, 0),
+            new Point(deltaX, deltaY),
+            isLastPoint,
+            minimumPixelDistance));
+    }
+
+    [Theory]
     [InlineData(true, true, true)]
     [InlineData(true, false, false)]
     [InlineData(false, true, false)]

@@ -15,6 +15,7 @@ public partial class EarthquakeMapView : UserControl
 {
     internal const double StationLabelZoomThreshold = 8;
     internal const double HighDetailRenderBufferRatio = 0.25;
+    internal const double HighDetailBoundarySimplificationPixels = 0.65;
 
     private static readonly Color OutlineFill = Color.FromRgb(243, 239, 228);
     private static readonly Color OutlineStroke = Color.FromRgb(121, 143, 153);
@@ -1106,7 +1107,12 @@ public partial class EarthquakeMapView : UserControl
 
                     DrawGeometry(
                         context,
-                        ToBoundaryPathGeometry(layer.Boundaries, projection),
+                        ToBoundaryPathGeometry(
+                            layer.Boundaries,
+                            projection,
+                            mapViewModel.DetailLevel == MapDetailLevel.High
+                                ? HighDetailBoundarySimplificationPixels
+                                : 0),
                         null,
                         CreatePen(
                             fillIntensityAreas
@@ -1542,7 +1548,8 @@ public partial class EarthquakeMapView : UserControl
 
     private static StreamGeometry ToBoundaryPathGeometry(
         IReadOnlyList<EarthquakeMapBoundary> boundaries,
-        MapProjection projection)
+        MapProjection projection,
+        double minimumPixelDistance)
     {
         var geometry = new StreamGeometry();
         using (StreamGeometryContext context = geometry.Open())
@@ -1557,22 +1564,51 @@ public partial class EarthquakeMapView : UserControl
                     continue;
                 }
 
+                Point firstPoint = projection.Project(boundary.Coordinates[0]);
                 context.BeginFigure(
-                    projection.Project(boundary.Coordinates[0]),
+                    firstPoint,
                     isFilled: false,
                     isClosed: false);
+                Point previousPoint = firstPoint;
                 for (int index = 1; index < boundary.Coordinates.Length; index++)
                 {
-                    context.LineTo(
-                        projection.Project(boundary.Coordinates[index]),
-                        isStroked: true,
-                        isSmoothJoin: false);
+                    Point projectedPoint = projection.Project(boundary.Coordinates[index]);
+                    bool isLastPoint = index == boundary.Coordinates.Length - 1;
+                    if (ShouldKeepBoundaryPoint(
+                            previousPoint,
+                            projectedPoint,
+                            isLastPoint,
+                            minimumPixelDistance))
+                    {
+                        context.LineTo(
+                            projectedPoint,
+                            isStroked: true,
+                            isSmoothJoin: false);
+                        previousPoint = projectedPoint;
+                    }
                 }
             }
         }
 
         geometry.Freeze();
         return geometry;
+    }
+
+    internal static bool ShouldKeepBoundaryPoint(
+        Point previous,
+        Point current,
+        bool isLastPoint,
+        double minimumPixelDistance)
+    {
+        if (isLastPoint || !double.IsFinite(minimumPixelDistance) || minimumPixelDistance <= 0)
+        {
+            return true;
+        }
+
+        double deltaX = current.X - previous.X;
+        double deltaY = current.Y - previous.Y;
+        return deltaX * deltaX + deltaY * deltaY >=
+            minimumPixelDistance * minimumPixelDistance;
     }
 
     private void DrawMarker(
