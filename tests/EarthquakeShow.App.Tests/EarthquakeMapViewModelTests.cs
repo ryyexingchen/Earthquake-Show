@@ -894,11 +894,14 @@ public sealed class EarthquakeMapViewModelTests
         map.ZoomIn();
         Assert.True(map.ZoomLevel > 1);
 
+        var changedProperties = new List<string?>();
+        map.PropertyChanged += (_, args) => changedProperties.Add(args.PropertyName);
         Assert.True(page.SelectReport("p2pquake", "p2p-message"));
 
         Assert.Equal(1, map.ZoomLevel, precision: 3);
         Assert.True(map.FollowSelection);
         Assert.Equal(EarthquakeMapFocusMode.SelectedEvent, map.EffectiveFocusMode);
+        Assert.DoesNotContain(nameof(EarthquakeMapViewModel.ZoomLevel), changedProperties);
     }
 
     [Fact]

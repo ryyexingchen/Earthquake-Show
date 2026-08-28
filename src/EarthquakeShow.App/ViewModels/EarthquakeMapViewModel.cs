@@ -113,6 +113,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     private long _detailLoadGeneration;
     private bool _lastHighLoadUsedCache;
     private bool _isApplyingAutoScale;
+    private bool _suppressZoomNotification;
     private bool _isDisposed;
     private EarthquakeMapSelection? _selectedMapSelection;
     private EarthquakeMapViewState _lastMapState;
@@ -509,7 +510,10 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             }
 
             _zoomLevel = value;
-            OnPropertyChanged();
+            if (!_suppressZoomNotification)
+            {
+                OnPropertyChanged();
+            }
         }
     }
 
@@ -996,7 +1000,8 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
         TraceDetail(
             "AutoScale",
             $"requested={automaticZoomLevel:0.###} current={ZoomLevel:0.###} " +
-            $"manualPan={_isMapPanning} event={_page.State.ViewedReport?.EventId ?? "null"}");
+            $"manualPan={_isMapPanning} notifyZoom={!_suppressZoomNotification} " +
+            $"event={_page.State.ViewedReport?.EventId ?? "null"}");
         ZoomLevel = Math.Clamp(
             automaticZoomLevel,
             MaxSmallZoomLevel,
@@ -1148,7 +1153,16 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
                 _isApplyingAutoScale = true;
                 try
                 {
-                    AutoScale();
+                    bool previousSuppressZoomNotification = _suppressZoomNotification;
+                    _suppressZoomNotification = true;
+                    try
+                    {
+                        AutoScale();
+                    }
+                    finally
+                    {
+                        _suppressZoomNotification = previousSuppressZoomNotification;
+                    }
                 }
                 finally
                 {
