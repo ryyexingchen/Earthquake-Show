@@ -207,6 +207,25 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Fact]
+    public void FilterVisibleItemsPreservesOrderAndKeepsOnlyIntersectingItems()
+    {
+        IReadOnlyList<(string Name, MapGeometryBounds Bounds)> items =
+        [
+            ("first", new MapGeometryBounds(138, 140, 34, 36)),
+            ("outside", new MapGeometryBounds(145, 146, 40, 41)),
+            ("second", new MapGeometryBounds(139, 141, 35, 37)),
+        ];
+
+        IReadOnlyList<(string Name, MapGeometryBounds Bounds)> result =
+            EarthquakeMapView.FilterVisibleItems(
+                items,
+                new MapGeometryBounds(139.5, 140.5, 35.5, 36.5),
+                static item => item.Bounds);
+
+        Assert.Equal(["first", "second"], result.Select(item => item.Name));
+    }
+
+    [Fact]
     public void LegendIntensities_UsesContinuousKnownRangeWithoutUnknown()
     {
         Assert.Equal(

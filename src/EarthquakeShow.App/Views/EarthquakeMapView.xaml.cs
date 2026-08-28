@@ -1201,6 +1201,27 @@ public partial class EarthquakeMapView : UserControl
         return visibleLayers;
     }
 
+    internal static IReadOnlyList<T> FilterVisibleItems<T>(
+        IReadOnlyList<T> items,
+        MapGeometryBounds bounds,
+        Func<T, MapGeometryBounds> getBounds)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        ArgumentNullException.ThrowIfNull(getBounds);
+
+        var visibleItems = new List<T>();
+        for (int index = 0; index < items.Count; index++)
+        {
+            T item = items[index];
+            if (getBounds(item).Intersects(bounds))
+            {
+                visibleItems.Add(item);
+            }
+        }
+
+        return visibleItems;
+    }
+
     internal static bool ShouldKeepPanCacheAfterInteraction(bool isLoaded) => isLoaded;
 
     private static BitmapCache CreatePanCache() => new() { RenderAtScale = 1.0 };
@@ -1271,20 +1292,23 @@ public partial class EarthquakeMapView : UserControl
         IReadOnlyList<MapPolygonGeometry> visibleOutline = mapViewModel.IsDistantEvent
             ? []
             : renderBounds is MapGeometryBounds outlineBounds
-                ? mapViewModel.Outline
-                    .Where(item => item.Bounds.Intersects(outlineBounds))
-                    .ToArray()
+                ? FilterVisibleItems(
+                    mapViewModel.Outline,
+                    outlineBounds,
+                    static item => item.Bounds)
                 : mapViewModel.Outline;
         IReadOnlyList<EarthquakeMapArea> visibleAreas = renderBounds is MapGeometryBounds areaBounds
-            ? mapViewModel.Areas
-                .Where(item => item.Bounds.Intersects(areaBounds))
-                .ToArray()
+            ? FilterVisibleItems(
+                mapViewModel.Areas,
+                areaBounds,
+                static item => item.Bounds)
             : mapViewModel.Areas;
         IReadOnlyList<EarthquakeMapMunicipality> visibleMunicipalities =
             renderBounds is MapGeometryBounds municipalityBounds
-                ? mapViewModel.Municipalities
-                    .Where(item => item.Bounds.Intersects(municipalityBounds))
-                    .ToArray()
+                ? FilterVisibleItems(
+                    mapViewModel.Municipalities,
+                    municipalityBounds,
+                    static item => item.Bounds)
                 : mapViewModel.Municipalities;
         IReadOnlyList<EarthquakeMapBoundaryLayer> visibleBoundaryLayers =
             renderBounds is MapGeometryBounds boundaryBounds
@@ -1292,15 +1316,17 @@ public partial class EarthquakeMapView : UserControl
                 : mapViewModel.BoundaryLayers;
         IReadOnlyList<EarthquakeMapArea> visibleSelectedAreas =
             renderBounds is MapGeometryBounds selectedAreaBounds
-                ? mapViewModel.SelectedAreaHighlights
-                    .Where(item => item.Bounds.Intersects(selectedAreaBounds))
-                    .ToArray()
+                ? FilterVisibleItems(
+                    mapViewModel.SelectedAreaHighlights,
+                    selectedAreaBounds,
+                    static item => item.Bounds)
                 : mapViewModel.SelectedAreaHighlights;
         IReadOnlyList<EarthquakeMapMunicipality> visibleSelectedMunicipalities =
             renderBounds is MapGeometryBounds selectedMunicipalityBounds
-                ? mapViewModel.SelectedMunicipalityHighlights
-                    .Where(item => item.Bounds.Intersects(selectedMunicipalityBounds))
-                    .ToArray()
+                ? FilterVisibleItems(
+                    mapViewModel.SelectedMunicipalityHighlights,
+                    selectedMunicipalityBounds,
+                    static item => item.Bounds)
                 : mapViewModel.SelectedMunicipalityHighlights;
         int visibleBoundaryCount = visibleBoundaryLayers.Sum(layer => layer.Boundaries.Length);
         double boundarySimplificationPixels = GetBoundarySimplificationPixels(
