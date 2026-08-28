@@ -173,6 +173,17 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Fact]
+    public void IsRenderableBoundaryUsesMinimumPointCountAndFiniteCoordinates()
+    {
+        Assert.False(EarthquakeMapView.IsRenderableBoundary([]));
+        Assert.False(EarthquakeMapView.IsRenderableBoundary([
+            new GeoCoordinate(35, 139)]));
+        Assert.True(EarthquakeMapView.IsRenderableBoundary([
+            new GeoCoordinate(35, 139),
+            new GeoCoordinate(35.1, 139.1)]));
+    }
+
+    [Fact]
     public void LegendIntensities_UsesContinuousKnownRangeWithoutUnknown()
     {
         Assert.Equal(

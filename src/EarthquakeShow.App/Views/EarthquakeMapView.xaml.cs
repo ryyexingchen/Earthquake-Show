@@ -1784,6 +1784,26 @@ public partial class EarthquakeMapView : UserControl
             double.IsFinite(coordinate.Longitude));
     }
 
+    internal static bool IsRenderableBoundary(IReadOnlyList<GeoCoordinate> coordinates)
+    {
+        if (coordinates.Count < 2)
+        {
+            return false;
+        }
+
+        for (int index = 0; index < coordinates.Count; index++)
+        {
+            GeoCoordinate coordinate = coordinates[index];
+            if (!double.IsFinite(coordinate.Latitude) ||
+                !double.IsFinite(coordinate.Longitude))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private static StreamGeometry ToPathGeometry(
         IReadOnlyList<ImmutableArray<GeoCoordinate>> rings,
         MapProjection projection)
@@ -1823,10 +1843,7 @@ public partial class EarthquakeMapView : UserControl
         {
             foreach (EarthquakeMapBoundary boundary in boundaries)
             {
-                if (boundary.Coordinates.Length < 2 ||
-                    boundary.Coordinates.Any(coordinate =>
-                        !double.IsFinite(coordinate.Latitude) ||
-                        !double.IsFinite(coordinate.Longitude)))
+                if (!IsRenderableBoundary(boundary.Coordinates))
                 {
                     continue;
                 }
