@@ -184,6 +184,29 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Fact]
+    public void FilterVisibleBoundaryLayersPreservesLayerAndBoundaryOrder()
+    {
+        EarthquakeMapBoundary first = new(
+            "A",
+            "B",
+            [new GeoCoordinate(35, 139), new GeoCoordinate(35.1, 139.1)]);
+        EarthquakeMapBoundary second = new(
+            "C",
+            "D",
+            [new GeoCoordinate(40, 145), new GeoCoordinate(40.1, 145.1)]);
+        IReadOnlyList<EarthquakeMapBoundaryLayer> result =
+            EarthquakeMapView.FilterVisibleBoundaryLayers(
+                [
+                    new EarthquakeMapBoundaryLayer(JmaIntensity.Two, [first, second]),
+                ],
+                new MapGeometryBounds(138, 140, 34, 36));
+
+        EarthquakeMapBoundaryLayer layer = Assert.Single(result);
+        Assert.Single(layer.Boundaries);
+        Assert.Equal(first, layer.Boundaries[0]);
+    }
+
+    [Fact]
     public void LegendIntensities_UsesContinuousKnownRangeWithoutUnknown()
     {
         Assert.Equal(

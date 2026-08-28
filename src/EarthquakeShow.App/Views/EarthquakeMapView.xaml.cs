@@ -1174,6 +1174,33 @@ public partial class EarthquakeMapView : UserControl
             boundaryCount > 0;
     }
 
+    internal static IReadOnlyList<EarthquakeMapBoundaryLayer> FilterVisibleBoundaryLayers(
+        IReadOnlyList<EarthquakeMapBoundaryLayer> layers,
+        MapGeometryBounds bounds)
+    {
+        var visibleLayers = new List<EarthquakeMapBoundaryLayer>(layers.Count);
+        foreach (EarthquakeMapBoundaryLayer layer in layers)
+        {
+            var visibleBoundaries = ImmutableArray.CreateBuilder<EarthquakeMapBoundary>();
+            foreach (EarthquakeMapBoundary boundary in layer.Boundaries)
+            {
+                if (boundary.Bounds.Intersects(bounds))
+                {
+                    visibleBoundaries.Add(boundary);
+                }
+            }
+
+            if (visibleBoundaries.Count > 0)
+            {
+                visibleLayers.Add(new EarthquakeMapBoundaryLayer(
+                    layer.Intensity,
+                    visibleBoundaries.ToImmutable()));
+            }
+        }
+
+        return visibleLayers;
+    }
+
     internal static bool ShouldKeepPanCacheAfterInteraction(bool isLoaded) => isLoaded;
 
     private static BitmapCache CreatePanCache() => new() { RenderAtScale = 1.0 };
@@ -1261,14 +1288,7 @@ public partial class EarthquakeMapView : UserControl
                 : mapViewModel.Municipalities;
         IReadOnlyList<EarthquakeMapBoundaryLayer> visibleBoundaryLayers =
             renderBounds is MapGeometryBounds boundaryBounds
-                ? mapViewModel.BoundaryLayers
-                    .Select(layer => new EarthquakeMapBoundaryLayer(
-                        layer.Intensity,
-                        layer.Boundaries
-                            .Where(item => item.Bounds.Intersects(boundaryBounds))
-                            .ToImmutableArray()))
-                    .Where(layer => !layer.Boundaries.IsDefaultOrEmpty)
-                    .ToArray()
+                ? FilterVisibleBoundaryLayers(mapViewModel.BoundaryLayers, boundaryBounds)
                 : mapViewModel.BoundaryLayers;
         IReadOnlyList<EarthquakeMapArea> visibleSelectedAreas =
             renderBounds is MapGeometryBounds selectedAreaBounds
