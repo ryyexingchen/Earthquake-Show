@@ -648,6 +648,23 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Theory]
+    [InlineData(MapDetailLevel.Overview, 12000, 0)]
+    [InlineData(MapDetailLevel.Medium, 12000, 0)]
+    [InlineData(MapDetailLevel.High, 7999, EarthquakeMapView.HighDetailBoundarySimplificationPixels)]
+    [InlineData(MapDetailLevel.High, 8000, EarthquakeMapView.DenseHighDetailBoundarySimplificationPixels)]
+    public void BoundarySimplificationAdaptsToVisibleBoundaryDensity(
+        MapDetailLevel detailLevel,
+        int visibleBoundaryCount,
+        double expected)
+    {
+        Assert.Equal(
+            expected,
+            EarthquakeMapView.GetBoundarySimplificationPixels(
+                detailLevel,
+                visibleBoundaryCount));
+    }
+
+    [Theory]
     [InlineData(1, 1, 1)]
     [InlineData(1, 2, 1.25)]
     [InlineData(2, 1, 0.8)]

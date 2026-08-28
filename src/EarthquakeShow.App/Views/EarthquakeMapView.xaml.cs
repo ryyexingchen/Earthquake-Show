@@ -16,6 +16,8 @@ public partial class EarthquakeMapView : UserControl
     internal const double StationLabelZoomThreshold = 8;
     internal const double HighDetailRenderBufferRatio = 0.25;
     internal const double HighDetailBoundarySimplificationPixels = 0.65;
+    internal const double DenseHighDetailBoundarySimplificationPixels = 1.0;
+    internal const int DenseHighDetailBoundaryThreshold = 8000;
 
     private static readonly Color OutlineFill = Color.FromRgb(243, 239, 228);
     private static readonly Color OutlineStroke = Color.FromRgb(121, 143, 153);
@@ -543,6 +545,20 @@ public partial class EarthquakeMapView : UserControl
 
     internal static bool ShouldQueueDetailLevelCheck(bool dispatchPending) => !dispatchPending;
 
+    internal static double GetBoundarySimplificationPixels(
+        MapDetailLevel detailLevel,
+        int visibleBoundaryCount)
+    {
+        if (detailLevel != MapDetailLevel.High)
+        {
+            return 0;
+        }
+
+        return visibleBoundaryCount >= DenseHighDetailBoundaryThreshold
+            ? DenseHighDetailBoundarySimplificationPixels
+            : HighDetailBoundarySimplificationPixels;
+    }
+
     private async Task ProcessDetailChecksAsync()
     {
         try
@@ -1042,6 +1058,9 @@ public partial class EarthquakeMapView : UserControl
                     .ToArray()
                 : mapViewModel.SelectedMunicipalityHighlights;
         int visibleBoundaryCount = visibleBoundaryLayers.Sum(layer => layer.Boundaries.Length);
+        double boundarySimplificationPixels = GetBoundarySimplificationPixels(
+            mapViewModel.DetailLevel,
+            visibleBoundaryCount);
 
         StaticGeometryCacheKey staticGeometryCacheKey = CreateStaticGeometryCacheKey(
             mapViewModel,
@@ -1134,9 +1153,7 @@ public partial class EarthquakeMapView : UserControl
                         ToBoundaryPathGeometry(
                             layer.Boundaries,
                             projection,
-                            mapViewModel.DetailLevel == MapDetailLevel.High
-                                ? HighDetailBoundarySimplificationPixels
-                                : 0),
+                            boundarySimplificationPixels),
                         null,
                         CreatePen(
                             fillIntensityAreas
@@ -1230,6 +1247,7 @@ public partial class EarthquakeMapView : UserControl
             $"{mapViewModel.BoundaryLayers.Sum(layer => layer.Boundaries.Length)} " +
             $"markers={mapViewModel.Markers.Count} " +
             $"markerTypes={CountMarkerDrawingTypes(mapViewModel.Markers)} " +
+            $"boundarySimplify={boundarySimplificationPixels:0.##}px " +
             $"staticCache={(staticGeometryCacheHit ? "hit" : "miss")} " +
             $"stages=legend:{legendElapsed:0.##}ms,static:{staticElapsed:0.##}ms," +
             $"selection:{selectionElapsed:0.##}ms,markers:{markerElapsed:0.##}ms");
