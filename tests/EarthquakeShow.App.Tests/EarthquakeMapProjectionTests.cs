@@ -500,6 +500,24 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Theory]
+    [InlineData(0, 0, 0, 0, false)]
+    [InlineData(0, 0, 0, 1, true)]
+    [InlineData(0, 1, 0, 0, true)]
+    public void BaseStaticLayerIgnoresSelectionOnlyGeometry(
+        int outlineCount,
+        int areaCount,
+        int municipalityCount,
+        int boundaryCount,
+        bool expected)
+    {
+        Assert.Equal(expected, EarthquakeMapView.HasBaseStaticGeometry(
+            outlineCount,
+            areaCount,
+            municipalityCount,
+            boundaryCount));
+    }
+
+    [Theory]
     [InlineData(true, true, true)]
     [InlineData(true, false, false)]
     [InlineData(false, true, false)]

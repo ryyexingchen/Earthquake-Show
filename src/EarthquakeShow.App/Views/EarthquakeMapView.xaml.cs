@@ -896,6 +896,18 @@ public partial class EarthquakeMapView : UserControl
             selectedMunicipalityCount > 0;
     }
 
+    internal static bool HasBaseStaticGeometry(
+        int outlineCount,
+        int areaCount,
+        int municipalityCount,
+        int boundaryCount)
+    {
+        return outlineCount > 0 ||
+            areaCount > 0 ||
+            municipalityCount > 0 ||
+            boundaryCount > 0;
+    }
+
     internal static bool ShouldKeepPanCacheAfterInteraction(bool isLoaded) => isLoaded;
 
     private static BitmapCache CreatePanCache() => new() { RenderAtScale = 1.0 };
@@ -1103,38 +1115,50 @@ public partial class EarthquakeMapView : UserControl
                             1.8));
                 }
 
-                foreach (EarthquakeMapArea area in visibleSelectedAreas)
-                {
-                    DrawSelectionGlow(
-                        context,
-                        GetRings(area.Rings, area.Coordinates),
-                        projection,
-                        area.Intensity);
-                }
-
-                foreach (EarthquakeMapMunicipality municipality in visibleSelectedMunicipalities)
-                {
-                    DrawSelectionGlow(
-                        context,
-                        GetRings(municipality.Rings, municipality.Coordinates),
-                        projection,
-                        municipality.Intensity);
-                }
                 });
             _staticGeometryHost = staticGeometryHost;
             _staticGeometryCacheKey = staticGeometryCacheKey;
         }
         double staticElapsed = Stopwatch.GetElapsedTime(staticStarted).TotalMilliseconds;
-        if (HasStaticGeometry(
+        if (HasBaseStaticGeometry(
                 visibleOutline.Count,
                 visibleAreas.Count,
                 visibleMunicipalities.Count,
-                visibleBoundaryCount,
-                visibleSelectedAreas.Count,
-                visibleSelectedMunicipalities.Count))
+                visibleBoundaryCount))
         {
             MapContentCanvas.Children.Add(staticGeometryHost);
         }
+
+        long selectionStarted = Stopwatch.GetTimestamp();
+        if (visibleSelectedAreas.Count > 0 || visibleSelectedMunicipalities.Count > 0)
+        {
+            // 高亮单独绘制，选择变化不再使基础静态几何缓存失效。
+            var selectionGeometryHost = new MapDrawingHost(
+                MapCanvas.ActualWidth,
+                MapCanvas.ActualHeight,
+                context =>
+                {
+                    foreach (EarthquakeMapArea area in visibleSelectedAreas)
+                    {
+                        DrawSelectionGlow(
+                            context,
+                            GetRings(area.Rings, area.Coordinates),
+                            projection,
+                            area.Intensity);
+                    }
+
+                    foreach (EarthquakeMapMunicipality municipality in visibleSelectedMunicipalities)
+                    {
+                        DrawSelectionGlow(
+                            context,
+                            GetRings(municipality.Rings, municipality.Coordinates),
+                            projection,
+                            municipality.Intensity);
+                    }
+                });
+            MapContentCanvas.Children.Add(selectionGeometryHost);
+        }
+        double selectionElapsed = Stopwatch.GetElapsedTime(selectionStarted).TotalMilliseconds;
 
         long markerStarted = Stopwatch.GetTimestamp();
         if (ShouldRenderMarkerHost(mapViewModel.Markers.Count, mapViewModel.SelectedStationHighlight is not null))
@@ -1178,7 +1202,7 @@ public partial class EarthquakeMapView : UserControl
             $"markerTypes={CountMarkerDrawingTypes(mapViewModel.Markers)} " +
             $"staticCache={(staticGeometryCacheHit ? "hit" : "miss")} " +
             $"stages=legend:{legendElapsed:0.##}ms,static:{staticElapsed:0.##}ms," +
-            $"markers:{markerElapsed:0.##}ms");
+            $"selection:{selectionElapsed:0.##}ms,markers:{markerElapsed:0.##}ms");
     }
 
     private StaticGeometryCacheKey CreateStaticGeometryCacheKey(
@@ -1186,7 +1210,6 @@ public partial class EarthquakeMapView : UserControl
         GeoCoordinate? selectedEventFocusCoordinate,
         MapGeometryBounds? selectedEventBounds)
     {
-        EarthquakeMapSelection? selection = mapViewModel.SelectedMapSelection;
         return new StaticGeometryCacheKey(
             mapViewModel.ViewedReportKey,
             mapViewModel.DetailLevel,
@@ -1203,10 +1226,10 @@ public partial class EarthquakeMapView : UserControl
             mapViewModel.Areas.Count,
             mapViewModel.Municipalities.Count,
             mapViewModel.BoundaryLayers.Count,
-            mapViewModel.SelectedAreaHighlights.Count,
-            mapViewModel.SelectedMunicipalityHighlights.Count,
-            selection?.Kind,
-            selection?.Code);
+            0,
+            0,
+            null,
+            null);
     }
 
     internal static bool ShouldReuseStaticGeometry(
