@@ -695,6 +695,22 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Theory]
+    [InlineData(false, true, true)]
+    [InlineData(false, false, false)]
+    [InlineData(true, true, false)]
+    public void ReportChangeRenderIsDeferredOnlyForDetailDecreaseOutsidePan(
+        bool isPanning,
+        bool willDecreaseDetailLevel,
+        bool expected)
+    {
+        Assert.Equal(
+            expected,
+            EarthquakeMapView.ShouldDeferReportChangeRender(
+                isPanning,
+                willDecreaseDetailLevel));
+    }
+
+    [Theory]
     [InlineData(MapDetailLevel.Overview, 12000, 0)]
     [InlineData(MapDetailLevel.Medium, 12000, 0)]
     [InlineData(MapDetailLevel.High, 7999, EarthquakeMapView.HighDetailBoundarySimplificationPixels)]

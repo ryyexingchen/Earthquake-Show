@@ -59,6 +59,7 @@ public partial class EarthquakeMapView : UserControl
     private bool _renderDeferredForHighDetailReload;
     private bool _renderDeferredForHighDetailCoverage;
     private bool _highDetailCoverageRenderPending;
+    private bool _reportChangeAutoscaleInProgress;
 
     public EarthquakeMapView()
     {
@@ -127,6 +128,7 @@ public partial class EarthquakeMapView : UserControl
         _renderDeferredForHighDetailReload = false;
         _renderDeferredForHighDetailCoverage = false;
         _highDetailCoverageRenderPending = false;
+        _reportChangeAutoscaleInProgress = false;
         _markerDrawingCache.Clear();
         _markerCacheReportKey = null;
         _staticGeometryHost = null;
@@ -202,18 +204,44 @@ public partial class EarthquakeMapView : UserControl
         {
             _panContentChanged |= _isPanning;
             CancelWheelZoomPreview();
-            if (!_isPanning)
+            _reportChangeAutoscaleInProgress = true;
+            try
             {
-                _panOffset = default;
-                _viewportCenter = null;
-                ViewModel?.AutoScale(GetAutomaticZoomLevel());
+                if (!_isPanning)
+                {
+                    _panOffset = default;
+                    _viewportCenter = null;
+                    ViewModel?.AutoScale(GetAutomaticZoomLevel());
+                }
+                else
+                {
+                    TraceMap("AutoScaleSkipped", GetViewportCenter(), "reason=manual-pan-report-update");
+                }
             }
-            else
+            finally
             {
-                TraceMap("AutoScaleSkipped", GetViewportCenter(), "reason=manual-pan-report-update");
+                _reportChangeAutoscaleInProgress = false;
             }
 
-            RequestRender();
+            bool deferRender = ShouldDeferReportChangeRender(
+                _isPanning,
+                ViewModel?.WillDecreaseDetailLevel() == true);
+            if (deferRender)
+            {
+                _renderDeferredForDetailDecrease = true;
+                _renderPending = false;
+                _renderThrottleTimer.Stop();
+                TraceMap(
+                    "ReportRenderDeferred",
+                    GetViewportCenter(),
+                    $"reason=detail-decrease current={ViewModel?.DetailLevel} " +
+                    $"zoom={ViewModel?.ZoomLevel:0.###}");
+            }
+
+            if (!deferRender)
+            {
+                RequestRender();
+            }
             QueueDetailLevelCheck();
         }
 
@@ -278,7 +306,8 @@ public partial class EarthquakeMapView : UserControl
     private void RequestRender()
     {
         _renderPending = true;
-        if (_renderDeferredForDetailDecrease ||
+        if (_reportChangeAutoscaleInProgress ||
+            _renderDeferredForDetailDecrease ||
             ShouldDeferRenderDuringInteraction(_isPanning, _isWheelZooming))
         {
             return;
@@ -631,6 +660,13 @@ public partial class EarthquakeMapView : UserControl
 
     internal static bool ShouldQueueDetailLevelCheck(bool dispatchPending) => !dispatchPending;
 
+    internal static bool ShouldDeferReportChangeRender(
+        bool isPanning,
+        bool willDecreaseDetailLevel)
+    {
+        return !isPanning && willDecreaseDetailLevel;
+    }
+
     internal static double GetBoundarySimplificationPixels(
         MapDetailLevel detailLevel,
         int visibleBoundaryCount)
@@ -665,7 +701,7 @@ public partial class EarthquakeMapView : UserControl
             if (_renderDeferredForDetailDecrease && !_isPanning)
             {
                 _renderDeferredForDetailDecrease = false;
-                TraceMap("WheelRenderResumed", GetViewportCenter(), "reason=detail-check-complete");
+                TraceMap("RenderResumed", GetViewportCenter(), "reason=detail-check-complete");
                 RequestRender();
             }
         }
