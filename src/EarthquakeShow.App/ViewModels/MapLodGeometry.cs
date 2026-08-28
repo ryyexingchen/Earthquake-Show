@@ -25,7 +25,7 @@ public sealed class MapLodResourceProvider
     private readonly string? _highMunicipalitiesPath;
     private readonly string? _highBoundariesPath;
     private readonly Dictionary<MapGeometryBounds, MapGeometrySet> _highGeometryCache = [];
-    private readonly Queue<MapGeometryBounds> _highGeometryCacheOrder = [];
+    private readonly LinkedList<MapGeometryBounds> _highGeometryCacheOrder = [];
     private readonly object _mediumCacheLock = new();
     private MapGeometrySet? _mediumGeometryCache;
 
@@ -118,6 +118,7 @@ public sealed class MapLodResourceProvider
             _highGeometryCache.TryGetValue(cachedBounds, out MapGeometrySet? cachedGeometry))
         {
             LastHighLoadUsedCache = true;
+            TouchHighCacheEntry(cachedBounds);
             return cachedGeometry;
         }
 
@@ -146,18 +147,28 @@ public sealed class MapLodResourceProvider
         if (cacheBounds is MapGeometryBounds loadedBounds)
         {
             _highGeometryCache[loadedBounds] = geometrySet;
-            _highGeometryCacheOrder.Enqueue(loadedBounds);
+            TouchHighCacheEntry(loadedBounds);
             while (_highGeometryCacheOrder.Count > MaxHighCacheEntries)
             {
-                MapGeometryBounds oldestBounds = _highGeometryCacheOrder.Dequeue();
-                if (!oldestBounds.Equals(loadedBounds))
-                {
-                    _highGeometryCache.Remove(oldestBounds);
-                }
+                MapGeometryBounds oldestBounds = _highGeometryCacheOrder.First!.Value;
+                _highGeometryCacheOrder.RemoveFirst();
+                _highGeometryCache.Remove(oldestBounds);
             }
         }
 
         return geometrySet;
+    }
+
+    private void TouchHighCacheEntry(MapGeometryBounds bounds)
+    {
+        LinkedListNode<MapGeometryBounds>? existingNode =
+            _highGeometryCacheOrder.Find(bounds);
+        if (existingNode is not null)
+        {
+            _highGeometryCacheOrder.Remove(existingNode);
+        }
+
+        _highGeometryCacheOrder.AddLast(bounds);
     }
 
     internal static MapGeometryBounds ExpandToHighCacheTile(MapGeometryBounds bounds)

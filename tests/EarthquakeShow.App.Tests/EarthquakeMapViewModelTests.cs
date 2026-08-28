@@ -1033,6 +1033,52 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public void HighDetailCacheEvictsLeastRecentlyUsedRange()
+    {
+        string directory = Path.Combine(
+            Path.GetTempPath(),
+            "EarthquakeShowTests",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string highAreasPath = Path.Combine(directory, "areas-high.geojson");
+            string highMunicipalitiesPath = Path.Combine(directory, "municipalities-high.geojson");
+            File.WriteAllText(highAreasPath, GeometryJson);
+            File.WriteAllText(highMunicipalitiesPath, MunicipalityGeometryJson);
+
+            var provider = new MapLodResourceProvider(
+                highAreasPath,
+                highMunicipalitiesPath,
+                highAreasPath,
+                highAreasPath,
+                highMunicipalitiesPath);
+            MapGeometryBounds first = new(120, 121, 20, 21);
+            MapGeometryBounds second = new(122, 123, 22, 23);
+            MapGeometryBounds third = new(124, 125, 24, 25);
+            MapGeometryBounds fourth = new(126, 127, 26, 27);
+
+            Assert.False(provider.TryLoadHigh(viewportBounds: first) is null);
+            Assert.False(provider.LastHighLoadUsedCache);
+            Assert.False(provider.TryLoadHigh(viewportBounds: second) is null);
+            Assert.False(provider.TryLoadHigh(viewportBounds: third) is null);
+            Assert.True(provider.TryLoadHigh(viewportBounds: first) is not null);
+            Assert.True(provider.LastHighLoadUsedCache);
+
+            Assert.False(provider.TryLoadHigh(viewportBounds: fourth) is null);
+            Assert.False(provider.LastHighLoadUsedCache);
+            Assert.False(provider.TryLoadHigh(viewportBounds: second) is null);
+            Assert.False(provider.LastHighLoadUsedCache);
+            Assert.True(provider.TryLoadHigh(viewportBounds: first) is not null);
+            Assert.True(provider.LastHighLoadUsedCache);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task ZoomDetailSwitchesAllGeometryLayersAndRestoresOverview()
     {
         var report = CreateReport();
