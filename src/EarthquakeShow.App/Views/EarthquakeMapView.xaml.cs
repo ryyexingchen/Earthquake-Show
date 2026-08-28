@@ -1013,7 +1013,7 @@ public partial class EarthquakeMapView : UserControl
         bool staticGeometryCacheHit = _staticGeometryHost is not null &&
             ShouldReuseStaticGeometry(
                 _staticGeometryCacheKey is StaticGeometryCacheKey cachedKey &&
-                cachedKey.Equals(staticGeometryCacheKey),
+                AreEquivalentStaticGeometryKeys(cachedKey, staticGeometryCacheKey),
                 _staticGeometryHost is not null);
         long staticStarted = Stopwatch.GetTimestamp();
         MapDrawingHost staticGeometryHost;
@@ -1206,6 +1206,68 @@ public partial class EarthquakeMapView : UserControl
         bool hasCachedHost)
     {
         return hasMatchingKey && hasCachedHost;
+    }
+
+    private static bool AreEquivalentStaticGeometryKeys(
+        StaticGeometryCacheKey left,
+        StaticGeometryCacheKey right)
+    {
+        return string.Equals(left.ReportKey, right.ReportKey, StringComparison.Ordinal) &&
+            left.DetailLevel == right.DetailLevel &&
+            left.ReportType == right.ReportType &&
+            left.IsDistantEvent == right.IsDistantEvent &&
+            AreClose(left.ZoomLevel, right.ZoomLevel, 0.000001) &&
+            AreClose(left.Width, right.Width, 0.01) &&
+            AreClose(left.Height, right.Height, 0.01) &&
+            AreClose(left.ViewportCenter, right.ViewportCenter, 0.000001) &&
+            AreClose(left.FocusedCoordinate, right.FocusedCoordinate, 0.000001) &&
+            AreClose(left.SelectedEventFocusCoordinate, right.SelectedEventFocusCoordinate, 0.000001) &&
+            AreClose(left.SelectedEventBounds, right.SelectedEventBounds, 0.000001) &&
+            left.OutlineCount == right.OutlineCount &&
+            left.AreaCount == right.AreaCount &&
+            left.MunicipalityCount == right.MunicipalityCount &&
+            left.BoundaryCount == right.BoundaryCount &&
+            left.SelectedAreaCount == right.SelectedAreaCount &&
+            left.SelectedMunicipalityCount == right.SelectedMunicipalityCount &&
+            left.SelectionKind == right.SelectionKind &&
+            string.Equals(left.SelectionCode, right.SelectionCode, StringComparison.Ordinal);
+    }
+
+    private static bool AreClose(double left, double right, double tolerance)
+    {
+        return Math.Abs(left - right) <= tolerance;
+    }
+
+    internal static bool AreCloseValues(
+        double left,
+        double right,
+        double tolerance)
+    {
+        return AreClose(left, right, tolerance);
+    }
+
+    private static bool AreClose(
+        GeoCoordinate? left,
+        GeoCoordinate? right,
+        double tolerance)
+    {
+        return left is GeoCoordinate leftValue && right is GeoCoordinate rightValue
+            ? AreClose(leftValue.Latitude, rightValue.Latitude, tolerance) &&
+                AreClose(leftValue.Longitude, rightValue.Longitude, tolerance)
+            : left is null && right is null;
+    }
+
+    private static bool AreClose(
+        MapGeometryBounds? left,
+        MapGeometryBounds? right,
+        double tolerance)
+    {
+        return left is MapGeometryBounds leftValue && right is MapGeometryBounds rightValue
+            ? AreClose(leftValue.MinLongitude, rightValue.MinLongitude, tolerance) &&
+                AreClose(leftValue.MaxLongitude, rightValue.MaxLongitude, tolerance) &&
+                AreClose(leftValue.MinLatitude, rightValue.MinLatitude, tolerance) &&
+                AreClose(leftValue.MaxLatitude, rightValue.MaxLatitude, tolerance)
+            : left is null && right is null;
     }
 
     private void UpdateLegend()

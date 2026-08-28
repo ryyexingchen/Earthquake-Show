@@ -492,6 +492,13 @@ public sealed class EarthquakeMapProjectionTests
             selectedMunicipalityCount));
     }
 
+    [Fact]
+    public void StaticGeometryCacheUsesToleranceForEquivalentProjectionValues()
+    {
+        Assert.True(EarthquakeMapView.AreCloseValues(1.0000005, 1, 0.000001));
+        Assert.False(EarthquakeMapView.AreCloseValues(1.000002, 1, 0.000001));
+    }
+
     [Theory]
     [InlineData(true, true, true)]
     [InlineData(true, false, false)]

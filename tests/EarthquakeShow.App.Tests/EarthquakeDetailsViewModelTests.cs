@@ -122,6 +122,35 @@ public sealed class EarthquakeDetailsViewModelTests
     }
 
     [Fact]
+    public async Task Details_MapStateChangeDoesNotClearObservationHighlight()
+    {
+        EarthquakeReport report = CreateReport(
+            "map-state-highlight",
+            BaseTime,
+            intensity: JmaIntensity.Four,
+            station: true);
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+        using var details = new EarthquakeDetailsViewModel(page, map);
+
+        EarthquakeObservationTreeNode node = Assert.Single(
+            details.ObservationTreeNodes,
+            item => item.Kind == "都道府县");
+        details.SelectObservationNode(node);
+        Assert.Equal(node, details.SelectedObservationNode);
+        Assert.NotNull(map.SelectedMapSelection);
+
+        map.BeginManualInteraction();
+
+        Assert.Equal(node, details.SelectedObservationNode);
+        Assert.NotNull(map.SelectedMapSelection);
+    }
+
+    [Fact]
     public async Task Details_BuildsObservationTreeAndKeepsUnmappedStation()
     {
         EarthquakeReport report = CreateReport(

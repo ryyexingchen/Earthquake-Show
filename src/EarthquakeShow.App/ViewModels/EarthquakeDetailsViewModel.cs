@@ -152,6 +152,8 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
     private EarthquakeObservationItemViewModel? _selectedObservation;
     private EarthquakeObservationTreeNode? _selectedObservationNode;
     private EarthquakeTimelineItemViewModel? _selectedTimelineItem;
+    private EarthquakeEvent? _lastSelectedEvent;
+    private EarthquakeReport? _lastViewedReport;
     private IReadOnlyList<EarthquakeObservationItemViewModel> _allObservations = [];
     private IReadOnlyList<EarthquakeObservationTreeNode> _allObservationTreeNodes = [];
     private bool _isDisposed;
@@ -441,7 +443,12 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
     {
         if (eventArgs.PropertyName == nameof(EarthquakePageViewModel.State))
         {
-            Rebuild();
+            EarthquakePageState state = _page.State;
+            if (!ReferenceEquals(_lastSelectedEvent, state.SelectedEvent) ||
+                !ReferenceEquals(_lastViewedReport, state.ViewedReport))
+            {
+                Rebuild();
+            }
         }
     }
 
@@ -449,6 +456,8 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
     {
         EarthquakeReport? report = _page.State.ViewedReport;
         EarthquakeEvent? earthquakeEvent = _page.State.SelectedEvent;
+        _lastSelectedEvent = earthquakeEvent;
+        _lastViewedReport = report;
         if (report is null || earthquakeEvent is null)
         {
             Title = "未选择事件";
