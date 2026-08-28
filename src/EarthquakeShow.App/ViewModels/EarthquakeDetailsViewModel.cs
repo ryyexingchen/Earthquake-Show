@@ -444,15 +444,17 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         if (eventArgs.PropertyName == nameof(EarthquakePageViewModel.State))
         {
             EarthquakePageState state = _page.State;
-            if (!ReferenceEquals(_lastSelectedEvent, state.SelectedEvent) ||
-                !ReferenceEquals(_lastViewedReport, state.ViewedReport))
+            bool sameEvent = AreSameEventIdentity(_lastSelectedEvent, state.SelectedEvent);
+            bool sameReport = AreSameReportIdentity(_lastViewedReport, state.ViewedReport);
+            if (!AreEquivalentEventSnapshot(_lastSelectedEvent, state.SelectedEvent) ||
+                !sameReport)
             {
-                Rebuild();
+                Rebuild(preserveSelection: sameEvent && sameReport);
             }
         }
     }
 
-    private void Rebuild()
+    private void Rebuild(bool preserveSelection = false)
     {
         EarthquakeReport? report = _page.State.ViewedReport;
         EarthquakeEvent? earthquakeEvent = _page.State.SelectedEvent;
@@ -506,7 +508,7 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         EventAssociations = BuildEventAssociations(earthquakeEvent);
         _allObservations = BuildObservations(GetObservationReport(earthquakeEvent, report));
         _allObservationTreeNodes = BuildObservationTree(_allObservations);
-        RebuildVisibleObservations();
+            RebuildVisibleObservations(preserveSelection);
         TimelineItems = BuildTimeline(earthquakeEvent, report);
         _selectedTimelineItem = TimelineItems.FirstOrDefault(item => item.IsSelected);
         RawPayload = string.IsNullOrWhiteSpace(report.Source.SourcePayload)
@@ -514,7 +516,6 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             : report.Source.SourcePayload;
         RawMetadataText = $"{report.ReportCode} · {report.Source.SourceId} · " +
             $"{report.Source.SourceMessageId}";
-        _selectedObservation = null;
         RaiseAllProperties();
     }
 
@@ -1047,8 +1048,12 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
         return items;
     }
 
-    private void RebuildVisibleObservations()
+    private void RebuildVisibleObservations(bool preserveSelection = false)
     {
+        (string Kind, string Code, string Name)? selectedKey = preserveSelection &&
+            _selectedObservationNode is not null
+            ? (_selectedObservationNode.Kind, _selectedObservationNode.Code, _selectedObservationNode.Name)
+            : null;
         JmaIntensity? highest = null;
 
         if (_showHighestOnly && _allObservations.Count > 0)
@@ -1070,14 +1075,90 @@ public sealed class EarthquakeDetailsViewModel : INotifyPropertyChanged, IDispos
             .Where(node => node.Observation is not null)
             .Select(node => node.Observation!)
             .ToArray();
-        _selectedObservation = null;
-        _selectedObservationNode = null;
-        _map.ClearSelectedObservation();
+        EarthquakeObservationTreeNode? restoredNode = selectedKey is { } key
+            ? FindObservationNode(ObservationTreeNodes, key.Kind, key.Code, key.Name)
+            : null;
+        _selectedObservationNode = restoredNode;
+        _selectedObservation = restoredNode?.Observation;
+        if (_selectedObservation is EarthquakeObservationItemViewModel observation)
+        {
+            _map.SelectObservation(observation.Kind, observation.Code, observation.Coordinate);
+        }
+        else
+        {
+            _map.ClearSelectedObservation();
+        }
         OnPropertyChanged(nameof(Observations));
         OnPropertyChanged(nameof(ObservationTreeNodes));
         OnPropertyChanged(nameof(ObservationCountText));
         OnPropertyChanged(nameof(SelectedObservation));
         OnPropertyChanged(nameof(SelectedObservationNode));
+    }
+
+    private static EarthquakeObservationTreeNode? FindObservationNode(
+        IEnumerable<EarthquakeObservationTreeNode> nodes,
+        string kind,
+        string code,
+        string name)
+    {
+        foreach (EarthquakeObservationTreeNode node in nodes)
+        {
+            if (string.Equals(node.Kind, kind, StringComparison.Ordinal) &&
+                string.Equals(node.Code, code, StringComparison.Ordinal) &&
+                string.Equals(node.Name, name, StringComparison.Ordinal))
+            {
+                return node;
+            }
+
+            EarthquakeObservationTreeNode? child = FindObservationNode(node.Children, kind, code, name);
+            if (child is not null)
+            {
+                return child;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool AreSameEventIdentity(
+        EarthquakeEvent? left,
+        EarthquakeEvent? right)
+    {
+        return left is null && right is null ||
+            left is not null && right is not null &&
+            string.Equals(left.EventId, right.EventId, StringComparison.Ordinal);
+    }
+
+    private static bool AreSameReportIdentity(
+        EarthquakeReport? left,
+        EarthquakeReport? right)
+    {
+        return left is null && right is null ||
+            left is not null && right is not null &&
+            string.Equals(left.Source.SourceId, right.Source.SourceId, StringComparison.Ordinal) &&
+            string.Equals(left.Source.SourceMessageId, right.Source.SourceMessageId, StringComparison.Ordinal);
+    }
+
+    private static bool AreEquivalentEventSnapshot(
+        EarthquakeEvent? left,
+        EarthquakeEvent? right)
+    {
+        if (!AreSameEventIdentity(left, right))
+        {
+            return false;
+        }
+
+        if (left is null || right is null || left.Reports.Length != right.Reports.Length)
+        {
+            return left is null && right is null;
+        }
+
+        return left.Reports.Zip(right.Reports).All(pair =>
+            AreSameReportIdentity(pair.First, pair.Second) &&
+            pair.First.ReportCode == pair.Second.ReportCode &&
+            pair.First.IssuedAt == pair.Second.IssuedAt &&
+            pair.First.Serial == pair.Second.Serial &&
+            pair.First.Status == pair.Second.Status);
     }
 
     private static IEnumerable<EarthquakeObservationTreeNode> FlattenObservationNodes(

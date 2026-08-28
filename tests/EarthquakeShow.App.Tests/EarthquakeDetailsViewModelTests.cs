@@ -151,6 +151,36 @@ public sealed class EarthquakeDetailsViewModelTests
     }
 
     [Fact]
+    public async Task Details_RefreshWithEquivalentSnapshotPreservesObservationHighlight()
+    {
+        EarthquakeReport initial = CreateReport(
+            "refresh-initial",
+            BaseTime,
+            intensity: JmaIntensity.Four,
+            station: true);
+        var repository = new InMemoryEarthquakeEventRepository([initial]);
+        using var page = new EarthquakePageViewModel(repository);
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+        using var details = new EarthquakeDetailsViewModel(page, map);
+
+        EarthquakeObservationTreeNode node = Assert.Single(
+            details.ObservationTreeNodes,
+            item => item.Kind == "都道府县");
+        details.SelectObservationNode(node);
+
+        repository.ApplyReports([initial]);
+
+        Assert.NotNull(details.SelectedObservationNode);
+        Assert.Equal(node.Kind, details.SelectedObservationNode?.Kind);
+        Assert.Equal(node.Code, details.SelectedObservationNode?.Code);
+        Assert.Equal(node.Name, details.SelectedObservationNode?.Name);
+        Assert.Equal(EarthquakeMapSelectionKind.Prefecture, map.SelectedMapSelection?.Kind);
+    }
+
+    [Fact]
     public async Task Details_BuildsObservationTreeAndKeepsUnmappedStation()
     {
         EarthquakeReport report = CreateReport(

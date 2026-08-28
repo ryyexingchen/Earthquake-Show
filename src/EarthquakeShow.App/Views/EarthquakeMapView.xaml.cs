@@ -1015,6 +1015,14 @@ public partial class EarthquakeMapView : UserControl
                 _staticGeometryCacheKey is StaticGeometryCacheKey cachedKey &&
                 AreEquivalentStaticGeometryKeys(cachedKey, staticGeometryCacheKey),
                 _staticGeometryHost is not null);
+        if (!staticGeometryCacheHit &&
+            _staticGeometryCacheKey is StaticGeometryCacheKey previousStaticKey)
+        {
+            TraceMap(
+                "StaticGeometryCacheMiss",
+                projection.Unproject(new Point(MapCanvas.ActualWidth / 2, MapCanvas.ActualHeight / 2)),
+                DescribeStaticGeometryCacheDifference(previousStaticKey, staticGeometryCacheKey));
+        }
         long staticStarted = Stopwatch.GetTimestamp();
         MapDrawingHost staticGeometryHost;
         if (staticGeometryCacheHit)
@@ -1231,6 +1239,33 @@ public partial class EarthquakeMapView : UserControl
             left.SelectedMunicipalityCount == right.SelectedMunicipalityCount &&
             left.SelectionKind == right.SelectionKind &&
             string.Equals(left.SelectionCode, right.SelectionCode, StringComparison.Ordinal);
+    }
+
+    private static string DescribeStaticGeometryCacheDifference(
+        StaticGeometryCacheKey left,
+        StaticGeometryCacheKey right)
+    {
+        var differences = new List<string>();
+        if (!AreClose(left.ZoomLevel, right.ZoomLevel, 0.000001)) differences.Add("zoom");
+        if (!AreClose(left.Width, right.Width, 0.01)) differences.Add("width");
+        if (!AreClose(left.Height, right.Height, 0.01)) differences.Add("height");
+        if (!AreClose(left.ViewportCenter, right.ViewportCenter, 0.000001)) differences.Add("viewport");
+        if (!AreClose(left.FocusedCoordinate, right.FocusedCoordinate, 0.000001)) differences.Add("focus");
+        if (!AreClose(left.SelectedEventFocusCoordinate, right.SelectedEventFocusCoordinate, 0.000001)) differences.Add("event-focus");
+        if (!AreClose(left.SelectedEventBounds, right.SelectedEventBounds, 0.000001)) differences.Add("event-bounds");
+        if (left.DetailLevel != right.DetailLevel) differences.Add("detail");
+        if (left.ReportType != right.ReportType) differences.Add("report-type");
+        if (left.IsDistantEvent != right.IsDistantEvent) differences.Add("distant");
+        if (left.OutlineCount != right.OutlineCount) differences.Add("outline-count");
+        if (left.AreaCount != right.AreaCount) differences.Add("area-count");
+        if (left.MunicipalityCount != right.MunicipalityCount) differences.Add("municipality-count");
+        if (left.BoundaryCount != right.BoundaryCount) differences.Add("boundary-count");
+        if (left.SelectedAreaCount != right.SelectedAreaCount) differences.Add("selected-area-count");
+        if (left.SelectedMunicipalityCount != right.SelectedMunicipalityCount) differences.Add("selected-municipality-count");
+        if (left.SelectionKind != right.SelectionKind) differences.Add("selection-kind");
+        if (!string.Equals(left.ReportKey, right.ReportKey, StringComparison.Ordinal)) differences.Add("report-key");
+        if (!string.Equals(left.SelectionCode, right.SelectionCode, StringComparison.Ordinal)) differences.Add("selection-code");
+        return $"fields={(differences.Count == 0 ? "unknown" : string.Join(',', differences))}";
     }
 
     private static bool AreClose(double left, double right, double tolerance)
