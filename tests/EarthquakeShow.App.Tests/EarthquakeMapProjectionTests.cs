@@ -626,6 +626,31 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Theory]
+    [InlineData(true, false, MapDetailLevel.High, false, true, true)]
+    [InlineData(true, false, MapDetailLevel.High, true, true, false)]
+    [InlineData(true, false, MapDetailLevel.Medium, false, true, false)]
+    [InlineData(false, false, MapDetailLevel.High, false, true, false)]
+    [InlineData(true, true, MapDetailLevel.High, false, true, false)]
+    [InlineData(true, false, MapDetailLevel.High, false, false, false)]
+    public void HighDetailReloadRenderIsDeferredOnlyWhenNewGeometryIsRequired(
+        bool isPanning,
+        bool contentChanged,
+        MapDetailLevel detailLevel,
+        bool renderedCoverageContainsViewport,
+        bool willChangeDetailLevel,
+        bool expected)
+    {
+        Assert.Equal(
+            expected,
+            EarthquakeMapView.ShouldDeferHighDetailRenderAfterPan(
+                isPanning,
+                contentChanged,
+                detailLevel,
+                renderedCoverageContainsViewport,
+                willChangeDetailLevel));
+    }
+
+    [Theory]
     [InlineData(true, true)]
     [InlineData(false, false)]
     public void DetailLevelCheckIsDeferredDuringPan(bool isPanning, bool expected)

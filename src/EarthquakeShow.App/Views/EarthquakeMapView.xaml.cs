@@ -54,6 +54,7 @@ public partial class EarthquakeMapView : UserControl
     private bool _detailEnsureRequested;
     private bool _detailEnsureDeferredLogged;
     private bool _renderDeferredForDetailDecrease;
+    private bool _renderDeferredForHighDetailReload;
 
     public EarthquakeMapView()
     {
@@ -113,6 +114,7 @@ public partial class EarthquakeMapView : UserControl
         _detailEnsureRequested = false;
         _detailEnsureDispatchPending = false;
         _renderDeferredForDetailDecrease = false;
+        _renderDeferredForHighDetailReload = false;
         _markerDrawingCache.Clear();
         _markerCacheReportKey = null;
         _staticGeometryHost = null;
@@ -150,6 +152,16 @@ public partial class EarthquakeMapView : UserControl
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(EarthquakeMapViewModel.IsLoadingDetail) &&
+            ViewModel?.IsLoadingDetail == false &&
+            _renderDeferredForHighDetailReload &&
+            !_isPanning)
+        {
+            _renderDeferredForHighDetailReload = false;
+            TraceMap("PanRenderResumed", GetViewportCenter(), "reason=detail-load-finished");
+            RequestRender();
+        }
+
         if (!_isPanning &&
             e.PropertyName == nameof(EarthquakeMapViewModel.FocusedCoordinate) &&
             ShouldResetPanForFocusedCoordinate(_lastFocusedCoordinate, ViewModel?.FocusedCoordinate))
@@ -356,13 +368,22 @@ public partial class EarthquakeMapView : UserControl
             return;
         }
 
+        bool deferHighDetailRender = ShouldDeferHighDetailRenderAfterPan();
+        _renderDeferredForHighDetailReload = deferHighDetailRender;
         bool reusePanVisual = ShouldReusePanVisualAfterCommit();
-        CommitViewportCenter("MouseUp", requestRender: !reusePanVisual);
+        CommitViewportCenter(
+            "MouseUp",
+            requestRender: !reusePanVisual && !deferHighDetailRender,
+            preserveVisual: reusePanVisual || deferHighDetailRender);
         if (reusePanVisual)
         {
             _renderPending = false;
             _renderThrottleTimer.Stop();
             TraceMap("PanVisualReuse", GetViewportCenter(), "reason=mouse-up");
+        }
+        else if (deferHighDetailRender)
+        {
+            TraceMap("PanRenderDeferred", GetViewportCenter(), "reason=high-detail-reload");
         }
         StopPanning();
         await EnsureMapDetailLevelAsync();
@@ -374,13 +395,22 @@ public partial class EarthquakeMapView : UserControl
         bool wasPanning = _isPanning;
         if (wasPanning)
         {
+            bool deferHighDetailRender = ShouldDeferHighDetailRenderAfterPan();
+            _renderDeferredForHighDetailReload = deferHighDetailRender;
             bool reusePanVisual = ShouldReusePanVisualAfterCommit();
-            CommitViewportCenter("LostMouseCapture", requestRender: !reusePanVisual);
+            CommitViewportCenter(
+                "LostMouseCapture",
+                requestRender: !reusePanVisual && !deferHighDetailRender,
+                preserveVisual: reusePanVisual || deferHighDetailRender);
             if (reusePanVisual)
             {
                 _renderPending = false;
                 _renderThrottleTimer.Stop();
                 TraceMap("PanVisualReuse", GetViewportCenter(), "reason=lost-capture");
+            }
+            else if (deferHighDetailRender)
+            {
+                TraceMap("PanRenderDeferred", GetViewportCenter(), "reason=high-detail-reload");
             }
         }
         StopPanning();
@@ -781,6 +811,7 @@ public partial class EarthquakeMapView : UserControl
             projectedCenter,
             _isPanning);
         _viewportCenter = preservedCenter;
+        _renderDeferredForHighDetailReload = false;
         if (!_isPanning)
         {
             _panOffset = default;
@@ -855,6 +886,25 @@ public partial class EarthquakeMapView : UserControl
             renderedCoverageContainsViewport);
     }
 
+    private bool ShouldDeferHighDetailRenderAfterPan()
+    {
+        if (ViewModel is null ||
+            !_isPanning ||
+            _panContentChanged ||
+            ViewModel.DetailLevel != MapDetailLevel.High)
+        {
+            return false;
+        }
+
+        bool renderedCoverageContainsViewport = IsRenderedCoverageCurrent();
+        return ShouldDeferHighDetailRenderAfterPan(
+            _isPanning,
+            _panContentChanged,
+            ViewModel.DetailLevel,
+            renderedCoverageContainsViewport,
+            ViewModel.WillChangeDetailLevel(GetDetailViewportBounds()));
+    }
+
     private bool IsRenderedCoverageCurrent()
     {
         if (ViewModel?.DetailLevel != MapDetailLevel.High)
@@ -915,6 +965,20 @@ public partial class EarthquakeMapView : UserControl
             !contentChanged &&
             !detailWillChange &&
             renderedCoverageContainsViewport;
+    }
+
+    internal static bool ShouldDeferHighDetailRenderAfterPan(
+        bool isPanning,
+        bool contentChanged,
+        MapDetailLevel detailLevel,
+        bool renderedCoverageContainsViewport,
+        bool willChangeDetailLevel)
+    {
+        return isPanning &&
+            !contentChanged &&
+            detailLevel == MapDetailLevel.High &&
+            !renderedCoverageContainsViewport &&
+            willChangeDetailLevel;
     }
 
     internal static bool ShouldDeferRenderDuringInteraction(
