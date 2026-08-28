@@ -48,6 +48,7 @@ public partial class EarthquakeMapView : UserControl
     private GeoCoordinate? _lastFocusedCoordinate;
     private long _lastPanTraceAt;
     private Task? _detailEnsureTask;
+    private bool _detailEnsureDispatchPending;
     private bool _detailEnsureRequested;
     private bool _detailEnsureDeferredLogged;
     private bool _renderDeferredForDetailDecrease;
@@ -108,6 +109,7 @@ public partial class EarthquakeMapView : UserControl
         ResetWheelZoomTransform();
         _wheelZoomTimer.Stop();
         _detailEnsureRequested = false;
+        _detailEnsureDispatchPending = false;
         _renderDeferredForDetailDecrease = false;
         _markerDrawingCache.Clear();
         _markerCacheReportKey = null;
@@ -141,7 +143,7 @@ public partial class EarthquakeMapView : UserControl
         }
 
         RequestRender();
-        _ = EnsureMapDetailLevelAsync();
+        QueueDetailLevelCheck();
     }
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -170,7 +172,7 @@ public partial class EarthquakeMapView : UserControl
             }
 
             RequestRender();
-            _ = EnsureMapDetailLevelAsync();
+            QueueDetailLevelCheck();
         }
 
         if (e.PropertyName == nameof(EarthquakeMapViewModel.SelectedMapSelection) &&
@@ -207,12 +209,12 @@ public partial class EarthquakeMapView : UserControl
         if (e.PropertyName == nameof(EarthquakeMapViewModel.ZoomLevel) &&
             !_isWheelZooming)
         {
-            _ = EnsureMapDetailLevelAsync();
+            QueueDetailLevelCheck();
         }
         else if (e.PropertyName is nameof(EarthquakeMapViewModel.EffectiveFocusMode)
             or nameof(EarthquakeMapViewModel.HasSelectedEvent))
         {
-            _ = EnsureMapDetailLevelAsync();
+            QueueDetailLevelCheck();
         }
     }
 
@@ -306,7 +308,7 @@ public partial class EarthquakeMapView : UserControl
         if (_isWheelZooming)
         {
             CommitWheelZoom();
-            _ = EnsureMapDetailLevelAsync();
+            QueueDetailLevelCheck();
         }
 
         _isPanning = true;
@@ -518,6 +520,28 @@ public partial class EarthquakeMapView : UserControl
         _detailEnsureTask = ProcessDetailChecksAsync();
         return _detailEnsureTask;
     }
+
+    private void QueueDetailLevelCheck()
+    {
+        if (!ShouldQueueDetailLevelCheck(_detailEnsureDispatchPending))
+        {
+            return;
+        }
+
+        _detailEnsureDispatchPending = true;
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Background,
+            new Action(() =>
+            {
+                _detailEnsureDispatchPending = false;
+                if (IsLoaded)
+                {
+                    _ = EnsureMapDetailLevelAsync();
+                }
+            }));
+    }
+
+    internal static bool ShouldQueueDetailLevelCheck(bool dispatchPending) => !dispatchPending;
 
     private async Task ProcessDetailChecksAsync()
     {

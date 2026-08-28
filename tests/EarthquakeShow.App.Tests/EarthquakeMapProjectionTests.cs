@@ -636,6 +636,18 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public void DetailLevelCheckIsQueuedOnlyOncePerDispatchCycle(
+        bool dispatchPending,
+        bool expected)
+    {
+        Assert.Equal(
+            expected,
+            EarthquakeMapView.ShouldQueueDetailLevelCheck(dispatchPending));
+    }
+
+    [Theory]
     [InlineData(1, 1, 1)]
     [InlineData(1, 2, 1.25)]
     [InlineData(2, 1, 0.8)]
