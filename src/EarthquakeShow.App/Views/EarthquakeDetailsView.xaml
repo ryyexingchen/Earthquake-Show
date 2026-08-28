@@ -471,6 +471,8 @@
                         <Style TargetType="TreeViewItem">
                             <Setter Property="IsExpanded" Value="True" />
                             <Setter Property="Padding" Value="2" />
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="VerticalContentAlignment" Value="Center" />
                             <EventSetter Event="PreviewMouseLeftButtonDown"
                                          Handler="OnObservationTreeItemPreviewMouseLeftButtonDown" />
                         </Style>
