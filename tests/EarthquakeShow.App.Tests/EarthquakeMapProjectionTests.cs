@@ -651,6 +651,28 @@ public sealed class EarthquakeMapProjectionTests
     }
 
     [Theory]
+    [InlineData(true, false, MapDetailLevel.High, false, true)]
+    [InlineData(true, false, MapDetailLevel.High, true, false)]
+    [InlineData(true, false, MapDetailLevel.Medium, false, false)]
+    [InlineData(true, true, MapDetailLevel.High, false, false)]
+    [InlineData(false, false, MapDetailLevel.High, false, false)]
+    public void HighDetailCoverageRedrawIsDeferredOnlyAfterCoverageExpires(
+        bool isPanning,
+        bool contentChanged,
+        MapDetailLevel detailLevel,
+        bool renderedCoverageContainsViewport,
+        bool expected)
+    {
+        Assert.Equal(
+            expected,
+            EarthquakeMapView.ShouldDeferHighDetailCoverageRenderAfterPan(
+                isPanning,
+                contentChanged,
+                detailLevel,
+                renderedCoverageContainsViewport));
+    }
+
+    [Theory]
     [InlineData(true, true)]
     [InlineData(false, false)]
     public void DetailLevelCheckIsDeferredDuringPan(bool isPanning, bool expected)
