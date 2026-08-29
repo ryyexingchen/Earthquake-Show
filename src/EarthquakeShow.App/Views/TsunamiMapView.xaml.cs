@@ -47,7 +47,8 @@ public partial class TsunamiMapView : UserControl
     {
         if (e.PropertyName is nameof(TsunamiPageViewModel.ForecastAreaLevels)
             or nameof(TsunamiPageViewModel.HasMapGeometry)
-            or nameof(TsunamiPageViewModel.ObservationStations))
+            or nameof(TsunamiPageViewModel.ObservationStations)
+            or nameof(TsunamiPageViewModel.SelectedObservationStation))
         {
             RequestRender();
         }
@@ -133,16 +134,24 @@ public partial class TsunamiMapView : UserControl
 
             Point point = projection.Project(new GeoCoordinate(latitude, longitude));
             Color color = GetLevelColor(station.Level);
+            bool isSelected = string.Equals(
+                station.Code,
+                viewModel.SelectedObservationStation?.Code,
+                StringComparison.Ordinal);
             Ellipse marker = new()
             {
-                Width = 11,
-                Height = 11,
+                Width = isSelected ? 15 : 11,
+                Height = isSelected ? 15 : 11,
                 Fill = new SolidColorBrush(color),
                 Stroke = Brushes.White,
-                StrokeThickness = 1.5,
+                StrokeThickness = isSelected ? 3 : 1.5,
                 ToolTip = station.Name + "（" + station.Code + "）\n" +
-                    station.ObservationStatusText + " · " + station.HeightText,
+                    station.ObservationStatusText + " · " + station.HeightText +
+                    (string.IsNullOrWhiteSpace(station.PublicationText)
+                        ? string.Empty
+                        : "\n" + station.PublicationText),
             };
+            marker.MouseLeftButtonUp += (_, _) => viewModel.SelectObservationStation(station.Code);
             Canvas.SetLeft(marker, point.X - marker.Width / 2);
             Canvas.SetTop(marker, point.Y - marker.Height / 2);
             MapCanvas.Children.Add(marker);

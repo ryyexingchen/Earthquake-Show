@@ -68,6 +68,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
     private readonly JmaTsunamiStationCatalog _fallbackStationCatalog;
     private JmaTsunamiStationCatalog _stationCatalog;
     private TsunamiPageState _state = new();
+    private string? _selectedObservationStationCode;
     private string _rawXmlCopyStatus = string.Empty;
     private bool _isDisposed;
 
@@ -94,6 +95,14 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             }
 
             _state = value;
+            if (_selectedObservationStationCode is not null &&
+                !ObservationStations.Any(item => string.Equals(
+                    item.Code,
+                    _selectedObservationStationCode,
+                    StringComparison.Ordinal)))
+            {
+                _selectedObservationStationCode = null;
+            }
             OnPropertyChanged();
             OnPropertyChanged(nameof(Reports));
             OnPropertyChanged(nameof(HasReports));
@@ -122,6 +131,8 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(ObservationSummaryText));
             OnPropertyChanged(nameof(ForecastAreas));
             OnPropertyChanged(nameof(ObservationStations));
+            OnPropertyChanged(nameof(SelectedObservationStation));
+            OnPropertyChanged(nameof(HasSelectedObservationStation));
             OnPropertyChanged(nameof(EstimationAreas));
             OnPropertyChanged(nameof(HasForecastAreas));
             OnPropertyChanged(nameof(HasObservationStations));
@@ -293,6 +304,16 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
     public bool HasForecastAreas => !ForecastAreas.IsDefaultOrEmpty;
 
     public bool HasObservationStations => !ObservationStations.IsDefaultOrEmpty;
+
+    public TsunamiObservationStationDisplay? SelectedObservationStation =>
+        _selectedObservationStationCode is null
+            ? null
+            : ObservationStations.FirstOrDefault(item => string.Equals(
+                item.Code,
+                _selectedObservationStationCode,
+                StringComparison.Ordinal));
+
+    public bool HasSelectedObservationStation => SelectedObservationStation is not null;
 
     public bool HasEstimationAreas => !EstimationAreas.IsDefaultOrEmpty;
 
@@ -765,6 +786,28 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
     {
         ThrowIfDisposed();
         State = State with { SelectedReport = null };
+    }
+
+    public bool SelectObservationStation(string stationCode)
+    {
+        ThrowIfDisposed();
+        ArgumentException.ThrowIfNullOrWhiteSpace(stationCode);
+        TsunamiObservationStationDisplay? station = ObservationStations.FirstOrDefault(item =>
+            string.Equals(item.Code, stationCode, StringComparison.Ordinal));
+        if (station is null)
+        {
+            return false;
+        }
+
+        if (string.Equals(_selectedObservationStationCode, station.Code, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        _selectedObservationStationCode = station.Code;
+        OnPropertyChanged(nameof(SelectedObservationStation));
+        OnPropertyChanged(nameof(HasSelectedObservationStation));
+        return true;
     }
 
     public void Dispose()

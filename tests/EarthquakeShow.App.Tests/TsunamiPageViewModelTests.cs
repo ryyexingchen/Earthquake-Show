@@ -227,6 +227,52 @@ public sealed class TsunamiPageViewModelTests
     }
 
     [Fact]
+    public async Task SelectObservationStation_ExposesDetailsAndClearsWhenReportChanges()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
+        JmaTsunamiReport report = CreateReport("station-selection", issuedAt) with
+        {
+            ObservationStations =
+            [
+                new JmaTsunamiObservationStation(
+                    "釧路沖",
+                    "00410",
+                    "报文名称",
+                    "10050",
+                    null,
+                    issuedAt.AddMinutes(2),
+                    "到達",
+                    "観測",
+                    issuedAt.AddMinutes(8),
+                    null,
+                    new JmaTsunamiHeight(0.4, null, null, "m", "高さ")),
+            ],
+        };
+        var repository = new CatalogStubTsunamiReportRepository(
+            [report],
+            JmaTsunamiStationCatalog.Create(
+                "selection-test",
+                [new JmaTsunamiStationCatalogEntry("10050", "数据库站点", null, 42.1, 144.2, "100")],
+                [new JmaTsunamiPublicationCatalogEntry("00410", "釧路沖１００ｋｍ", null, ["10050"])]));
+        using var viewModel = new TsunamiPageViewModel(repository);
+
+        await viewModel.LoadAsync();
+
+        Assert.True(viewModel.SelectObservationStation("10050"));
+        Assert.True(viewModel.HasSelectedObservationStation);
+        Assert.Equal("数据库站点", viewModel.SelectedObservationStation?.Name);
+        Assert.Equal("00410", viewModel.SelectedObservationStation?.PublicationCode);
+        Assert.Equal("观测到海啸", viewModel.SelectedObservationStation?.ObservationStatusText);
+        Assert.False(viewModel.SelectObservationStation("不存在"));
+
+        repository.Reports = [CreateReport("station-selection-next", issuedAt.AddMinutes(10))];
+        await viewModel.LoadAsync();
+
+        Assert.False(viewModel.HasSelectedObservationStation);
+        Assert.Null(viewModel.SelectedObservationStation);
+    }
+
+    [Fact]
     public async Task Timeline_GroupsReportsByEventAndKeepsCancellationAsRelease()
     {
         DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
