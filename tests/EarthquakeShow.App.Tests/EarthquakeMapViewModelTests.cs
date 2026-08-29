@@ -874,7 +874,7 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
-    public async Task SelectingAnotherReportAutomaticallyRestoresEventView()
+    public async Task SelectingAnotherReportPublishesViewKeyWithoutChangingManualZoom()
     {
         EarthquakeReport first = CreateReport();
         EarthquakeReport second = CreateReport() with
@@ -890,6 +890,7 @@ public sealed class EarthquakeMapViewModelTests
             page,
             OfflineMapGeometry.LoadFromJson(GeometryJson));
 
+        map.BeginManualInteraction();
         map.ZoomIn();
         map.ZoomIn();
         Assert.True(map.ZoomLevel > 1);
@@ -898,9 +899,50 @@ public sealed class EarthquakeMapViewModelTests
         map.PropertyChanged += (_, args) => changedProperties.Add(args.PropertyName);
         Assert.True(page.SelectReport("p2pquake", "p2p-message"));
 
-        Assert.Equal(1, map.ZoomLevel, precision: 3);
-        Assert.True(map.FollowSelection);
+        Assert.True(map.ZoomLevel > 1);
+        Assert.False(map.FollowSelection);
         Assert.Equal(EarthquakeMapFocusMode.SelectedEvent, map.EffectiveFocusMode);
+        Assert.Contains(nameof(EarthquakeMapViewModel.ViewedReportKey), changedProperties);
+        Assert.DoesNotContain(nameof(EarthquakeMapViewModel.ZoomLevel), changedProperties);
+    }
+
+    [Fact]
+    public async Task SelectingAnotherEventPublishesNewViewKeyWithoutReusingOldZoom()
+    {
+        EarthquakeReport first = CreateReport() with
+        {
+            EventId = "event-a",
+            Source = new SourceReference("jma-xml", "event-a-message"),
+        };
+        EarthquakeReport second = CreateReport() with
+        {
+            EventId = "event-b",
+            Source = new SourceReference("jma-xml", "event-b-message"),
+            Hypocenter = new Hypocenter(
+                "北海道",
+                "100",
+                new GeoCoordinate(41.3, 139.5),
+                10),
+        };
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([first, second]));
+        await page.LoadAsync();
+        Assert.True(page.SelectEvent("event-a"));
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+
+        map.BeginManualInteraction();
+        map.ZoomIn();
+        map.ZoomIn();
+        double previousZoom = map.ZoomLevel;
+        var changedProperties = new List<string?>();
+        map.PropertyChanged += (_, args) => changedProperties.Add(args.PropertyName);
+
+        Assert.True(page.SelectEvent("event-b"));
+
+        Assert.Equal(previousZoom, map.ZoomLevel, precision: 3);
+        Assert.Contains(nameof(EarthquakeMapViewModel.ViewedReportKey), changedProperties);
         Assert.DoesNotContain(nameof(EarthquakeMapViewModel.ZoomLevel), changedProperties);
     }
 

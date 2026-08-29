@@ -811,19 +811,25 @@ public sealed class EarthquakeMapProjectionTests
             EarthquakeMapViewModel.IsDetailLevelDecrease(currentLevel, desiredLevel));
     }
 
-    [Theory]
-    [InlineData(false, false, true)]
-    [InlineData(false, true, false)]
-    [InlineData(true, false, false)]
-    public void ReportChangeAutoscaleIsSkippedDuringManualPan(
-        bool isApplyingAutoScale,
-        bool isMapPanning,
-        bool expected)
+    [Fact]
+    public void AutomaticZoomUsesCurrentEventBounds()
     {
-        Assert.Equal(expected, EarthquakeMapViewModel.ShouldAutoScaleAfterReportChange(
-            isApplyingAutoScale,
-            isMapPanning,
-            reportChanged: true));
+        MapGeometryBounds overviewBounds = new(125, 150, 20, 50);
+        GeoCoordinate center = new(35, 135);
+        double zoomForSmallEvent = EarthquakeMapView.CalculateAutomaticZoomLevel(
+            overviewBounds,
+            new MapGeometryBounds(134.8, 135.2, 34.8, 35.2),
+            center,
+            1000,
+            600);
+        double zoomForLargeEvent = EarthquakeMapView.CalculateAutomaticZoomLevel(
+            overviewBounds,
+            new MapGeometryBounds(130, 140, 30, 40),
+            center,
+            1000,
+            600);
+
+        Assert.True(zoomForSmallEvent > zoomForLargeEvent);
     }
 
     [Fact]

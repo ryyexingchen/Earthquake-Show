@@ -852,17 +852,32 @@ public partial class EarthquakeMapView : UserControl
                 (eventBounds.MinLongitude + eventBounds.MaxLongitude) / 2);
         }
 
+        return CalculateAutomaticZoomLevel(
+            ViewModel.OverviewBounds,
+            eventBounds,
+            center,
+            MapCanvas.ActualWidth,
+            MapCanvas.ActualHeight);
+    }
+
+    internal static double CalculateAutomaticZoomLevel(
+        MapGeometryBounds overviewBounds,
+        MapGeometryBounds eventBounds,
+        GeoCoordinate eventCenter,
+        double width,
+        double height)
+    {
         MapGeometryBounds centeredEventBounds = EarthquakeMapViewModel.CenterEventBounds(
             eventBounds,
-            center);
+            eventCenter);
         double overviewScale = MapProjection.CalculateFitScale(
-            ViewModel.OverviewBounds,
-            MapCanvas.ActualWidth,
-            MapCanvas.ActualHeight);
+            overviewBounds,
+            width,
+            height);
         double eventScale = MapProjection.CalculateFitScale(
             centeredEventBounds,
-            MapCanvas.ActualWidth,
-            MapCanvas.ActualHeight);
+            width,
+            height);
         return MapProjection.ZoomLevelForScale(eventScale / overviewScale);
     }
 
@@ -870,18 +885,12 @@ public partial class EarthquakeMapView : UserControl
         MapGeometryBounds selectedBounds,
         GeoCoordinate selectedCenter)
     {
-        MapGeometryBounds centeredBounds = EarthquakeMapViewModel.CenterEventBounds(
-            selectedBounds,
-            selectedCenter);
-        double overviewScale = MapProjection.CalculateFitScale(
+        return CalculateAutomaticZoomLevel(
             ViewModel!.OverviewBounds,
+            selectedBounds,
+            selectedCenter,
             MapCanvas.ActualWidth,
             MapCanvas.ActualHeight);
-        double selectedScale = MapProjection.CalculateFitScale(
-            centeredBounds,
-            MapCanvas.ActualWidth,
-            MapCanvas.ActualHeight);
-        return MapProjection.ZoomLevelForScale(selectedScale / overviewScale);
     }
 
     private void OnGeometryChanging(
