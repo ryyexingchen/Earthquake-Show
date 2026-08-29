@@ -290,9 +290,12 @@ public sealed class MainWindowViewModelTests
                 MainWindowViewModel windowViewModel =
                     Assert.IsType<MainWindowViewModel>(window.DataContext);
                 Assert.True(windowViewModel.IsTsunamiPageVisible);
-                Assert.Equal(
-                    Visibility.Visible,
-                    Assert.IsType<TsunamiPageView>(window.FindName("TsunamiPageView")).Visibility);
+                TsunamiPageView tsunamiPage =
+                    Assert.IsType<TsunamiPageView>(window.FindName("TsunamiPageView"));
+                Assert.Equal(Visibility.Visible, tsunamiPage.Visibility);
+                Assert.Equal(Visibility.Visible, tsunamiPage.FindName("TsunamiMap") is TsunamiMapView map
+                    ? map.Visibility
+                    : Visibility.Collapsed);
                 RadioButton earthquakeButton = Assert.IsType<RadioButton>(
                     window.FindName("EarthquakeNavigationButton"));
                 earthquakeButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));

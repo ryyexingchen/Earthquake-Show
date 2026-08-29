@@ -377,6 +377,16 @@ public sealed class TsunamiPageViewModelTests
     }
 
     [Fact]
+    public void MapGeometry_IsAvailableBeforeReportSelection()
+    {
+        using var viewModel = new TsunamiPageViewModel(new StubTsunamiReportRepository([]));
+
+        Assert.False(viewModel.HasSelectedReport);
+        Assert.True(viewModel.HasMapGeometry);
+        Assert.NotEmpty(viewModel.MapLines);
+    }
+
+    [Fact]
     public async Task Timeline_GroupsReportsByEventAndKeepsCancellationAsRelease()
     {
         DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));

@@ -285,12 +285,19 @@
                                 <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="关联事件" />
                                 <TextBlock Margin="0,4,0,0" FontSize="12" Text="{Binding SelectedReport.EventId}" />
                             </StackPanel>
-                        </Grid>
-                    </Border>
+                            </Grid>
+                        </Border>
 
-                    <views:TsunamiMapView Margin="0,18,0,0"
+                    </StackPanel>
+
+                    <views:TsunamiMapView x:Name="TsunamiMap"
+                                          Margin="0,18,0,0"
                                           DataContext="{Binding}"
                                           Visibility="{Binding HasMapGeometry, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                    <StackPanel MaxWidth="1120"
+                                HorizontalAlignment="Stretch"
+                                Visibility="{Binding HasSelectedReport, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Border Margin="0,12,0,0"
                             Padding="14"
                             Background="#F1F7F8"
