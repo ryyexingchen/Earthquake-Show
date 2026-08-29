@@ -565,6 +565,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
 
     public bool TryGetSelectedEventFocusCoordinate(out GeoCoordinate coordinate)
     {
+        coordinate = default;
         EarthquakeReport? report = _page.State.ViewedReport;
         if (report?.Hypocenter?.Coordinate is GeoCoordinate hypocenter)
         {
@@ -572,32 +573,62 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             return true;
         }
 
-        IReadOnlyList<GeoCoordinate> points = Markers
-            .Select(marker => marker.Coordinate)
-            .Concat(Areas.SelectMany(area => area.Rings.SelectMany(ring => ring)))
-            .Concat(Municipalities.SelectMany(item => item.Rings.SelectMany(ring => ring)))
-            .ToArray();
-        return TryGetBoundsCenter(points, out coordinate);
+        if (!TryGetSelectedEventBounds(out MapGeometryBounds bounds))
+        {
+            return false;
+        }
+
+        coordinate = new GeoCoordinate(
+            (bounds.MinLatitude + bounds.MaxLatitude) / 2,
+            (bounds.MinLongitude + bounds.MaxLongitude) / 2);
+        return true;
     }
 
     public bool TryGetSelectedEventBounds(out MapGeometryBounds bounds)
     {
-        IReadOnlyList<GeoCoordinate> points = Markers
+        IEnumerable<GeoCoordinate> points = Markers
             .Select(marker => marker.Coordinate)
             .Concat(Areas.SelectMany(area => area.Rings.SelectMany(ring => ring)))
             .Concat(Municipalities.SelectMany(item => item.Rings.SelectMany(ring => ring)))
             .ToArray();
-        if (points.Count == 0)
+
+        EarthquakeReport? report = _page.State.ViewedReport;
+        if (report is not null)
+        {
+            report = GetMapReport(report);
+            HashSet<string> areaCodes = report.IntensityAreas
+                .Select(area => area.Code)
+                .Where(code => !string.IsNullOrWhiteSpace(code))
+                .ToHashSet(StringComparer.Ordinal);
+            HashSet<string> municipalityCodes = report.IntensityMunicipalities
+                .Select(item => item.Code)
+                .Where(code => !string.IsNullOrWhiteSpace(code))
+                .ToHashSet(StringComparer.Ordinal);
+
+            // 高精度几何按视口裁剪，自动适配必须使用稳定的概览几何避免切换时范围退化。
+            points = points
+                .Concat(_overviewGeometry.Polygons
+                    .Where(polygon => areaCodes.Contains(polygon.Code))
+                    .SelectMany(GetPolygonRings)
+                    .SelectMany(ring => ring))
+                .Concat((_overviewMunicipalityGeometry?.Polygons ?? [])
+                    .Where(polygon => municipalityCodes.Contains(polygon.Code))
+                    .SelectMany(GetPolygonRings)
+                    .SelectMany(ring => ring));
+        }
+
+        GeoCoordinate[] materialized = points.ToArray();
+        if (materialized.Length == 0)
         {
             bounds = default;
             return false;
         }
 
         bounds = new MapGeometryBounds(
-            points.Min(item => item.Longitude),
-            points.Max(item => item.Longitude),
-            points.Min(item => item.Latitude),
-            points.Max(item => item.Latitude));
+            materialized.Min(item => item.Longitude),
+            materialized.Max(item => item.Longitude),
+            materialized.Min(item => item.Latitude),
+            materialized.Max(item => item.Latitude));
         return true;
     }
 

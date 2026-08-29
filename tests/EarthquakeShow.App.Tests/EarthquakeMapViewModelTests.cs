@@ -763,6 +763,60 @@ public sealed class EarthquakeMapViewModelTests
     }
 
     [Fact]
+    public async Task SelectedEventBounds_UsesOverviewGeometryAfterHighDetailViewportClipping()
+    {
+        EarthquakeReport report = CreateReport();
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository([report]));
+        await page.LoadAsync();
+
+        string directory = Path.Combine(
+            Path.GetTempPath(),
+            "EarthquakeShowTests",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string mediumAreasPath = Path.Combine(directory, "areas-medium.geojson");
+            string mediumMunicipalitiesPath = Path.Combine(directory, "municipalities-medium.geojson");
+            string mediumBoundariesPath = Path.Combine(directory, "boundaries-medium.geojson");
+            string highAreasPath = Path.Combine(directory, "areas-high.geojson");
+            string highMunicipalitiesPath = Path.Combine(directory, "municipalities-high.geojson");
+            await File.WriteAllTextAsync(mediumAreasPath, GeometryJson);
+            await File.WriteAllTextAsync(mediumMunicipalitiesPath, MunicipalityGeometryJson);
+            await File.WriteAllTextAsync(mediumBoundariesPath, BoundaryGeometryJson);
+            await File.WriteAllTextAsync(highAreasPath, HighDetailClippedGeometryJson);
+            await File.WriteAllTextAsync(highMunicipalitiesPath, MunicipalityGeometryJson);
+
+            using var map = new EarthquakeMapViewModel(
+                page,
+                OfflineMapGeometry.LoadFromJson(GeometryJson),
+                OfflineMapGeometry.LoadFromJson(MunicipalityGeometryJson),
+                lodResourceProvider: new MapLodResourceProvider(
+                    mediumAreasPath,
+                    mediumMunicipalitiesPath,
+                    mediumBoundariesPath,
+                    highAreasPath,
+                    highMunicipalitiesPath));
+            map.AutoScale(13);
+            await map.EnsureDetailLevelForZoomAsync(
+                viewportBounds: new MapGeometryBounds(130.65, 130.8, 32.65, 32.95),
+                viewportCenter: new GeoCoordinate(32.8, 130.7));
+
+            Assert.Equal(MapDetailLevel.High, map.DetailLevel);
+            Assert.True(map.TryGetSelectedEventBounds(out MapGeometryBounds bounds));
+            Assert.True(bounds.MinLongitude <= 130.4);
+            Assert.True(bounds.MaxLongitude >= 131.0);
+            Assert.True(bounds.MinLatitude <= 32.4);
+            Assert.True(bounds.MaxLatitude >= 33.1);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task MapCommands_UpdateZoomAndPageMapState()
     {
         var report = CreateReport();
@@ -1358,6 +1412,23 @@ public sealed class EarthquakeMapViewModelTests
               "geometry": {
                 "type": "Polygon",
                 "coordinates": [[[130.5,32.5],[130.9,32.5],[130.9,32.9],[130.5,32.9],[130.5,32.5]]]
+              }
+            }
+          ]
+        }
+        """;
+
+    private const string HighDetailClippedGeometryJson = """
+        {
+          "type": "FeatureCollection",
+          "metadata": { "source": "测试高精度裁剪轮廓", "officialBoundary": true },
+          "features": [
+            {
+              "type": "Feature",
+              "properties": { "areaCode": "741", "name": "熊本県熊本" },
+              "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[130.65,32.65],[130.8,32.65],[130.8,32.95],[130.65,32.95],[130.65,32.65]]]
               }
             }
           ]
