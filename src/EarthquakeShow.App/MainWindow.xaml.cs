@@ -79,12 +79,20 @@ public partial class MainWindow : Window
 
     private void OnNewReportNavigationRequested(object? sender, EventArgs e)
     {
+        if (!ShouldAutoNavigateToEarthquakePage(_viewModel.IsTsunamiPageVisible))
+        {
+            return;
+        }
+
         _viewModel.ShowEarthquakePage();
         EventListView.ScrollToSelectedItem();
         _viewModel.Layout.OpenDetailsPane();
         DetailsView.ShowSummary();
         DetailsView.FocusDetails();
     }
+
+    internal static bool ShouldAutoNavigateToEarthquakePage(bool isTsunamiPageVisible) =>
+        !isTsunamiPageVisible;
 
     protected override async void OnContentRendered(EventArgs e)
     {

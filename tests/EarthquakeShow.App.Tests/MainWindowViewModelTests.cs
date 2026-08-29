@@ -237,6 +237,13 @@ public sealed class MainWindowViewModelTests
     }
 
     [Fact]
+    public void NewEarthquakeReportNavigation_DoesNotInterruptTsunamiPage()
+    {
+        Assert.False(MainWindow.ShouldAutoNavigateToEarthquakePage(isTsunamiPageVisible: true));
+        Assert.True(MainWindow.ShouldAutoNavigateToEarthquakePage(isTsunamiPageVisible: false));
+    }
+
+    [Fact]
     public void MainWindow_XamlResources_LoadOnStaThread()
     {
         Exception? capturedException = null;
