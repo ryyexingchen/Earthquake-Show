@@ -264,12 +264,116 @@ public sealed class TsunamiPageViewModelTests
         Assert.Equal("00410", viewModel.SelectedObservationStation?.PublicationCode);
         Assert.Equal("观测到海啸", viewModel.SelectedObservationStation?.ObservationStatusText);
         Assert.False(viewModel.SelectObservationStation("不存在"));
+        viewModel.SelectedObservationStation = viewModel.ObservationStations[0];
+        Assert.Equal("10050", viewModel.SelectedObservationStation?.Code);
+        viewModel.SelectedObservationStation = null;
+        Assert.False(viewModel.HasSelectedObservationStation);
+        Assert.True(viewModel.SelectObservationStation("10050"));
 
         repository.Reports = [CreateReport("station-selection-next", issuedAt.AddMinutes(10))];
         await viewModel.LoadAsync();
 
         Assert.False(viewModel.HasSelectedObservationStation);
         Assert.Null(viewModel.SelectedObservationStation);
+    }
+
+    [Fact]
+    public async Task SelectedObservationCoordinate_OnlyReturnsMeasuredStationWithFiniteCoordinates()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
+        JmaTsunamiReport report = CreateReport("station-coordinate", issuedAt) with
+        {
+            ObservationStations =
+            [
+                new JmaTsunamiObservationStation(
+                    "区域",
+                    "有坐标",
+                    "观测到海啸",
+                    "MEASURED",
+                    null,
+                    null,
+                    null,
+                    "観測",
+                    null,
+                    null,
+                    new JmaTsunamiHeight(0.4, null, null, "m", "高さ")),
+                new JmaTsunamiObservationStation(
+                    "区域",
+                    "欠测",
+                    "欠测",
+                    "MISSING",
+                    null,
+                    null,
+                    null,
+                    "欠測",
+                    null,
+                    null,
+                    new JmaTsunamiHeight(null, null, null, null, null)),
+            ],
+        };
+        var repository = new CatalogStubTsunamiReportRepository(
+            [report],
+            JmaTsunamiStationCatalog.Create(
+                "coordinate-test",
+                [
+                    new JmaTsunamiStationCatalogEntry("MEASURED", "有坐标", null, 42.1, 144.2, "100"),
+                    new JmaTsunamiStationCatalogEntry("MISSING", "欠测", null, null, null, "100"),
+                ],
+                []));
+        using var viewModel = new TsunamiPageViewModel(repository);
+
+        await viewModel.LoadAsync();
+
+        Assert.True(viewModel.SelectObservationStation("MEASURED"));
+        Assert.True(viewModel.TryGetSelectedObservationCoordinate(out GeoCoordinate coordinate));
+        Assert.Equal(42.1, coordinate.Latitude);
+        Assert.Equal(144.2, coordinate.Longitude);
+
+        Assert.True(viewModel.SelectObservationStation("MISSING"));
+        Assert.False(viewModel.TryGetSelectedObservationCoordinate(out _));
+    }
+
+    [Fact]
+    public async Task ObservationStations_HidesNoTsunamiAndKeepsWeakObservation()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
+        JmaTsunamiReport report = CreateReport("station-filter", issuedAt) with
+        {
+            ObservationStations =
+            [
+                new JmaTsunamiObservationStation("区域", "A", "无海啸", "NO", null, null, null, null, null, null, new JmaTsunamiHeight(0, null, null, "m", "高さ")),
+                new JmaTsunamiObservationStation("区域", "A", "微弱站", "WEAK", null, null, null, "微弱", null, null, new JmaTsunamiHeight(null, "微弱", null, null, null)),
+            ],
+        };
+        var repository = new StubTsunamiReportRepository([report]);
+        using var viewModel = new TsunamiPageViewModel(repository);
+
+        await viewModel.LoadAsync();
+
+        Assert.Single(viewModel.ObservationStations);
+        Assert.Equal("WEAK", viewModel.ObservationStations[0].Code);
+        Assert.True(viewModel.ObservationStations[0].HasMeasuredTsunami);
+    }
+
+    [Fact]
+    public void MapZoom_UsesOverviewAtLowZoomAndDetailedAfterThreshold()
+    {
+        using var viewModel = new TsunamiPageViewModel(new StubTsunamiReportRepository([]));
+
+        Assert.Equal(TsunamiMapDetailLevel.Overview, viewModel.MapDetailLevel);
+        Assert.Equal("低精度地图 · 1.0×", viewModel.MapStatusText);
+
+        viewModel.ZoomMapIn();
+        Assert.Equal(1.5, viewModel.MapZoomLevel);
+        Assert.Equal(TsunamiMapDetailLevel.Overview, viewModel.MapDetailLevel);
+
+        viewModel.ZoomMapIn();
+        viewModel.ZoomMapIn();
+        Assert.Equal(2.5, viewModel.MapZoomLevel);
+        Assert.Equal(TsunamiMapDetailLevel.Detailed, viewModel.MapDetailLevel);
+
+        viewModel.ResetMapZoom();
+        Assert.Equal(1, viewModel.MapZoomLevel);
     }
 
     [Fact]

@@ -10,7 +10,16 @@
             <Canvas x:Name="MapCanvas"
                     Background="#D9EEF3"
                     ClipToBounds="True"
-                    SizeChanged="OnMapSizeChanged" />
+                    RenderTransformOrigin="0.5,0.5"
+                    SizeChanged="OnMapSizeChanged"
+                    MouseWheel="OnMapMouseWheel">
+                <Canvas.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform x:Name="MapZoomTransform" ScaleX="1" ScaleY="1" />
+                        <TranslateTransform x:Name="MapPanTransform" />
+                    </TransformGroup>
+                </Canvas.RenderTransform>
+            </Canvas>
             <Border Margin="10"
                     Padding="8,5"
                     HorizontalAlignment="Left"
@@ -23,10 +32,34 @@
                     <TextBlock FontWeight="SemiBold" Text="海啸预报区" />
                     <TextBlock Margin="0,3,0,0"
                                Foreground="#53666D"
-                               FontSize="10"
-                               Text="JMA 沿岸线 · 观测点仅在有官方坐标时显示" />
+                               FontSize="10">
+                        <Run Text="JMA 沿岸线 · " />
+                        <Run Text="{Binding MapStatusText, Mode=OneWay}" />
+                    </TextBlock>
                 </StackPanel>
             </Border>
+            <StackPanel Margin="10"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top">
+                <Button AutomationProperties.Name="放大海啸地图"
+                        Click="OnZoomInClick"
+                        Style="{StaticResource MapToolButtonStyle}"
+                        ToolTip="放大海啸地图">
+                    <TextBlock FontSize="17" Text="+" />
+                </Button>
+                <Button AutomationProperties.Name="缩小海啸地图"
+                        Click="OnZoomOutClick"
+                        Style="{StaticResource MapToolButtonStyle}"
+                        ToolTip="缩小海啸地图">
+                    <TextBlock FontSize="17" Text="−" />
+                </Button>
+                <Button AutomationProperties.Name="恢复海啸地图视图"
+                        Click="OnResetZoomClick"
+                        Style="{StaticResource MapToolButtonStyle}"
+                        ToolTip="恢复海啸地图视图">
+                    <TextBlock FontSize="16" Text="⌂" />
+                </Button>
+            </StackPanel>
             <Border Margin="10"
                     Padding="8,6"
                     HorizontalAlignment="Right"

@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace EarthquakeShow.App.Views;
 
@@ -28,5 +29,20 @@ public partial class TsunamiPageView : UserControl
 
         Clipboard.SetText(viewModel.RawXmlText);
         viewModel.MarkRawXmlCopied();
+    }
+
+    private void OnObservationStationSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (ObservationStationListBox.SelectedItem is null)
+        {
+            return;
+        }
+
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Loaded,
+            new Action(() => ObservationStationListBox.ScrollIntoView(
+                ObservationStationListBox.SelectedItem)));
     }
 }

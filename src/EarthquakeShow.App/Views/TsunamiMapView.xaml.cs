@@ -43,12 +43,39 @@ public partial class TsunamiMapView : UserControl
 
     private void OnMapSizeChanged(object sender, SizeChangedEventArgs e) => RequestRender();
 
+    private void OnMapMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+    {
+        if (ViewModel is null)
+        {
+            return;
+        }
+
+        if (e.Delta > 0)
+        {
+            ViewModel.ZoomMapIn();
+        }
+        else if (e.Delta < 0)
+        {
+            ViewModel.ZoomMapOut();
+        }
+
+        e.Handled = true;
+    }
+
+    private void OnZoomInClick(object sender, RoutedEventArgs e) => ViewModel?.ZoomMapIn();
+
+    private void OnZoomOutClick(object sender, RoutedEventArgs e) => ViewModel?.ZoomMapOut();
+
+    private void OnResetZoomClick(object sender, RoutedEventArgs e) => ViewModel?.ResetMapZoom();
+
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(TsunamiPageViewModel.ForecastAreaLevels)
             or nameof(TsunamiPageViewModel.HasMapGeometry)
             or nameof(TsunamiPageViewModel.ObservationStations)
-            or nameof(TsunamiPageViewModel.SelectedObservationStation))
+            or nameof(TsunamiPageViewModel.SelectedObservationStation)
+            or nameof(TsunamiPageViewModel.MapLines)
+            or nameof(TsunamiPageViewModel.MapZoomLevel))
         {
             RequestRender();
         }
@@ -83,6 +110,9 @@ public partial class TsunamiMapView : UserControl
             viewModel.MapBounds,
             MapCanvas.ActualWidth,
             MapCanvas.ActualHeight);
+        MapZoomTransform.ScaleX = viewModel.MapZoomLevel;
+        MapZoomTransform.ScaleY = viewModel.MapZoomLevel;
+        UpdateSelectedStationPan(viewModel, projection);
         foreach (IGrouping<string, TsunamiMapLine> group in viewModel.MapLines.GroupBy(
                      line => line.Code,
                      StringComparer.Ordinal))
@@ -124,7 +154,8 @@ public partial class TsunamiMapView : UserControl
             });
         }
 
-        foreach (TsunamiObservationStationDisplay station in viewModel.ObservationStations)
+        foreach (TsunamiObservationStationDisplay station in viewModel.ObservationStations
+                     .Where(item => item.HasMeasuredTsunami))
         {
             if (station.Latitude is not double latitude || station.Longitude is not double longitude ||
                 !double.IsFinite(latitude) || !double.IsFinite(longitude))
@@ -156,6 +187,43 @@ public partial class TsunamiMapView : UserControl
             Canvas.SetTop(marker, point.Y - marker.Height / 2);
             MapCanvas.Children.Add(marker);
         }
+    }
+
+    private void UpdateSelectedStationPan(
+        TsunamiPageViewModel viewModel,
+        MapProjection projection)
+    {
+        if (!viewModel.TryGetSelectedObservationCoordinate(out GeoCoordinate coordinate))
+        {
+            if (!viewModel.HasSelectedObservationStation)
+            {
+                MapPanTransform.X = 0;
+                MapPanTransform.Y = 0;
+            }
+
+            return;
+        }
+
+        Point projected = projection.Project(coordinate);
+        Vector offset = GetStationCenteringOffset(
+            projected,
+            viewModel.MapZoomLevel,
+            MapCanvas.ActualWidth,
+            MapCanvas.ActualHeight);
+        MapPanTransform.X = offset.X;
+        MapPanTransform.Y = offset.Y;
+    }
+
+    internal static Vector GetStationCenteringOffset(
+        Point projected,
+        double zoomLevel,
+        double width,
+        double height)
+    {
+        Point center = new(width / 2, height / 2);
+        return new(
+            center.X - (center.X + (projected.X - center.X) * zoomLevel),
+            center.Y - (center.Y + (projected.Y - center.Y) * zoomLevel));
     }
 
     private static Color GetLevelColor(TsunamiLevel level) => level switch

@@ -31,7 +31,10 @@ public sealed record TsunamiObservationStationDisplay(
     double? Longitude,
     string PublicationCode,
     string PublicationText,
-    bool IsCatalogMatched);
+    bool IsCatalogMatched)
+{
+    public bool HasMeasuredTsunami => ObservationStatusText is "观测到海啸" or "微弱";
+}
 
 public sealed record TsunamiEstimationAreaDisplay(
     string Name,
@@ -60,17 +63,29 @@ public sealed record TsunamiReportDifferenceDisplay(
     string PreviousText,
     string CurrentText);
 
+public enum TsunamiMapDetailLevel
+{
+    Overview,
+    Detailed,
+}
+
 public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 {
+    public const double MinimumMapZoomLevel = 0.75;
+    public const double MaximumMapZoomLevel = 8;
+    public const double DetailedMapZoomThreshold = 2;
+
     private readonly ITsunamiReportRepository _repository;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
-    private readonly TsunamiMapGeometry _mapGeometry;
+    private readonly TsunamiMapGeometry _overviewMapGeometry;
+    private TsunamiMapGeometry? _detailedMapGeometry;
     private readonly JmaTsunamiStationCatalog _fallbackStationCatalog;
     private JmaTsunamiStationCatalog _stationCatalog;
     private TsunamiPageState _state = new();
     private string? _selectedObservationStationCode;
     private string _rawXmlCopyStatus = string.Empty;
     private bool _isDisposed;
+    private double _mapZoomLevel = 1;
 
     public TsunamiPageViewModel(
         ITsunamiReportRepository repository,
@@ -79,7 +94,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _fallbackStationCatalog = stationCatalog ?? JmaTsunamiStationCatalog.Empty;
         _stationCatalog = _fallbackStationCatalog;
-        _mapGeometry = LoadMapGeometry();
+        _overviewMapGeometry = LoadMapGeometry("jma-tsunami-forecast-lines-low.geojson");
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -155,11 +170,40 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
     public ImmutableArray<JmaTsunamiReport> Reports => State.Reports;
 
-    public ImmutableArray<TsunamiMapLine> MapLines => _mapGeometry.Lines;
+    public ImmutableArray<TsunamiMapLine> MapLines => CurrentMapGeometry.Lines;
 
-    public MapGeometryBounds MapBounds => _mapGeometry.Bounds;
+    public MapGeometryBounds MapBounds => _overviewMapGeometry.Bounds;
 
     public bool HasMapGeometry => !MapLines.IsDefaultOrEmpty;
+
+    public double MapZoomLevel
+    {
+        get => _mapZoomLevel;
+        private set
+        {
+            value = Math.Clamp(value, MinimumMapZoomLevel, MaximumMapZoomLevel);
+            if (Math.Abs(_mapZoomLevel - value) < 0.001)
+            {
+                return;
+            }
+
+            _mapZoomLevel = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(MapDetailLevel));
+            OnPropertyChanged(nameof(MapStatusText));
+            OnPropertyChanged(nameof(MapLines));
+        }
+    }
+
+    public TsunamiMapDetailLevel MapDetailLevel =>
+        MapZoomLevel >= DetailedMapZoomThreshold
+            ? TsunamiMapDetailLevel.Detailed
+            : TsunamiMapDetailLevel.Overview;
+
+    public string MapStatusText =>
+        MapDetailLevel == TsunamiMapDetailLevel.Detailed
+            ? $"详细地图 · {MapZoomLevel:0.0}×"
+            : $"低精度地图 · {MapZoomLevel:0.0}×";
 
     public bool HasReports => !State.Reports.IsDefaultOrEmpty;
 
@@ -195,6 +239,12 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         State.LoadState == TsunamiPageLoadState.Error && State.Reports.IsDefaultOrEmpty;
 
     public bool CanRefresh => !State.IsRefreshing;
+
+    public void ZoomMapIn() => MapZoomLevel += 0.5;
+
+    public void ZoomMapOut() => MapZoomLevel -= 0.5;
+
+    public void ResetMapZoom() => MapZoomLevel = 1;
 
     public string SelectedReportStatusText => GetStatusText(State.SelectedReport?.Status);
 
@@ -305,15 +355,50 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
     public bool HasObservationStations => !ObservationStations.IsDefaultOrEmpty;
 
-    public TsunamiObservationStationDisplay? SelectedObservationStation =>
-        _selectedObservationStationCode is null
+    public TsunamiObservationStationDisplay? SelectedObservationStation
+    {
+        get => _selectedObservationStationCode is null
             ? null
             : ObservationStations.FirstOrDefault(item => string.Equals(
                 item.Code,
                 _selectedObservationStationCode,
                 StringComparison.Ordinal));
+        set
+        {
+            if (value is null)
+            {
+                if (_selectedObservationStationCode is null)
+                {
+                    return;
+                }
+
+                _selectedObservationStationCode = null;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasSelectedObservationStation));
+                return;
+            }
+
+            SelectObservationStation(value.Code);
+        }
+    }
 
     public bool HasSelectedObservationStation => SelectedObservationStation is not null;
+
+    public bool TryGetSelectedObservationCoordinate(out GeoCoordinate coordinate)
+    {
+        TsunamiObservationStationDisplay? station = SelectedObservationStation;
+        if (station is null || !station.HasMeasuredTsunami ||
+            station.Latitude is not double latitude ||
+            station.Longitude is not double longitude ||
+            !double.IsFinite(latitude) || !double.IsFinite(longitude))
+        {
+            coordinate = default;
+            return false;
+        }
+
+        coordinate = new GeoCoordinate(latitude, longitude);
+        return true;
+    }
 
     public bool HasEstimationAreas => !EstimationAreas.IsDefaultOrEmpty;
 
@@ -435,14 +520,27 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             ? "未提供"
             : timestamp.Value.ToString("yyyy-MM-dd HH:mm:ss zzz", System.Globalization.CultureInfo.InvariantCulture);
 
-    private static TsunamiMapGeometry LoadMapGeometry()
+    private TsunamiMapGeometry CurrentMapGeometry
+    {
+        get
+        {
+            if (MapDetailLevel != TsunamiMapDetailLevel.Detailed)
+            {
+                return _overviewMapGeometry;
+            }
+
+            return _detailedMapGeometry ??= LoadMapGeometry();
+        }
+    }
+
+    private static TsunamiMapGeometry LoadMapGeometry(string fileName = "jma-tsunami-forecast-lines-overview.geojson")
     {
         string path = Path.Combine(
             AppContext.BaseDirectory,
             "Assets",
             "Data",
             "Map",
-            "jma-tsunami-forecast-lines-overview.geojson");
+            fileName);
         try
         {
             return TsunamiMapGeometry.LoadFromFile(path);

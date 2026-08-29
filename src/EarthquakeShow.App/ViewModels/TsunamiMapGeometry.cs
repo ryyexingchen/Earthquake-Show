@@ -26,9 +26,14 @@ public sealed class TsunamiMapGeometry
 
     public static TsunamiMapGeometry Empty { get; } = new([], new(122, 146, 24, 46));
 
-    public static TsunamiMapGeometry LoadFromFile(string path)
+    public static TsunamiMapGeometry LoadFromFile(string path, int pointStride = 1)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        if (pointStride < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(pointStride));
+        }
+
         if (!File.Exists(path))
         {
             return Empty;
@@ -53,13 +58,13 @@ public sealed class TsunamiMapGeometry
             JsonElement coordinates = geometry.GetProperty("coordinates");
             if (type == "LineString")
             {
-                AddLine(lines, code, name, coordinates);
+                AddLine(lines, code, name, coordinates, pointStride);
             }
             else if (type == "MultiLineString" && coordinates.ValueKind == JsonValueKind.Array)
             {
                 foreach (JsonElement line in coordinates.EnumerateArray())
                 {
-                    AddLine(lines, code, name, line);
+                    AddLine(lines, code, name, line, pointStride);
                 }
             }
             else
@@ -86,7 +91,8 @@ public sealed class TsunamiMapGeometry
         ImmutableArray<TsunamiMapLine>.Builder lines,
         string code,
         string name,
-        JsonElement coordinates)
+        JsonElement coordinates,
+        int pointStride)
     {
         if (coordinates.ValueKind != JsonValueKind.Array)
         {
@@ -94,18 +100,38 @@ public sealed class TsunamiMapGeometry
         }
 
         var points = ImmutableArray.CreateBuilder<GeoCoordinate>();
+        int index = 0;
+        JsonElement lastCoordinate = default;
         foreach (JsonElement coordinate in coordinates.EnumerateArray())
         {
+            lastCoordinate = coordinate;
             if (coordinate.ValueKind != JsonValueKind.Array || coordinate.GetArrayLength() < 2)
             {
+                index++;
                 continue;
             }
 
             double longitude = coordinate[0].GetDouble();
             double latitude = coordinate[1].GetDouble();
-            if (double.IsFinite(longitude) && double.IsFinite(latitude))
+            if (double.IsFinite(longitude) && double.IsFinite(latitude) &&
+                (index % pointStride == 0 || index == coordinates.GetArrayLength() - 1))
             {
                 points.Add(new GeoCoordinate(latitude, longitude));
+            }
+
+            index++;
+        }
+
+        if (pointStride > 1 && lastCoordinate.ValueKind == JsonValueKind.Array &&
+            lastCoordinate.GetArrayLength() >= 2)
+        {
+            double longitude = lastCoordinate[0].GetDouble();
+            double latitude = lastCoordinate[1].GetDouble();
+            GeoCoordinate endpoint = new(latitude, longitude);
+            if (double.IsFinite(longitude) && double.IsFinite(latitude) &&
+                !points.Contains(endpoint))
+            {
+                points.Add(endpoint);
             }
         }
 

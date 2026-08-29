@@ -13,6 +13,8 @@
         <Style x:Key="TsunamiListBoxItemStyle" TargetType="ListBoxItem">
             <Setter Property="Margin" Value="10,0,10,8" />
             <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="{StaticResource SurfaceSubtleBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Setter Property="Template">
@@ -20,8 +22,8 @@
                     <ControlTemplate TargetType="ListBoxItem">
                         <Border x:Name="Root"
                                 Padding="10"
-                                Background="{StaticResource SurfaceSubtleBrush}"
-                                BorderBrush="{StaticResource BorderBrush}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="6">
                             <ContentPresenter />
@@ -29,6 +31,12 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#DDECEF" />
+                    <Setter Property="BorderBrush" Value="#6A9DA8" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="TsunamiLevelBadgeStyle" TargetType="Border">
@@ -230,48 +238,8 @@
                           HorizontalScrollBarVisibility="Disabled"
                           VerticalScrollBarVisibility="Auto">
                 <StackPanel>
-                    <views:TsunamiMapView Margin="0,0,0,18"
-                                          DataContext="{Binding}"
-                                          Visibility="{Binding HasMapGeometry, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                    <Border Margin="0,0,0,18"
-                            Padding="14"
-                            Background="#F1F7F8"
-                            BorderBrush="#A5BEC3"
-                            BorderThickness="1"
-                            CornerRadius="6"
-                            Visibility="{Binding HasSelectedObservationStation, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="2*" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="选中观测点" />
-                                <TextBlock Margin="0,4,0,0" FontSize="15" FontWeight="SemiBold" Text="{Binding SelectedObservationStation.Name}" TextWrapping="Wrap" />
-                                <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="11" Text="{Binding SelectedObservationStation.AreaName}" TextWrapping="Wrap" />
-                                <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding SelectedObservationStation.Code}" />
-                                <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding SelectedObservationStation.PublicationText}" TextWrapping="Wrap" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Margin="22,0,0,0">
-                                <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="状态" />
-                                <TextBlock Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold" Text="{Binding SelectedObservationStation.ObservationStatusText}" />
-                                <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="11" Text="{Binding SelectedObservationStation.InitialText}" TextWrapping="Wrap" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="2" Margin="22,0,0,0">
-                                <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="观测高度" />
-                                <TextBlock Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold" Text="{Binding SelectedObservationStation.HeightText}" />
-                                <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="11" Text="{Binding SelectedObservationStation.HighTideText, StringFormat=高潮 {0}}" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="3" Margin="22,0,0,0">
-                                <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="首波" />
-                                <TextBlock Margin="0,4,0,0" FontSize="12" Text="{Binding SelectedObservationStation.ArrivalText}" TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-                    <StackPanel MaxWidth="760"
-                                HorizontalAlignment="Left"
+                    <StackPanel MaxWidth="1120"
+                                HorizontalAlignment="Stretch"
                                 Visibility="{Binding HasSelectedReport, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <TextBlock Style="{StaticResource EyebrowTextStyle}"
                                Text="当前报文" />
@@ -316,6 +284,47 @@
                             <StackPanel Grid.Column="3" Margin="22,0,0,0">
                                 <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="关联事件" />
                                 <TextBlock Margin="0,4,0,0" FontSize="12" Text="{Binding SelectedReport.EventId}" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <views:TsunamiMapView Margin="0,18,0,0"
+                                          DataContext="{Binding}"
+                                          Visibility="{Binding HasMapGeometry, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <Border Margin="0,12,0,0"
+                            Padding="14"
+                            Background="#F1F7F8"
+                            BorderBrush="#A5BEC3"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Visibility="{Binding HasSelectedObservationStation, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="选中观测点" />
+                                <TextBlock Margin="0,4,0,0" FontSize="15" FontWeight="SemiBold" Text="{Binding SelectedObservationStation.Name}" TextWrapping="Wrap" />
+                                <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="11" Text="{Binding SelectedObservationStation.AreaName}" TextWrapping="Wrap" />
+                                <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding SelectedObservationStation.Code}" />
+                                <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding SelectedObservationStation.PublicationText}" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="22,0,0,0">
+                                <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="状态" />
+                                <TextBlock Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold" Text="{Binding SelectedObservationStation.ObservationStatusText}" />
+                                <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="11" Text="{Binding SelectedObservationStation.InitialText}" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Margin="22,0,0,0">
+                                <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="观测高度" />
+                                <TextBlock Margin="0,4,0,0" FontSize="14" FontWeight="SemiBold" Text="{Binding SelectedObservationStation.HeightText}" />
+                                <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="11" Text="{Binding SelectedObservationStation.HighTideText, StringFormat=高潮 {0}}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="3" Margin="22,0,0,0">
+                                <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="首波" />
+                                <TextBlock Margin="0,4,0,0" FontSize="12" Text="{Binding SelectedObservationStation.ArrivalText}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Grid>
                     </Border>
@@ -610,9 +619,16 @@
                                 <TextBlock Grid.Column="4" Style="{StaticResource TsunamiTableHeaderStyle}" Text="观测状态" />
                             </Grid>
                         </Border>
-                        <ItemsControl Margin="0,8,0,0"
-                                      ItemsSource="{Binding ObservationStations}">
-                            <ItemsControl.ItemTemplate>
+                        <ListBox Margin="0,8,0,0"
+                                 AutomationProperties.Name="海啸观测点列表"
+                                 ItemsSource="{Binding ObservationStations}"
+                                 ItemContainerStyle="{StaticResource TsunamiListBoxItemStyle}"
+                                 SelectionChanged="OnObservationStationSelectionChanged"
+                                 SelectedItem="{Binding SelectedObservationStation, Mode=TwoWay}"
+                                 x:Name="ObservationStationListBox"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Border Margin="0,0,0,7"
                                             Padding="10"
@@ -663,8 +679,8 @@
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
                     </StackPanel>
 
                     <StackPanel Margin="0,18,0,0"
