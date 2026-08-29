@@ -95,6 +95,31 @@ public sealed class TsunamiMapGeometryTests
         Assert.Equal(-60, offset.Y);
     }
 
+    [Fact]
+    public void PackagedTsunamiLodResources_IncreaseGeometryDetail()
+    {
+        string mapDirectory = Path.Combine(
+            AppContext.BaseDirectory,
+            "Assets",
+            "Data",
+            "Map");
+
+        TsunamiMapGeometry low = TsunamiMapGeometry.LoadFromFile(
+            Path.Combine(mapDirectory, "jma-tsunami-forecast-lines-low.geojson"));
+        TsunamiMapGeometry medium = TsunamiMapGeometry.LoadFromFile(
+            Path.Combine(mapDirectory, "jma-tsunami-forecast-lines-medium.geojson"));
+        TsunamiMapGeometry detailed = TsunamiMapGeometry.LoadFromFile(
+            Path.Combine(mapDirectory, "jma-tsunami-forecast-lines-overview.geojson"));
+
+        int CountPoints(TsunamiMapGeometry geometry) =>
+            geometry.Lines.Sum(line => line.Coordinates.Length);
+
+        Assert.True(CountPoints(low) < CountPoints(medium));
+        Assert.True(CountPoints(medium) < CountPoints(detailed));
+        Assert.Equal(low.Lines.Select(line => line.Code).OrderBy(code => code),
+            medium.Lines.Select(line => line.Code).OrderBy(code => code));
+    }
+
     private static string WriteTemporaryFile(string content)
     {
         string path = Path.Combine(Path.GetTempPath(), $"tsunami-map-{Guid.NewGuid():N}.geojson");

@@ -66,18 +66,21 @@ public sealed record TsunamiReportDifferenceDisplay(
 public enum TsunamiMapDetailLevel
 {
     Overview,
+    Medium,
     Detailed,
 }
 
 public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 {
-    public const double MinimumMapZoomLevel = 0.75;
-    public const double MaximumMapZoomLevel = 8;
-    public const double DetailedMapZoomThreshold = 2;
+    public const double MinimumMapZoomLevel = 0.5;
+    public const double MaximumMapZoomLevel = 24;
+    public const double MediumMapZoomThreshold = 2;
+    public const double DetailedMapZoomThreshold = 12;
 
     private readonly ITsunamiReportRepository _repository;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private readonly TsunamiMapGeometry _overviewMapGeometry;
+    private TsunamiMapGeometry? _mediumMapGeometry;
     private TsunamiMapGeometry? _detailedMapGeometry;
     private readonly JmaTsunamiStationCatalog _fallbackStationCatalog;
     private JmaTsunamiStationCatalog _stationCatalog;
@@ -86,6 +89,10 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
     private string _rawXmlCopyStatus = string.Empty;
     private bool _isDisposed;
     private double _mapZoomLevel = 1;
+    private CancellationTokenSource? _mapDetailLoadCancellation;
+    private Task? _mapDetailLoadTask;
+    private long _mapDetailLoadGeneration;
+    private bool _isLoadingMapDetail;
 
     public TsunamiPageViewModel(
         ITsunamiReportRepository repository,
@@ -192,18 +199,22 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(MapDetailLevel));
             OnPropertyChanged(nameof(MapStatusText));
             OnPropertyChanged(nameof(MapLines));
+            RequestMapDetailLoad();
         }
     }
 
     public TsunamiMapDetailLevel MapDetailLevel =>
-        MapZoomLevel >= DetailedMapZoomThreshold
+        MapZoomLevel > DetailedMapZoomThreshold
             ? TsunamiMapDetailLevel.Detailed
-            : TsunamiMapDetailLevel.Overview;
+            : MapZoomLevel > MediumMapZoomThreshold
+                ? TsunamiMapDetailLevel.Medium
+                : TsunamiMapDetailLevel.Overview;
+
+    public bool IsLoadingMapDetail => _isLoadingMapDetail;
 
     public string MapStatusText =>
-        MapDetailLevel == TsunamiMapDetailLevel.Detailed
-            ? $"详细地图 · {MapZoomLevel:0.0}×"
-            : $"低精度地图 · {MapZoomLevel:0.0}×";
+        $"{GetMapDetailText(MapDetailLevel)} · {MapZoomLevel:0.0}×" +
+        (_isLoadingMapDetail ? " · 加载中" : string.Empty);
 
     public bool HasReports => !State.Reports.IsDefaultOrEmpty;
 
@@ -240,9 +251,9 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
     public bool CanRefresh => !State.IsRefreshing;
 
-    public void ZoomMapIn() => MapZoomLevel += 0.5;
+    public void ZoomMapIn() => MapZoomLevel = Math.Min(MaximumMapZoomLevel, MapZoomLevel + 1);
 
-    public void ZoomMapOut() => MapZoomLevel -= 0.5;
+    public void ZoomMapOut() => MapZoomLevel = Math.Max(MinimumMapZoomLevel, MapZoomLevel - 1);
 
     public void ResetMapZoom() => MapZoomLevel = 1;
 
@@ -524,16 +535,18 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
     {
         get
         {
-            if (MapDetailLevel != TsunamiMapDetailLevel.Detailed)
+            return MapDetailLevel switch
             {
-                return _overviewMapGeometry;
-            }
-
-            return _detailedMapGeometry ??= LoadMapGeometry();
+                TsunamiMapDetailLevel.Detailed => _detailedMapGeometry ??
+                    _mediumMapGeometry ??
+                    _overviewMapGeometry,
+                TsunamiMapDetailLevel.Medium => _mediumMapGeometry ?? _overviewMapGeometry,
+                _ => _overviewMapGeometry,
+            };
         }
     }
 
-    private static TsunamiMapGeometry LoadMapGeometry(string fileName = "jma-tsunami-forecast-lines-overview.geojson")
+    private static TsunamiMapGeometry LoadMapGeometry(string fileName)
     {
         string path = Path.Combine(
             AppContext.BaseDirectory,
@@ -550,6 +563,115 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             return TsunamiMapGeometry.Empty;
         }
     }
+
+    private void RequestMapDetailLoad()
+    {
+        if (_isDisposed || MapDetailLevel == TsunamiMapDetailLevel.Overview ||
+            IsMapGeometryLoaded(MapDetailLevel) ||
+            _mapDetailLoadTask is { IsCompleted: false })
+        {
+            if (MapDetailLevel == TsunamiMapDetailLevel.Overview)
+            {
+                _mapDetailLoadCancellation?.Cancel();
+            }
+
+            return;
+        }
+
+        _mapDetailLoadCancellation?.Cancel();
+        _mapDetailLoadCancellation?.Dispose();
+        CancellationTokenSource cancellation = new();
+        _mapDetailLoadCancellation = cancellation;
+        long generation = ++_mapDetailLoadGeneration;
+        TsunamiMapDetailLevel requestedLevel = MapDetailLevel;
+        _isLoadingMapDetail = true;
+        OnPropertyChanged(nameof(IsLoadingMapDetail));
+        OnPropertyChanged(nameof(MapStatusText));
+        _mapDetailLoadTask = LoadMapDetailAsync(requestedLevel, generation, cancellation);
+    }
+
+    private async Task LoadMapDetailAsync(
+        TsunamiMapDetailLevel requestedLevel,
+        long generation,
+        CancellationTokenSource cancellation)
+    {
+        try
+        {
+            if (RequiresMediumMap(requestedLevel) && _mediumMapGeometry is null)
+            {
+                TsunamiMapGeometry medium = await Task.Run(
+                    () => LoadMapGeometry("jma-tsunami-forecast-lines-medium.geojson"),
+                    cancellation.Token);
+                if (!IsCurrentMapDetailLoad(generation, cancellation))
+                {
+                    return;
+                }
+
+                _mediumMapGeometry = medium;
+                OnPropertyChanged(nameof(MapLines));
+            }
+
+            if (requestedLevel == TsunamiMapDetailLevel.Detailed && _detailedMapGeometry is null)
+            {
+                TsunamiMapGeometry detailed = await Task.Run(
+                    () => LoadMapGeometry("jma-tsunami-forecast-lines-overview.geojson"),
+                    cancellation.Token);
+                if (!IsCurrentMapDetailLoad(generation, cancellation))
+                {
+                    return;
+                }
+
+                _detailedMapGeometry = detailed;
+                OnPropertyChanged(nameof(MapLines));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // 缩放回退或视图关闭时，丢弃过期地图精度请求。
+        }
+        finally
+        {
+            if (ReferenceEquals(_mapDetailLoadCancellation, cancellation))
+            {
+                _mapDetailLoadCancellation = null;
+                _isLoadingMapDetail = false;
+                OnPropertyChanged(nameof(IsLoadingMapDetail));
+                OnPropertyChanged(nameof(MapStatusText));
+                _mapDetailLoadTask = null;
+            }
+
+            cancellation.Dispose();
+            if (!_isDisposed && MapDetailLevel != requestedLevel)
+            {
+                RequestMapDetailLoad();
+            }
+        }
+    }
+
+    private bool IsCurrentMapDetailLoad(
+        long generation,
+        CancellationTokenSource cancellation) =>
+        !_isDisposed &&
+        generation == _mapDetailLoadGeneration &&
+        ReferenceEquals(_mapDetailLoadCancellation, cancellation) &&
+        !cancellation.IsCancellationRequested;
+
+    private bool IsMapGeometryLoaded(TsunamiMapDetailLevel detailLevel) => detailLevel switch
+    {
+        TsunamiMapDetailLevel.Detailed => _detailedMapGeometry is not null,
+        TsunamiMapDetailLevel.Medium => _mediumMapGeometry is not null,
+        _ => true,
+    };
+
+    private static bool RequiresMediumMap(TsunamiMapDetailLevel detailLevel) =>
+        detailLevel is TsunamiMapDetailLevel.Medium or TsunamiMapDetailLevel.Detailed;
+
+    private static string GetMapDetailText(TsunamiMapDetailLevel detailLevel) => detailLevel switch
+    {
+        TsunamiMapDetailLevel.Detailed => "高精度地图",
+        TsunamiMapDetailLevel.Medium => "中精度地图",
+        _ => "低精度地图",
+    };
 
     private static TsunamiForecastAreaDisplay CreateForecastAreaDisplay(
         JmaTsunamiForecastArea area)
@@ -916,6 +1038,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         }
 
         _isDisposed = true;
+        _mapDetailLoadCancellation?.Cancel();
         _refreshGate.Dispose();
     }
 

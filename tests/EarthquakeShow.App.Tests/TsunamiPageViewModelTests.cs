@@ -356,7 +356,7 @@ public sealed class TsunamiPageViewModelTests
     }
 
     [Fact]
-    public void MapZoom_UsesOverviewAtLowZoomAndDetailedAfterThreshold()
+    public void MapZoom_UsesThreeDetailLevelsAndOneStepIncrement()
     {
         using var viewModel = new TsunamiPageViewModel(new StubTsunamiReportRepository([]));
 
@@ -364,16 +364,47 @@ public sealed class TsunamiPageViewModelTests
         Assert.Equal("低精度地图 · 1.0×", viewModel.MapStatusText);
 
         viewModel.ZoomMapIn();
-        Assert.Equal(1.5, viewModel.MapZoomLevel);
+        Assert.Equal(2, viewModel.MapZoomLevel);
         Assert.Equal(TsunamiMapDetailLevel.Overview, viewModel.MapDetailLevel);
 
         viewModel.ZoomMapIn();
+        Assert.Equal(3, viewModel.MapZoomLevel);
+        Assert.Equal(TsunamiMapDetailLevel.Medium, viewModel.MapDetailLevel);
+
+        for (int index = 0; index < 9; index++)
+        {
+            viewModel.ZoomMapIn();
+        }
+
+        Assert.Equal(12, viewModel.MapZoomLevel);
+        Assert.Equal(TsunamiMapDetailLevel.Medium, viewModel.MapDetailLevel);
+
         viewModel.ZoomMapIn();
-        Assert.Equal(2.5, viewModel.MapZoomLevel);
+        Assert.Equal(13, viewModel.MapZoomLevel);
         Assert.Equal(TsunamiMapDetailLevel.Detailed, viewModel.MapDetailLevel);
 
         viewModel.ResetMapZoom();
         Assert.Equal(1, viewModel.MapZoomLevel);
+    }
+
+    [Fact]
+    public void MapZoom_ClampsToConfiguredRange()
+    {
+        using var viewModel = new TsunamiPageViewModel(new StubTsunamiReportRepository([]));
+
+        for (int index = 0; index < 40; index++)
+        {
+            viewModel.ZoomMapIn();
+        }
+
+        Assert.Equal(TsunamiPageViewModel.MaximumMapZoomLevel, viewModel.MapZoomLevel);
+
+        for (int index = 0; index < 40; index++)
+        {
+            viewModel.ZoomMapOut();
+        }
+
+        Assert.Equal(TsunamiPageViewModel.MinimumMapZoomLevel, viewModel.MapZoomLevel);
     }
 
     [Fact]
