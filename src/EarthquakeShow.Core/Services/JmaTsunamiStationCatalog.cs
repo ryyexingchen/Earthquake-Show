@@ -74,6 +74,16 @@ public sealed class JmaTsunamiStationCatalog
             document.Stations,
             document.OffshorePublicationMappings);
     }
+
+    public static JmaTsunamiStationCatalog Create(
+        string sourceVersion,
+        IEnumerable<JmaTsunamiStationCatalogEntry> stations,
+        IEnumerable<JmaTsunamiPublicationCatalogEntry> publications)
+    {
+        ArgumentNullException.ThrowIfNull(stations);
+        ArgumentNullException.ThrowIfNull(publications);
+        return new(sourceVersion ?? string.Empty, stations, publications);
+    }
 }
 
 public sealed record JmaTsunamiStationCatalogEntry(

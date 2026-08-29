@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using EarthquakeShow.App.ViewModels;
 using EarthquakeShow.Core.Abstractions;
 using EarthquakeShow.Core.Models;
+using EarthquakeShow.Core.Services;
 using Xunit;
 
 namespace EarthquakeShow.App.Tests;
@@ -150,6 +151,82 @@ public sealed class TsunamiPageViewModelTests
     }
 
     [Fact]
+    public async Task Load_UsesPersistedCatalogForExactStationCodeMapping()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
+        JmaTsunamiReport report = CreateReport("catalog", issuedAt) with
+        {
+            ObservationStations =
+            [
+                new JmaTsunamiObservationStation(
+                    "釧路沖",
+                    "00410",
+                    "报文名称",
+                    "10050",
+                    null,
+                    null,
+                    null,
+                    null,
+                    issuedAt,
+                    null,
+                    new JmaTsunamiHeight(0.4, null, null, "m", "高さ")),
+            ],
+        };
+        var repository = new CatalogStubTsunamiReportRepository(
+            [report],
+            JmaTsunamiStationCatalog.Create(
+                "sqlite-test",
+                [new JmaTsunamiStationCatalogEntry("10050", "数据库站点", null, 42.1, 144.2, "100")],
+                [new JmaTsunamiPublicationCatalogEntry("00410", "釧路沖１００ｋｍ", null, ["10050"])]));
+        using var viewModel = new TsunamiPageViewModel(repository);
+
+        await viewModel.LoadAsync();
+
+        Assert.Equal("数据库站点", viewModel.ObservationStations[0].Name);
+        Assert.Equal(42.1, viewModel.ObservationStations[0].Latitude);
+        Assert.Equal("00410", viewModel.ObservationStations[0].PublicationCode);
+        Assert.True(viewModel.ObservationStations[0].IsCatalogMatched);
+    }
+
+    [Fact]
+    public async Task Load_CatalogReadFailure_UsesFallbackCatalog()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
+        JmaTsunamiReport report = CreateReport("catalog-fallback", issuedAt) with
+        {
+            ObservationStations =
+            [
+                new JmaTsunamiObservationStation(
+                    "茨城県",
+                    "JP08",
+                    "报文名称",
+                    "10050",
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    new JmaTsunamiHeight(0.4, null, null, "m", "高さ")),
+            ],
+        };
+        var repository = new CatalogStubTsunamiReportRepository(
+            [report],
+            JmaTsunamiStationCatalog.Empty,
+            new InvalidDataException("目录损坏"));
+        JmaTsunamiStationCatalog fallback = JmaTsunamiStationCatalog.Create(
+            "json-test",
+            [new JmaTsunamiStationCatalogEntry("10050", "固定目录站点", null, 42.2, 144.3, "100")],
+            []);
+        using var viewModel = new TsunamiPageViewModel(repository, fallback);
+
+        await viewModel.LoadAsync();
+
+        Assert.Equal("固定目录站点", viewModel.ObservationStations[0].Name);
+        Assert.Equal(42.2, viewModel.ObservationStations[0].Latitude);
+    }
+
+    [Fact]
     public async Task Timeline_GroupsReportsByEventAndKeepsCancellationAsRelease()
     {
         DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
@@ -220,7 +297,7 @@ public sealed class TsunamiPageViewModelTests
                 sourceMessageId),
         };
 
-    private sealed class StubTsunamiReportRepository(
+    private class StubTsunamiReportRepository(
         ImmutableArray<JmaTsunamiReport> reports,
         Exception? loadException = null) : ITsunamiReportRepository
     {
@@ -270,5 +347,26 @@ public sealed class TsunamiPageViewModelTests
             IEnumerable<JmaTsunamiReport> reports,
             CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+    }
+
+    private sealed class CatalogStubTsunamiReportRepository(
+        ImmutableArray<JmaTsunamiReport> reports,
+        JmaTsunamiStationCatalog catalog,
+        Exception? catalogLoadException = null) : StubTsunamiReportRepository(reports), ITsunamiStationCatalogRepository
+    {
+        public Task<JmaTsunamiStationCatalog> LoadStationCatalogAsync(
+            CancellationToken cancellationToken = default)
+        {
+            if (catalogLoadException is not null)
+            {
+                throw catalogLoadException;
+            }
+
+            return Task.FromResult(catalog);
+        }
+
+        public Task SaveStationCatalogAsync(
+            JmaTsunamiStationCatalog catalog,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }

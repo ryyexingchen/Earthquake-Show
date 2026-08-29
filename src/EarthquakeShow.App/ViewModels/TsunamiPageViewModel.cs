@@ -65,7 +65,8 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
     private readonly ITsunamiReportRepository _repository;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private readonly TsunamiMapGeometry _mapGeometry;
-    private readonly JmaTsunamiStationCatalog _stationCatalog;
+    private readonly JmaTsunamiStationCatalog _fallbackStationCatalog;
+    private JmaTsunamiStationCatalog _stationCatalog;
     private TsunamiPageState _state = new();
     private string _rawXmlCopyStatus = string.Empty;
     private bool _isDisposed;
@@ -75,7 +76,8 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         JmaTsunamiStationCatalog? stationCatalog = null)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-        _stationCatalog = stationCatalog ?? JmaTsunamiStationCatalog.Empty;
+        _fallbackStationCatalog = stationCatalog ?? JmaTsunamiStationCatalog.Empty;
+        _stationCatalog = _fallbackStationCatalog;
         _mapGeometry = LoadMapGeometry();
     }
 
@@ -678,6 +680,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
         try
         {
+            await LoadStationCatalogAsync(cancellationToken).ConfigureAwait(false);
             ImmutableArray<JmaTsunamiReport> reports =
                 await _repository.ListReportsAsync(cancellationToken);
             ApplyReports(reports);
@@ -711,6 +714,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             try
             {
                 await _repository.RefreshAsync(cancellationToken);
+                await LoadStationCatalogAsync(cancellationToken).ConfigureAwait(false);
                 ImmutableArray<JmaTsunamiReport> reports =
                     await _repository.ListReportsAsync(cancellationToken);
                 ApplyReports(reports);
@@ -795,6 +799,29 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
                 statuses.All(status => status.State != SourceConnectionState.Online),
             ErrorMessage = null,
         };
+    }
+
+    private async Task LoadStationCatalogAsync(CancellationToken cancellationToken)
+    {
+        if (_repository is not ITsunamiStationCatalogRepository catalogRepository)
+        {
+            _stationCatalog = _fallbackStationCatalog;
+            return;
+        }
+
+        try
+        {
+            JmaTsunamiStationCatalog catalog =
+                await catalogRepository.LoadStationCatalogAsync(cancellationToken).ConfigureAwait(false);
+            _stationCatalog = catalog.Stations.IsDefaultOrEmpty && catalog.Publications.IsDefaultOrEmpty
+                ? _fallbackStationCatalog
+                : catalog;
+        }
+        catch (Exception exception) when (
+            exception is IOException or InvalidDataException or InvalidOperationException or System.Data.Common.DbException)
+        {
+            _stationCatalog = _fallbackStationCatalog;
+        }
     }
 
     private JmaTsunamiReport? FindSelectedReport(

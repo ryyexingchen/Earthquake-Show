@@ -25,6 +25,12 @@ public sealed class SqliteTsunamiReportRepositoryTests
 
         await repository.SaveStationCatalogAsync(catalog);
 
+        JmaTsunamiStationCatalog loaded = await repository.LoadStationCatalogAsync();
+        Assert.True(loaded.TryGetStation("10050", out JmaTsunamiStationCatalogEntry station));
+        Assert.Equal(42.0, station.Latitude);
+        Assert.True(loaded.TryGetPublication("00410", out JmaTsunamiPublicationCatalogEntry publication));
+        Assert.Equal("10050", Assert.Single(publication.StationCodes));
+
         await using var connection = new SqliteConnection($"Data Source={database.Path}");
         await connection.OpenAsync();
         await using SqliteCommand command = connection.CreateCommand();

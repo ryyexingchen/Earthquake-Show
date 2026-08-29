@@ -12,7 +12,7 @@ namespace EarthquakeShow.Infrastructure.Persistence;
 /// <summary>
 /// 使用独立 SQLite 表保存 JMA VTSE 海啸报文。
 /// </summary>
-public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, IDisposable
+public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, ITsunamiStationCatalogRepository, IDisposable
 {
     private const int CurrentSchemaVersion = 2;
     private const string SchemaKey = "tsunami_schema_version";
@@ -170,6 +170,86 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, ID
         {
             _writeGate.Release();
         }
+    }
+
+    public async Task<JmaTsunamiStationCatalog> LoadStationCatalogAsync(
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+        await using SqliteConnection connection = CreateConnection();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+
+        var stations = new List<JmaTsunamiStationCatalogEntry>();
+        string sourceVersion = string.Empty;
+        await using (SqliteCommand command = connection.CreateCommand())
+        {
+            command.CommandText = """
+                SELECT station_code, name, name_kana, latitude, longitude, forecast_area_code, source_version
+                FROM tsunami_station_catalog
+                ORDER BY station_code;
+                """;
+            await using SqliteDataReader reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                sourceVersion = reader.GetString(6);
+                stations.Add(new(
+                    reader.GetString(0),
+                    reader.GetString(1),
+                    reader.IsDBNull(2) ? null : reader.GetString(2),
+                    reader.IsDBNull(3) ? null : reader.GetDouble(3),
+                    reader.IsDBNull(4) ? null : reader.GetDouble(4),
+                    reader.IsDBNull(5) ? null : reader.GetString(5)));
+            }
+        }
+
+        var publicationRows = new List<(string Code, string Name, string? Kana, string Source)>();
+        await using (SqliteCommand command = connection.CreateCommand())
+        {
+            command.CommandText = """
+                SELECT publication_code, name, name_kana, source_version
+                FROM tsunami_offshore_publication
+                ORDER BY publication_code;
+                """;
+            await using SqliteDataReader reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                string publicationSource = reader.GetString(3);
+                sourceVersion = string.IsNullOrWhiteSpace(sourceVersion) ? publicationSource : sourceVersion;
+                publicationRows.Add((
+                    reader.GetString(0),
+                    reader.GetString(1),
+                    reader.IsDBNull(2) ? null : reader.GetString(2),
+                    publicationSource));
+            }
+        }
+
+        var stationCodesByPublication = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        await using (SqliteCommand command = connection.CreateCommand())
+        {
+            command.CommandText = """
+                SELECT publication_code, station_code
+                FROM tsunami_offshore_station_map
+                ORDER BY publication_code, station_code;
+                """;
+            await using SqliteDataReader reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                stationCodesByPublication
+                    .TryGetValue(reader.GetString(0), out List<string>? codes);
+                codes ??= stationCodesByPublication[reader.GetString(0)] = [];
+                codes.Add(reader.GetString(1));
+            }
+        }
+
+        var publications = publicationRows.Select(row => new JmaTsunamiPublicationCatalogEntry(
+            row.Code,
+            row.Name,
+            row.Kana,
+            stationCodesByPublication.TryGetValue(row.Code, out List<string>? codes)
+                ? codes.ToImmutableArray()
+                : []));
+        return JmaTsunamiStationCatalog.Create(sourceVersion, stations, publications);
     }
 
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
