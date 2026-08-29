@@ -13,6 +13,24 @@ internal static class FixedJmaXmlDataLoader
         return LoadStationCatalog(Path.Combine(AppContext.BaseDirectory, "Assets"));
     }
 
+    public static JmaTsunamiStationCatalog LoadTsunamiStationCatalog()
+    {
+        string path = Path.Combine(
+            AppContext.BaseDirectory,
+            "Assets",
+            "Data",
+            "Stations",
+            "jma-tsunami-catalog.json");
+        try
+        {
+            return JmaTsunamiStationCatalog.LoadFile(path);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or FormatException or JsonException)
+        {
+            return JmaTsunamiStationCatalog.Empty;
+        }
+    }
+
     internal static JmaStationCoordinateCatalog LoadStationCatalog(string assetsRoot)
     {
         string stationPath = Path.Combine(assetsRoot, "JmaStations.csv");

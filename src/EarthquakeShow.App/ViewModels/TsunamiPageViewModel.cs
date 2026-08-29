@@ -23,7 +23,15 @@ public sealed record TsunamiObservationStationDisplay(
     string Code,
     string ArrivalText,
     string HeightText,
-    string InitialText);
+    string InitialText,
+    string HighTideText,
+    string ObservationStatusText,
+    TsunamiLevel Level,
+    double? Latitude,
+    double? Longitude,
+    string PublicationCode,
+    string PublicationText,
+    bool IsCatalogMatched);
 
 public sealed record TsunamiEstimationAreaDisplay(
     string Name,
@@ -57,13 +65,17 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
     private readonly ITsunamiReportRepository _repository;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private readonly TsunamiMapGeometry _mapGeometry;
+    private readonly JmaTsunamiStationCatalog _stationCatalog;
     private TsunamiPageState _state = new();
     private string _rawXmlCopyStatus = string.Empty;
     private bool _isDisposed;
 
-    public TsunamiPageViewModel(ITsunamiReportRepository repository)
+    public TsunamiPageViewModel(
+        ITsunamiReportRepository repository,
+        JmaTsunamiStationCatalog? stationCatalog = null)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _stationCatalog = stationCatalog ?? JmaTsunamiStationCatalog.Empty;
         _mapGeometry = LoadMapGeometry();
     }
 
@@ -101,6 +113,11 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(SelectedReportStructureText));
             OnPropertyChanged(nameof(SelectedReportLevel));
             OnPropertyChanged(nameof(SelectedReportLevelText));
+            OnPropertyChanged(nameof(EarthquakeSourceText));
+            OnPropertyChanged(nameof(EarthquakeMagnitudeText));
+            OnPropertyChanged(nameof(EarthquakeDepthText));
+            OnPropertyChanged(nameof(EarthquakeOriginTimeText));
+            OnPropertyChanged(nameof(ObservationSummaryText));
             OnPropertyChanged(nameof(ForecastAreas));
             OnPropertyChanged(nameof(ObservationStations));
             OnPropertyChanged(nameof(EstimationAreas));
@@ -213,6 +230,42 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
     public string SelectedReportLevelText => GetReportLevelTextForDisplay(State.SelectedReport);
 
+    public string EarthquakeSourceText => State.SelectedReport?.Hypocenter?.Name ?? "未提供";
+
+    public string EarthquakeMagnitudeText => State.SelectedReport?.Magnitude?.Value is double value
+        ? $"M {value:0.0}"
+        : "M 未知";
+
+    public string EarthquakeDepthText => State.SelectedReport?.Hypocenter?.DepthKm is int depth
+        ? $"{depth} km"
+        : "未提供";
+
+    public string EarthquakeOriginTimeText => FormatTimestamp(State.SelectedReport?.OriginTime);
+
+    public string ObservationSummaryText
+    {
+        get
+        {
+            if (State.SelectedReport is null || !HasObservationStations)
+            {
+                return "当前报文没有沿岸观测记录";
+            }
+
+            if (!HasForecastAreas)
+            {
+                return $"仅收到海啸观测，当前没有预报区发布记录（{ObservationStations.Length} 个观测点）";
+            }
+
+            TsunamiLevel observedLevel = ObservationStations
+                .Select(item => item.Level)
+                .OrderByDescending(GetLevelPriority)
+                .FirstOrDefault(TsunamiLevel.Unknown);
+            return observedLevel is TsunamiLevel.Unknown
+                ? $"已收到 {ObservationStations.Length} 个观测点记录，暂无可量化高度"
+                : $"已在 {ObservationStations.Length} 个观测点收到实测记录，最高对应等级：{GetLevelText(observedLevel, null)}";
+        }
+    }
+
     public ImmutableArray<TsunamiForecastAreaDisplay> ForecastAreas =>
         State.SelectedReport is null
             ? []
@@ -225,6 +278,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             ? []
             : State.SelectedReport.ObservationStations
                 .Select(CreateObservationStationDisplay)
+                .Where(item => item.ObservationStatusText != "未观测到海啸")
                 .ToImmutableArray();
 
     public ImmutableArray<TsunamiEstimationAreaDisplay> EstimationAreas =>
@@ -380,6 +434,11 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         JmaTsunamiForecastArea area)
     {
         TsunamiLevel level = JmaTsunamiClassifier.Classify(area.KindName, area.KindCode);
+        if (level is TsunamiLevel.Unknown or TsunamiLevel.Investigating)
+        {
+            level = ClassifyHeight(area.MaximumHeight);
+        }
+
         return new(
             area.Name,
             area.Code,
@@ -389,14 +448,71 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             FormatHeight(area.MaximumHeight));
     }
 
-    private static TsunamiObservationStationDisplay CreateObservationStationDisplay(
-        JmaTsunamiObservationStation station) => new(
+    private TsunamiObservationStationDisplay CreateObservationStationDisplay(
+        JmaTsunamiObservationStation station)
+    {
+        _stationCatalog.TryGetStation(station.Code, out JmaTsunamiStationCatalogEntry? catalogEntry);
+        ImmutableArray<JmaTsunamiPublicationCatalogEntry> publications =
+            _stationCatalog.GetPublicationsForStation(station.Code);
+        JmaTsunamiPublicationCatalogEntry? publication = publications.FirstOrDefault();
+        if (publication is null && _stationCatalog.TryGetPublication(station.Code, out JmaTsunamiPublicationCatalogEntry directPublication))
+        {
+            publication = directPublication;
+        }
+        string observationStatus = GetObservationStatus(station);
+        TsunamiLevel level = ClassifyHeight(station.MaximumHeight);
+        if (level == TsunamiLevel.Unknown && observationStatus == "微弱")
+        {
+            level = TsunamiLevel.MinorChange;
+        }
+        return new(
             station.AreaName,
-            station.Name,
+            catalogEntry?.Name ?? station.Name,
             station.Code,
             FormatArrival(station.FirstArrivalTime, station.FirstArrivalCondition),
             FormatHeight(station.MaximumHeight),
-            string.IsNullOrWhiteSpace(station.Initial) ? "未提供" : station.Initial!);
+            string.IsNullOrWhiteSpace(station.Initial) ? "未提供" : station.Initial!,
+            FormatTimestamp(station.MaximumHeightTime),
+            observationStatus,
+            level,
+            catalogEntry?.Latitude,
+            catalogEntry?.Longitude,
+            publication?.PublicationCode ?? "",
+            publication is null ? "" : $"近海发布 {publication.PublicationCode} · {publication.Name}",
+            publication is not null);
+    }
+
+    private static string GetObservationStatus(JmaTsunamiObservationStation station)
+    {
+        string text = $"{station.Initial} {station.MaximumHeight?.Description} {station.MaximumHeight?.Condition}";
+        if (text.Contains("欠測", StringComparison.Ordinal) || text.Contains("欠测", StringComparison.Ordinal))
+        {
+            return "欠测";
+        }
+
+        if (text.Contains("微弱", StringComparison.Ordinal))
+        {
+            return "微弱";
+        }
+
+        if (station.MaximumHeight?.Meters is double meters && double.IsFinite(meters))
+        {
+            return meters > 0 ? "观测到海啸" : "未观测到海啸";
+        }
+
+        return string.IsNullOrWhiteSpace(station.Initial) ? "未提供" : station.Initial!;
+    }
+
+    private static TsunamiLevel ClassifyHeight(JmaTsunamiHeight? height) =>
+        height?.Meters is not double meters || !double.IsFinite(meters)
+            ? TsunamiLevel.Unknown
+            : meters < 0.2
+                ? TsunamiLevel.MinorChange
+                : meters < 1
+                    ? TsunamiLevel.Advisory
+                    : meters <= 3
+                        ? TsunamiLevel.Warning
+                        : TsunamiLevel.MajorWarning;
 
     private static TsunamiEstimationAreaDisplay CreateEstimationAreaDisplay(
         JmaTsunamiEstimationArea area) => new(

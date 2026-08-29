@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text.Json;
 using EarthquakeShow.Core.Abstractions;
 using EarthquakeShow.Core.Models;
+using EarthquakeShow.Core.Services;
 using EarthquakeShow.Infrastructure.Sources;
 using Microsoft.Data.Sqlite;
 
@@ -97,6 +98,78 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, ID
 
         SetSourceStatuses(statuses);
         _initialized = true;
+    }
+
+    public async Task SaveStationCatalogAsync(
+        JmaTsunamiStationCatalog catalog,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(catalog);
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+        await _writeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await using SqliteConnection connection = CreateConnection();
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+            await using SqliteTransaction transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+            await using (SqliteCommand clear = connection.CreateCommand())
+            {
+                clear.Transaction = transaction;
+                clear.CommandText = "DELETE FROM tsunami_offshore_station_map; DELETE FROM tsunami_offshore_publication; DELETE FROM tsunami_station_catalog;";
+                await clear.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            foreach (JmaTsunamiStationCatalogEntry station in catalog.Stations)
+            {
+                await using SqliteCommand command = connection.CreateCommand();
+                command.Transaction = transaction;
+                command.CommandText = """
+                    INSERT INTO tsunami_station_catalog
+                        (station_code, name, name_kana, latitude, longitude, forecast_area_code, source_version)
+                    VALUES ($code, $name, $kana, $latitude, $longitude, $area, $source);
+                    """;
+                command.Parameters.AddWithValue("$code", station.StationCode);
+                command.Parameters.AddWithValue("$name", station.Name);
+                command.Parameters.AddWithValue("$kana", (object?)station.NameKana ?? DBNull.Value);
+                command.Parameters.AddWithValue("$latitude", (object?)station.Latitude ?? DBNull.Value);
+                command.Parameters.AddWithValue("$longitude", (object?)station.Longitude ?? DBNull.Value);
+                command.Parameters.AddWithValue("$area", (object?)station.ForecastAreaCode ?? DBNull.Value);
+                command.Parameters.AddWithValue("$source", catalog.SourceVersion);
+                await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            foreach (JmaTsunamiPublicationCatalogEntry publication in catalog.Publications)
+            {
+                await using SqliteCommand command = connection.CreateCommand();
+                command.Transaction = transaction;
+                command.CommandText = """
+                    INSERT INTO tsunami_offshore_publication
+                        (publication_code, name, name_kana, source_version)
+                    VALUES ($code, $name, $kana, $source);
+                    """;
+                command.Parameters.AddWithValue("$code", publication.PublicationCode);
+                command.Parameters.AddWithValue("$name", publication.Name);
+                command.Parameters.AddWithValue("$kana", (object?)publication.NameKana ?? DBNull.Value);
+                command.Parameters.AddWithValue("$source", catalog.SourceVersion);
+                await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+                foreach (string stationCode in publication.StationCodes)
+                {
+                    await using SqliteCommand map = connection.CreateCommand();
+                    map.Transaction = transaction;
+                    map.CommandText = "INSERT INTO tsunami_offshore_station_map(publication_code, station_code) VALUES ($publication, $station);";
+                    map.Parameters.AddWithValue("$publication", publication.PublicationCode);
+                    map.Parameters.AddWithValue("$station", stationCode);
+                    await map.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _writeGate.Release();
+        }
     }
 
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
@@ -385,6 +458,28 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, ID
             );
             CREATE INDEX IF NOT EXISTS idx_tsunami_reports_event_issued
                 ON tsunami_reports(event_id, issued_at, received_at);
+            CREATE TABLE IF NOT EXISTS tsunami_station_catalog (
+                station_code TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                name_kana TEXT NULL,
+                latitude REAL NULL,
+                longitude REAL NULL,
+                forecast_area_code TEXT NULL,
+                source_version TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS tsunami_offshore_publication (
+                publication_code TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                name_kana TEXT NULL,
+                source_version TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS tsunami_offshore_station_map (
+                publication_code TEXT NOT NULL,
+                station_code TEXT NOT NULL,
+                PRIMARY KEY (publication_code, station_code),
+                FOREIGN KEY (publication_code) REFERENCES tsunami_offshore_publication(publication_code),
+                FOREIGN KEY (station_code) REFERENCES tsunami_station_catalog(station_code)
+            );
             """;
         await using (SqliteCommand command = connection.CreateCommand())
         {
@@ -619,6 +714,9 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, ID
         public int? Serial { get; set; }
         public string IssuedAt { get; set; } = string.Empty;
         public string ReceivedAt { get; set; } = string.Empty;
+        public string? OriginTime { get; set; }
+        public HypocenterDto? Hypocenter { get; set; }
+        public MagnitudeDto? Magnitude { get; set; }
         public string? HeadlineText { get; set; }
         public List<TsunamiInformationItemDto> Items { get; set; } = [];
         public List<TsunamiForecastAreaDto> ForecastAreas { get; set; } = [];
@@ -636,6 +734,9 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, ID
             Serial = report.Serial,
             IssuedAt = FormatDateTime(report.IssuedAt),
             ReceivedAt = FormatDateTime(report.ReceivedAt),
+            OriginTime = report.OriginTime is null ? null : FormatDateTime(report.OriginTime.Value),
+            Hypocenter = HypocenterDto.FromDomain(report.Hypocenter),
+            Magnitude = MagnitudeDto.FromDomain(report.Magnitude),
             HeadlineText = report.HeadlineText,
             Items = report.Items.Select(TsunamiInformationItemDto.FromDomain).ToList(),
             ForecastAreas = report.ForecastAreas.Select(TsunamiForecastAreaDto.FromDomain).ToList(),
@@ -654,6 +755,9 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, ID
             Serial = Serial,
             IssuedAt = ParseDateTime(IssuedAt),
             ReceivedAt = ParseDateTime(ReceivedAt),
+            OriginTime = OriginTime is null ? null : ParseDateTime(OriginTime),
+            Hypocenter = Hypocenter?.ToDomain(),
+            Magnitude = Magnitude?.ToDomain(),
             HeadlineText = HeadlineText,
             Items = Items.Select(item => item.ToDomain()).ToImmutableArray(),
             ForecastAreas = ForecastAreas.Select(item => item.ToDomain()).ToImmutableArray(),
@@ -666,6 +770,48 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, ID
             Enum.TryParse(value, ignoreCase: false, out T result)
                 ? result
                 : throw new InvalidDataException($"无法解析 SQLite 海啸枚举值：{value}。");
+    }
+
+    private sealed class HypocenterDto
+    {
+        public string? Name { get; set; }
+        public string? Code { get; set; }
+        public double? Latitude { get; set; }
+        public double? Longitude { get; set; }
+        public int? DepthKm { get; set; }
+
+        public static HypocenterDto? FromDomain(Hypocenter? value) => value is null ? null : new()
+        {
+            Name = value.Name,
+            Code = value.Code,
+            Latitude = value.Coordinate?.Latitude,
+            Longitude = value.Coordinate?.Longitude,
+            DepthKm = value.DepthKm,
+        };
+
+        public Hypocenter ToDomain() => new(
+            Name,
+            Code,
+            Latitude is double latitude && Longitude is double longitude
+                ? new GeoCoordinate(latitude, longitude)
+                : null,
+            DepthKm);
+    }
+
+    private sealed class MagnitudeDto
+    {
+        public double? Value { get; set; }
+        public string? Type { get; set; }
+        public string? Condition { get; set; }
+
+        public static MagnitudeDto? FromDomain(Magnitude? value) => value is null ? null : new()
+        {
+            Value = value.Value,
+            Type = value.Type,
+            Condition = value.Condition,
+        };
+
+        public Magnitude ToDomain() => new(Value, Type, Condition);
     }
 
     private sealed class TsunamiInformationItemDto

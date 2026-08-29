@@ -1,0 +1,8652 @@
+{
+  "schemaVersion": 1,
+  "sourceVersion": "tsunami_station_list.txt + 抧恔壩嶳娭楢僐乕僪昞.xls#35",
+  "stations": [
+    {
+      "stationCode": "10001",
+      "name": "釧路",
+      "nameKana": null,
+      "latitude": 42.983333333333334,
+      "longitude": 144.36666666666667,
+      "forecastAreaCode": "100"
+    },
+    {
+      "stationCode": "10002",
+      "name": "根室市花咲",
+      "nameKana": null,
+      "latitude": 43.28333333333333,
+      "longitude": 145.56666666666666,
+      "forecastAreaCode": "100"
+    },
+    {
+      "stationCode": "10020",
+      "name": "根室港",
+      "nameKana": null,
+      "latitude": 43.35,
+      "longitude": 145.58333333333334,
+      "forecastAreaCode": "100"
+    },
+    {
+      "stationCode": "10021",
+      "name": "浜中町霧多布港",
+      "nameKana": null,
+      "latitude": 43.083333333333336,
+      "longitude": 145.11666666666667,
+      "forecastAreaCode": "100"
+    },
+    {
+      "stationCode": "10031",
+      "name": "羅臼漁港",
+      "nameKana": null,
+      "latitude": 44.016666666666666,
+      "longitude": 145.2,
+      "forecastAreaCode": "100"
+    },
+    {
+      "stationCode": "10034",
+      "name": "厚岸漁港",
+      "nameKana": null,
+      "latitude": 43.05,
+      "longitude": 144.85,
+      "forecastAreaCode": "100"
+    },
+    {
+      "stationCode": "10050",
+      "name": "釧路沖１００ｋｍＡ",
+      "nameKana": null,
+      "latitude": 42.083333333333336,
+      "longitude": 144.63333333333333,
+      "forecastAreaCode": "100"
+    },
+    {
+      "stationCode": "10060",
+      "name": "釧路沖８０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 42.233333333333334,
+      "longitude": 144.85,
+      "forecastAreaCode": "100"
+    },
+    {
+      "stationCode": "10061",
+      "name": "釧路沖８０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 42.233333333333334,
+      "longitude": 145.2,
+      "forecastAreaCode": "100"
+    },
+    {
+      "stationCode": "10062",
+      "name": "根室南東沖８０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 42.583333333333336,
+      "longitude": 146.08333333333334,
+      "forecastAreaCode": "100"
+    },
+    {
+      "stationCode": "10070",
+      "name": "釧路沖６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 42.483333333333334,
+      "longitude": 145.15,
+      "forecastAreaCode": "100"
+    },
+    {
+      "stationCode": "10071",
+      "name": "根室南東沖５０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 42.766666666666666,
+      "longitude": 145.71666666666667,
+      "forecastAreaCode": "100"
+    },
+    {
+      "stationCode": "10072",
+      "name": "釧路沖５０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 42.63333333333333,
+      "longitude": 145.4,
+      "forecastAreaCode": "100"
+    },
+    {
+      "stationCode": "10073",
+      "name": "根室南東沖６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 42.8,
+      "longitude": 146.01666666666668,
+      "forecastAreaCode": "100"
+    },
+    {
+      "stationCode": "10100",
+      "name": "浦河",
+      "nameKana": null,
+      "latitude": 42.166666666666664,
+      "longitude": 142.76666666666668,
+      "forecastAreaCode": "101"
+    },
+    {
+      "stationCode": "10101",
+      "name": "浦河",
+      "nameKana": null,
+      "latitude": 42.166666666666664,
+      "longitude": 142.76666666666668,
+      "forecastAreaCode": "101"
+    },
+    {
+      "stationCode": "10102",
+      "name": "十勝港",
+      "nameKana": null,
+      "latitude": 42.3,
+      "longitude": 143.31666666666666,
+      "forecastAreaCode": "101"
+    },
+    {
+      "stationCode": "10103",
+      "name": "えりも町庶野",
+      "nameKana": null,
+      "latitude": 42.05,
+      "longitude": 143.3,
+      "forecastAreaCode": "101"
+    },
+    {
+      "stationCode": "10150",
+      "name": "十勝沖１００ｋｍＡ",
+      "nameKana": null,
+      "latitude": 41.7,
+      "longitude": 144.43333333333334,
+      "forecastAreaCode": "101"
+    },
+    {
+      "stationCode": "10151",
+      "name": "浦河沖１００ｋｍＡ",
+      "nameKana": null,
+      "latitude": 41.05,
+      "longitude": 143.11666666666667,
+      "forecastAreaCode": "101"
+    },
+    {
+      "stationCode": "10152",
+      "name": "浦河沖１００ｋｍＢ",
+      "nameKana": null,
+      "latitude": 41.083333333333336,
+      "longitude": 142.76666666666668,
+      "forecastAreaCode": "101"
+    },
+    {
+      "stationCode": "10153",
+      "name": "十勝沖９０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 41.983333333333334,
+      "longitude": 144.35,
+      "forecastAreaCode": "101"
+    },
+    {
+      "stationCode": "10160",
+      "name": "十勝沖８０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 41.75,
+      "longitude": 144.18333333333334,
+      "forecastAreaCode": "101"
+    },
+    {
+      "stationCode": "10161",
+      "name": "十勝沖８０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 41.5,
+      "longitude": 144.08333333333334,
+      "forecastAreaCode": "101"
+    },
+    {
+      "stationCode": "10162",
+      "name": "十勝沖８０ｋｍＣ",
+      "nameKana": null,
+      "latitude": 41.36666666666667,
+      "longitude": 143.8,
+      "forecastAreaCode": "101"
+    },
+    {
+      "stationCode": "10163",
+      "name": "浦河沖７０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 41.61666666666667,
+      "longitude": 142.48333333333332,
+      "forecastAreaCode": "101"
+    },
+    {
+      "stationCode": "10170",
+      "name": "十勝沖６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 41.36666666666667,
+      "longitude": 143.45,
+      "forecastAreaCode": "101"
+    },
+    {
+      "stationCode": "10171",
+      "name": "浦河沖６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 41.43333333333333,
+      "longitude": 143.13333333333333,
+      "forecastAreaCode": "101"
+    },
+    {
+      "stationCode": "10172",
+      "name": "浦河沖５０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 41.56666666666667,
+      "longitude": 142.81666666666666,
+      "forecastAreaCode": "101"
+    },
+    {
+      "stationCode": "10201",
+      "name": "室蘭",
+      "nameKana": null,
+      "latitude": 42.35,
+      "longitude": 140.95,
+      "forecastAreaCode": "102"
+    },
+    {
+      "stationCode": "10202",
+      "name": "函館",
+      "nameKana": null,
+      "latitude": 41.78333333333333,
+      "longitude": 140.71666666666667,
+      "forecastAreaCode": "102"
+    },
+    {
+      "stationCode": "10203",
+      "name": "苫小牧西港",
+      "nameKana": null,
+      "latitude": 42.63333333333333,
+      "longitude": 141.61666666666667,
+      "forecastAreaCode": "102"
+    },
+    {
+      "stationCode": "10204",
+      "name": "福島町吉岡",
+      "nameKana": null,
+      "latitude": 41.45,
+      "longitude": 140.23333333333332,
+      "forecastAreaCode": "102"
+    },
+    {
+      "stationCode": "10221",
+      "name": "苫小牧東港",
+      "nameKana": null,
+      "latitude": 42.6,
+      "longitude": 141.81666666666666,
+      "forecastAreaCode": "102"
+    },
+    {
+      "stationCode": "10222",
+      "name": "白老港",
+      "nameKana": null,
+      "latitude": 42.516666666666666,
+      "longitude": 141.31666666666666,
+      "forecastAreaCode": "102"
+    },
+    {
+      "stationCode": "10223",
+      "name": "渡島森港",
+      "nameKana": null,
+      "latitude": 42.11666666666667,
+      "longitude": 140.6,
+      "forecastAreaCode": "102"
+    },
+    {
+      "stationCode": "10224",
+      "name": "室蘭港",
+      "nameKana": null,
+      "latitude": 42.35,
+      "longitude": 140.95,
+      "forecastAreaCode": "102"
+    },
+    {
+      "stationCode": "10239",
+      "name": "山背泊漁港",
+      "nameKana": null,
+      "latitude": 41.78333333333333,
+      "longitude": 141.11666666666667,
+      "forecastAreaCode": "102"
+    },
+    {
+      "stationCode": "11001",
+      "name": "稚内",
+      "nameKana": null,
+      "latitude": 45.4,
+      "longitude": 141.68333333333334,
+      "forecastAreaCode": "110"
+    },
+    {
+      "stationCode": "11002",
+      "name": "留萌",
+      "nameKana": null,
+      "latitude": 43.95,
+      "longitude": 141.63333333333333,
+      "forecastAreaCode": "110"
+    },
+    {
+      "stationCode": "11003",
+      "name": "小樽",
+      "nameKana": null,
+      "latitude": 43.2,
+      "longitude": 141.0,
+      "forecastAreaCode": "110"
+    },
+    {
+      "stationCode": "11022",
+      "name": "石狩湾新港",
+      "nameKana": null,
+      "latitude": 43.21666666666667,
+      "longitude": 141.3,
+      "forecastAreaCode": "110"
+    },
+    {
+      "stationCode": "11023",
+      "name": "利尻島沓形港",
+      "nameKana": null,
+      "latitude": 45.18333333333333,
+      "longitude": 141.13333333333333,
+      "forecastAreaCode": "110"
+    },
+    {
+      "stationCode": "11024",
+      "name": "羽幌港",
+      "nameKana": null,
+      "latitude": 44.36666666666667,
+      "longitude": 141.7,
+      "forecastAreaCode": "110"
+    },
+    {
+      "stationCode": "11030",
+      "name": "小樽市忍路",
+      "nameKana": null,
+      "latitude": 43.21666666666667,
+      "longitude": 140.86666666666667,
+      "forecastAreaCode": "110"
+    },
+    {
+      "stationCode": "11101",
+      "name": "寿都",
+      "nameKana": "すっつ",
+      "latitude": 42.795,
+      "longitude": 140.226,
+      "forecastAreaCode": "111"
+    },
+    {
+      "stationCode": "11102",
+      "name": "江差",
+      "nameKana": null,
+      "latitude": 41.86666666666667,
+      "longitude": 140.13333333333333,
+      "forecastAreaCode": "111"
+    },
+    {
+      "stationCode": "11121",
+      "name": "瀬棚港",
+      "nameKana": null,
+      "latitude": 42.45,
+      "longitude": 139.85,
+      "forecastAreaCode": "111"
+    },
+    {
+      "stationCode": "11122",
+      "name": "岩内港",
+      "nameKana": null,
+      "latitude": 42.983333333333334,
+      "longitude": 140.5,
+      "forecastAreaCode": "111"
+    },
+    {
+      "stationCode": "11123",
+      "name": "奥尻島奥尻港",
+      "nameKana": null,
+      "latitude": 42.166666666666664,
+      "longitude": 139.51666666666668,
+      "forecastAreaCode": "111"
+    },
+    {
+      "stationCode": "11130",
+      "name": "奥尻島松江",
+      "nameKana": null,
+      "latitude": 42.083333333333336,
+      "longitude": 139.48333333333332,
+      "forecastAreaCode": "111"
+    },
+    {
+      "stationCode": "12001",
+      "name": "網走",
+      "nameKana": null,
+      "latitude": 44.016666666666666,
+      "longitude": 144.28333333333333,
+      "forecastAreaCode": "120"
+    },
+    {
+      "stationCode": "12002",
+      "name": "紋別",
+      "nameKana": null,
+      "latitude": 44.35,
+      "longitude": 143.36666666666667,
+      "forecastAreaCode": "120"
+    },
+    {
+      "stationCode": "12003",
+      "name": "枝幸港",
+      "nameKana": null,
+      "latitude": 44.93333333333333,
+      "longitude": 142.58333333333334,
+      "forecastAreaCode": "120"
+    },
+    {
+      "stationCode": "12020",
+      "name": "紋別港",
+      "nameKana": null,
+      "latitude": 44.35,
+      "longitude": 143.36666666666667,
+      "forecastAreaCode": "120"
+    },
+    {
+      "stationCode": "20001",
+      "name": "深浦",
+      "nameKana": null,
+      "latitude": 40.65,
+      "longitude": 139.93333333333334,
+      "forecastAreaCode": "200"
+    },
+    {
+      "stationCode": "20002",
+      "name": "竜飛",
+      "nameKana": null,
+      "latitude": 41.25,
+      "longitude": 140.38333333333333,
+      "forecastAreaCode": "200"
+    },
+    {
+      "stationCode": "20090",
+      "name": "青森深浦沖",
+      "nameKana": null,
+      "latitude": 40.78333333333333,
+      "longitude": 139.93333333333334,
+      "forecastAreaCode": "200"
+    },
+    {
+      "stationCode": "20101",
+      "name": "八戸",
+      "nameKana": null,
+      "latitude": 40.53333333333333,
+      "longitude": 141.53333333333333,
+      "forecastAreaCode": "201"
+    },
+    {
+      "stationCode": "20102",
+      "name": "むつ市関根浜",
+      "nameKana": null,
+      "latitude": 41.36666666666667,
+      "longitude": 141.23333333333332,
+      "forecastAreaCode": "201"
+    },
+    {
+      "stationCode": "20120",
+      "name": "むつ小川原港",
+      "nameKana": null,
+      "latitude": 40.93333333333333,
+      "longitude": 141.38333333333333,
+      "forecastAreaCode": "201"
+    },
+    {
+      "stationCode": "20121",
+      "name": "八戸港",
+      "nameKana": null,
+      "latitude": 40.53333333333333,
+      "longitude": 141.55,
+      "forecastAreaCode": "201"
+    },
+    {
+      "stationCode": "20150",
+      "name": "青森東方沖１００ｋｍＡ",
+      "nameKana": null,
+      "latitude": 40.516666666666666,
+      "longitude": 142.96666666666667,
+      "forecastAreaCode": "201"
+    },
+    {
+      "stationCode": "20151",
+      "name": "青森東方沖９０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 41.016666666666666,
+      "longitude": 142.43333333333334,
+      "forecastAreaCode": "201"
+    },
+    {
+      "stationCode": "20160",
+      "name": "青森東方沖８０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 40.6,
+      "longitude": 142.63333333333333,
+      "forecastAreaCode": "201"
+    },
+    {
+      "stationCode": "20170",
+      "name": "青森東方沖６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 41.416666666666664,
+      "longitude": 142.21666666666667,
+      "forecastAreaCode": "201"
+    },
+    {
+      "stationCode": "20171",
+      "name": "青森東方沖６０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 40.9,
+      "longitude": 142.1,
+      "forecastAreaCode": "201"
+    },
+    {
+      "stationCode": "20172",
+      "name": "青森東方沖５０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 41.2,
+      "longitude": 142.03333333333333,
+      "forecastAreaCode": "201"
+    },
+    {
+      "stationCode": "20173",
+      "name": "青森東方沖５０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 40.6,
+      "longitude": 142.28333333333333,
+      "forecastAreaCode": "201"
+    },
+    {
+      "stationCode": "20180",
+      "name": "青森東方沖４０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 40.95,
+      "longitude": 141.88333333333333,
+      "forecastAreaCode": "201"
+    },
+    {
+      "stationCode": "20181",
+      "name": "青森東方沖３０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 40.78333333333333,
+      "longitude": 141.78333333333333,
+      "forecastAreaCode": "201"
+    },
+    {
+      "stationCode": "20190",
+      "name": "青森八戸沖",
+      "nameKana": null,
+      "latitude": 40.63333333333333,
+      "longitude": 141.75,
+      "forecastAreaCode": "201"
+    },
+    {
+      "stationCode": "20201",
+      "name": "青森",
+      "nameKana": null,
+      "latitude": 40.833333333333336,
+      "longitude": 140.76666666666668,
+      "forecastAreaCode": "202"
+    },
+    {
+      "stationCode": "20202",
+      "name": "むつ市大湊",
+      "nameKana": null,
+      "latitude": 41.25,
+      "longitude": 141.15,
+      "forecastAreaCode": "202"
+    },
+    {
+      "stationCode": "21001",
+      "name": "宮古",
+      "nameKana": null,
+      "latitude": 39.65,
+      "longitude": 141.98333333333332,
+      "forecastAreaCode": "210"
+    },
+    {
+      "stationCode": "21002",
+      "name": "大船渡",
+      "nameKana": null,
+      "latitude": 39.016666666666666,
+      "longitude": 141.75,
+      "forecastAreaCode": "210"
+    },
+    {
+      "stationCode": "21003",
+      "name": "釜石",
+      "nameKana": null,
+      "latitude": 39.266666666666666,
+      "longitude": 141.88333333333333,
+      "forecastAreaCode": "210"
+    },
+    {
+      "stationCode": "21020",
+      "name": "久慈港",
+      "nameKana": null,
+      "latitude": 40.2,
+      "longitude": 141.8,
+      "forecastAreaCode": "210"
+    },
+    {
+      "stationCode": "21050",
+      "name": "岩手沖９０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 40.083333333333336,
+      "longitude": 142.96666666666667,
+      "forecastAreaCode": "210"
+    },
+    {
+      "stationCode": "21051",
+      "name": "岩手沖９０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 39.31666666666667,
+      "longitude": 143.11666666666667,
+      "forecastAreaCode": "210"
+    },
+    {
+      "stationCode": "21060",
+      "name": "岩手沖７０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 39.233333333333334,
+      "longitude": 142.76666666666668,
+      "forecastAreaCode": "210"
+    },
+    {
+      "stationCode": "21061",
+      "name": "岩手沖８０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 39.71666666666667,
+      "longitude": 143.03333333333333,
+      "forecastAreaCode": "210"
+    },
+    {
+      "stationCode": "21070",
+      "name": "岩手沖６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 40.11666666666667,
+      "longitude": 142.61666666666667,
+      "forecastAreaCode": "210"
+    },
+    {
+      "stationCode": "21071",
+      "name": "岩手沖６０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 39.75,
+      "longitude": 142.68333333333334,
+      "forecastAreaCode": "210"
+    },
+    {
+      "stationCode": "21072",
+      "name": "岩手沖６０ｋｍＣ",
+      "nameKana": null,
+      "latitude": 39.36666666666667,
+      "longitude": 142.8,
+      "forecastAreaCode": "210"
+    },
+    {
+      "stationCode": "21080",
+      "name": "岩手沖４０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 39.25,
+      "longitude": 142.43333333333334,
+      "forecastAreaCode": "210"
+    },
+    {
+      "stationCode": "21081",
+      "name": "岩手沖４０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 40.333333333333336,
+      "longitude": 142.26666666666668,
+      "forecastAreaCode": "210"
+    },
+    {
+      "stationCode": "21082",
+      "name": "岩手沖４０ｋｍＣ",
+      "nameKana": null,
+      "latitude": 40.11666666666667,
+      "longitude": 142.4,
+      "forecastAreaCode": "210"
+    },
+    {
+      "stationCode": "21083",
+      "name": "岩手沖３０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 39.733333333333334,
+      "longitude": 142.33333333333334,
+      "forecastAreaCode": "210"
+    },
+    {
+      "stationCode": "21084",
+      "name": "岩手沖３０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 39.45,
+      "longitude": 142.45,
+      "forecastAreaCode": "210"
+    },
+    {
+      "stationCode": "21090",
+      "name": "岩手釜石沖",
+      "nameKana": null,
+      "latitude": 39.266666666666666,
+      "longitude": 142.1,
+      "forecastAreaCode": "210"
+    },
+    {
+      "stationCode": "21091",
+      "name": "岩手宮古沖",
+      "nameKana": null,
+      "latitude": 39.63333333333333,
+      "longitude": 142.18333333333334,
+      "forecastAreaCode": "210"
+    },
+    {
+      "stationCode": "21092",
+      "name": "岩手久慈沖",
+      "nameKana": null,
+      "latitude": 40.11666666666667,
+      "longitude": 142.06666666666666,
+      "forecastAreaCode": "210"
+    },
+    {
+      "stationCode": "22001",
+      "name": "牡鹿町鮎川",
+      "nameKana": null,
+      "latitude": 38.3,
+      "longitude": 141.5,
+      "forecastAreaCode": "220"
+    },
+    {
+      "stationCode": "22002",
+      "name": "石巻市鮎川",
+      "nameKana": null,
+      "latitude": 38.3,
+      "longitude": 141.5,
+      "forecastAreaCode": "220"
+    },
+    {
+      "stationCode": "22021",
+      "name": "仙台港",
+      "nameKana": null,
+      "latitude": 38.266666666666666,
+      "longitude": 141.0,
+      "forecastAreaCode": "220"
+    },
+    {
+      "stationCode": "22022",
+      "name": "石巻港",
+      "nameKana": null,
+      "latitude": 38.4,
+      "longitude": 141.26666666666668,
+      "forecastAreaCode": "220"
+    },
+    {
+      "stationCode": "22050",
+      "name": "宮城沖９０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 38.03333333333333,
+      "longitude": 142.56666666666666,
+      "forecastAreaCode": "220"
+    },
+    {
+      "stationCode": "22060",
+      "name": "宮城沖８０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 38.86666666666667,
+      "longitude": 142.81666666666666,
+      "forecastAreaCode": "220"
+    },
+    {
+      "stationCode": "22061",
+      "name": "宮城沖８０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 38.5,
+      "longitude": 142.5,
+      "forecastAreaCode": "220"
+    },
+    {
+      "stationCode": "22070",
+      "name": "宮城沖６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 38.05,
+      "longitude": 142.23333333333332,
+      "forecastAreaCode": "220"
+    },
+    {
+      "stationCode": "22071",
+      "name": "宮城沖５０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 38.93333333333333,
+      "longitude": 142.48333333333332,
+      "forecastAreaCode": "220"
+    },
+    {
+      "stationCode": "22072",
+      "name": "宮城沖５０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 38.583333333333336,
+      "longitude": 142.18333333333334,
+      "forecastAreaCode": "220"
+    },
+    {
+      "stationCode": "22080",
+      "name": "宮城沖４０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 38.833333333333336,
+      "longitude": 142.18333333333334,
+      "forecastAreaCode": "220"
+    },
+    {
+      "stationCode": "22081",
+      "name": "宮城沖３０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 38.1,
+      "longitude": 141.9,
+      "forecastAreaCode": "220"
+    },
+    {
+      "stationCode": "22090",
+      "name": "宮城金華山沖",
+      "nameKana": null,
+      "latitude": 38.233333333333334,
+      "longitude": 141.68333333333334,
+      "forecastAreaCode": "220"
+    },
+    {
+      "stationCode": "22091",
+      "name": "気仙沼広田湾沖",
+      "nameKana": null,
+      "latitude": 38.85,
+      "longitude": 141.9,
+      "forecastAreaCode": "220"
+    },
+    {
+      "stationCode": "22095",
+      "name": "宮城牡鹿沖",
+      "nameKana": null,
+      "latitude": 38.1,
+      "longitude": 141.55,
+      "forecastAreaCode": "220"
+    },
+    {
+      "stationCode": "23001",
+      "name": "秋田",
+      "nameKana": null,
+      "latitude": 39.75,
+      "longitude": 140.06666666666666,
+      "forecastAreaCode": "230"
+    },
+    {
+      "stationCode": "23090",
+      "name": "秋田男鹿沖",
+      "nameKana": null,
+      "latitude": 40.21666666666667,
+      "longitude": 139.66666666666666,
+      "forecastAreaCode": "230"
+    },
+    {
+      "stationCode": "24001",
+      "name": "酒田",
+      "nameKana": null,
+      "latitude": 38.916666666666664,
+      "longitude": 139.81666666666666,
+      "forecastAreaCode": "240"
+    },
+    {
+      "stationCode": "24030",
+      "name": "飛島",
+      "nameKana": null,
+      "latitude": 39.18333333333333,
+      "longitude": 139.55,
+      "forecastAreaCode": "240"
+    },
+    {
+      "stationCode": "24031",
+      "name": "鶴岡市鼠ケ関",
+      "nameKana": null,
+      "latitude": 38.56666666666667,
+      "longitude": 139.55,
+      "forecastAreaCode": "240"
+    },
+    {
+      "stationCode": "24090",
+      "name": "山形酒田沖",
+      "nameKana": null,
+      "latitude": 38.96666666666667,
+      "longitude": 139.6,
+      "forecastAreaCode": "240"
+    },
+    {
+      "stationCode": "25002",
+      "name": "いわき市小名浜",
+      "nameKana": null,
+      "latitude": 36.93333333333333,
+      "longitude": 140.9,
+      "forecastAreaCode": "250"
+    },
+    {
+      "stationCode": "25030",
+      "name": "相馬",
+      "nameKana": null,
+      "latitude": 37.833333333333336,
+      "longitude": 140.96666666666667,
+      "forecastAreaCode": "250"
+    },
+    {
+      "stationCode": "25050",
+      "name": "福島沖９０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 37.666666666666664,
+      "longitude": 142.3,
+      "forecastAreaCode": "250"
+    },
+    {
+      "stationCode": "25060",
+      "name": "福島沖７０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 37.7,
+      "longitude": 141.96666666666667,
+      "forecastAreaCode": "250"
+    },
+    {
+      "stationCode": "25061",
+      "name": "福島沖７０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 37.28333333333333,
+      "longitude": 141.88333333333333,
+      "forecastAreaCode": "250"
+    },
+    {
+      "stationCode": "25070",
+      "name": "福島沖５０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 37.7,
+      "longitude": 141.63333333333333,
+      "forecastAreaCode": "250"
+    },
+    {
+      "stationCode": "25071",
+      "name": "福島沖５０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 37.3,
+      "longitude": 141.56666666666666,
+      "forecastAreaCode": "250"
+    },
+    {
+      "stationCode": "25080",
+      "name": "福島沖３０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 37.85,
+      "longitude": 141.38333333333333,
+      "forecastAreaCode": "250"
+    },
+    {
+      "stationCode": "25081",
+      "name": "福島沖３０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 37.1,
+      "longitude": 141.36666666666667,
+      "forecastAreaCode": "250"
+    },
+    {
+      "stationCode": "25090",
+      "name": "福島小名浜沖",
+      "nameKana": null,
+      "latitude": 36.96666666666667,
+      "longitude": 141.18333333333334,
+      "forecastAreaCode": "250"
+    },
+    {
+      "stationCode": "30001",
+      "name": "大洗",
+      "nameKana": null,
+      "latitude": 36.3,
+      "longitude": 140.56666666666666,
+      "forecastAreaCode": "300"
+    },
+    {
+      "stationCode": "30020",
+      "name": "神栖市鹿島港",
+      "nameKana": null,
+      "latitude": 35.93333333333333,
+      "longitude": 140.7,
+      "forecastAreaCode": "300"
+    },
+    {
+      "stationCode": "30050",
+      "name": "茨城沖９０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 36.63333333333333,
+      "longitude": 141.83333333333334,
+      "forecastAreaCode": "300"
+    },
+    {
+      "stationCode": "30051",
+      "name": "茨城沖９０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 36.0,
+      "longitude": 141.8,
+      "forecastAreaCode": "300"
+    },
+    {
+      "stationCode": "30060",
+      "name": "茨城沖７０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 36.06666666666667,
+      "longitude": 141.51666666666668,
+      "forecastAreaCode": "300"
+    },
+    {
+      "stationCode": "30070",
+      "name": "茨城沖６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 36.666666666666664,
+      "longitude": 141.51666666666668,
+      "forecastAreaCode": "300"
+    },
+    {
+      "stationCode": "30071",
+      "name": "茨城沖５０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 36.15,
+      "longitude": 141.2,
+      "forecastAreaCode": "300"
+    },
+    {
+      "stationCode": "30072",
+      "name": "茨城沖５０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 35.85,
+      "longitude": 141.38333333333333,
+      "forecastAreaCode": "300"
+    },
+    {
+      "stationCode": "30080",
+      "name": "茨城沖４０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 36.833333333333336,
+      "longitude": 141.33333333333334,
+      "forecastAreaCode": "300"
+    },
+    {
+      "stationCode": "30095",
+      "name": "茨城神栖沖",
+      "nameKana": null,
+      "latitude": 35.9,
+      "longitude": 141.05,
+      "forecastAreaCode": "300"
+    },
+    {
+      "stationCode": "31001",
+      "name": "銚子",
+      "nameKana": null,
+      "latitude": 35.75,
+      "longitude": 140.86666666666667,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31002",
+      "name": "勝浦市興津",
+      "nameKana": null,
+      "latitude": 35.13333333333333,
+      "longitude": 140.25,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31050",
+      "name": "千葉東方沖９０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 35.6,
+      "longitude": 141.9,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31051",
+      "name": "千葉南東沖９０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 34.63333333333333,
+      "longitude": 141.08333333333334,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31060",
+      "name": "千葉東方沖８０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 35.28333333333333,
+      "longitude": 141.58333333333334,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31061",
+      "name": "千葉南東沖８０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 34.266666666666666,
+      "longitude": 140.41666666666666,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31062",
+      "name": "千葉東方沖７０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 35.71666666666667,
+      "longitude": 141.65,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31063",
+      "name": "千葉東方沖７０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 35.1,
+      "longitude": 141.2,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31064",
+      "name": "千葉南東沖８０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 34.18333333333333,
+      "longitude": 139.98333333333332,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31070",
+      "name": "千葉南東沖６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 34.75,
+      "longitude": 140.75,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31071",
+      "name": "千葉東方沖６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 35.233333333333334,
+      "longitude": 141.3,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31072",
+      "name": "千葉東方沖６０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 34.88333333333333,
+      "longitude": 140.96666666666667,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31073",
+      "name": "千葉南東沖６０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 34.416666666666664,
+      "longitude": 140.2,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31074",
+      "name": "千葉東方沖５０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 35.45,
+      "longitude": 141.38333333333333,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31075",
+      "name": "千葉東方沖５０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 35.11666666666667,
+      "longitude": 140.96666666666667,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31080",
+      "name": "千葉南東沖４０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 34.8,
+      "longitude": 140.51666666666668,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31081",
+      "name": "千葉南東沖３０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 34.6,
+      "longitude": 139.91666666666666,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31082",
+      "name": "千葉東方沖４０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 35.016666666666666,
+      "longitude": 140.81666666666666,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31083",
+      "name": "千葉南東沖３０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 34.65,
+      "longitude": 140.08333333333334,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31084",
+      "name": "千葉南東沖３０ｋｍＣ",
+      "nameKana": null,
+      "latitude": 34.666666666666664,
+      "longitude": 139.81666666666666,
+      "forecastAreaCode": "310"
+    },
+    {
+      "stationCode": "31101",
+      "name": "館山市布良",
+      "nameKana": null,
+      "latitude": 34.916666666666664,
+      "longitude": 139.83333333333334,
+      "forecastAreaCode": "311"
+    },
+    {
+      "stationCode": "31201",
+      "name": "千葉",
+      "nameKana": null,
+      "latitude": 35.6,
+      "longitude": 140.1,
+      "forecastAreaCode": "312"
+    },
+    {
+      "stationCode": "31202",
+      "name": "東京晴海",
+      "nameKana": null,
+      "latitude": 35.65,
+      "longitude": 139.76666666666668,
+      "forecastAreaCode": "312"
+    },
+    {
+      "stationCode": "31203",
+      "name": "横浜",
+      "nameKana": null,
+      "latitude": 35.46666666666667,
+      "longitude": 139.63333333333333,
+      "forecastAreaCode": "312"
+    },
+    {
+      "stationCode": "31204",
+      "name": "横須賀",
+      "nameKana": null,
+      "latitude": 35.28333333333333,
+      "longitude": 139.65,
+      "forecastAreaCode": "312"
+    },
+    {
+      "stationCode": "31205",
+      "name": "千葉",
+      "nameKana": null,
+      "latitude": 35.56666666666667,
+      "longitude": 140.05,
+      "forecastAreaCode": "312"
+    },
+    {
+      "stationCode": "31206",
+      "name": "横浜",
+      "nameKana": null,
+      "latitude": 35.45,
+      "longitude": 139.65,
+      "forecastAreaCode": "312"
+    },
+    {
+      "stationCode": "32001",
+      "name": "伊豆大島岡田",
+      "nameKana": null,
+      "latitude": 34.78333333333333,
+      "longitude": 139.38333333333333,
+      "forecastAreaCode": "320"
+    },
+    {
+      "stationCode": "32002",
+      "name": "三宅島坪田",
+      "nameKana": null,
+      "latitude": 34.05,
+      "longitude": 139.55,
+      "forecastAreaCode": "320"
+    },
+    {
+      "stationCode": "32003",
+      "name": "八丈島八重根",
+      "nameKana": null,
+      "latitude": 33.1,
+      "longitude": 139.78333333333333,
+      "forecastAreaCode": "320"
+    },
+    {
+      "stationCode": "32004",
+      "name": "神津島神津島港",
+      "nameKana": null,
+      "latitude": 34.21666666666667,
+      "longitude": 139.13333333333333,
+      "forecastAreaCode": "320"
+    },
+    {
+      "stationCode": "32005",
+      "name": "三宅島阿古",
+      "nameKana": null,
+      "latitude": 34.06666666666667,
+      "longitude": 139.48333333333332,
+      "forecastAreaCode": "320"
+    },
+    {
+      "stationCode": "32006",
+      "name": "八丈島神湊",
+      "nameKana": null,
+      "latitude": 33.13333333333333,
+      "longitude": 139.8,
+      "forecastAreaCode": "320"
+    },
+    {
+      "stationCode": "32101",
+      "name": "父島二見",
+      "nameKana": null,
+      "latitude": 27.1,
+      "longitude": 142.2,
+      "forecastAreaCode": "321"
+    },
+    {
+      "stationCode": "32102",
+      "name": "南鳥島",
+      "nameKana": null,
+      "latitude": 24.283333333333335,
+      "longitude": 153.98333333333332,
+      "forecastAreaCode": "321"
+    },
+    {
+      "stationCode": "33000",
+      "name": "小田原",
+      "nameKana": null,
+      "latitude": 35.233333333333334,
+      "longitude": 139.15,
+      "forecastAreaCode": "330"
+    },
+    {
+      "stationCode": "33001",
+      "name": "三浦市三崎漁港",
+      "nameKana": null,
+      "latitude": 35.13333333333333,
+      "longitude": 139.61666666666667,
+      "forecastAreaCode": "330"
+    },
+    {
+      "stationCode": "33030",
+      "name": "三浦市油壺",
+      "nameKana": null,
+      "latitude": 35.166666666666664,
+      "longitude": 139.61666666666667,
+      "forecastAreaCode": "330"
+    },
+    {
+      "stationCode": "33080",
+      "name": "神奈川沖４０ｋｍ",
+      "nameKana": null,
+      "latitude": 34.8,
+      "longitude": 139.6,
+      "forecastAreaCode": "330"
+    },
+    {
+      "stationCode": "33095",
+      "name": "神奈川相模湾沖",
+      "nameKana": null,
+      "latitude": 35.06666666666667,
+      "longitude": 139.4,
+      "forecastAreaCode": "330"
+    },
+    {
+      "stationCode": "34001",
+      "name": "新潟",
+      "nameKana": null,
+      "latitude": 37.93333333333333,
+      "longitude": 139.06666666666666,
+      "forecastAreaCode": "340"
+    },
+    {
+      "stationCode": "34003",
+      "name": "粟島",
+      "nameKana": null,
+      "latitude": 38.46666666666667,
+      "longitude": 139.25,
+      "forecastAreaCode": "340"
+    },
+    {
+      "stationCode": "34030",
+      "name": "柏崎市鯨波",
+      "nameKana": null,
+      "latitude": 37.35,
+      "longitude": 138.51666666666668,
+      "forecastAreaCode": "340"
+    },
+    {
+      "stationCode": "34101",
+      "name": "両津市鷲崎",
+      "nameKana": null,
+      "latitude": 38.31666666666667,
+      "longitude": 138.51666666666668,
+      "forecastAreaCode": "341"
+    },
+    {
+      "stationCode": "34102",
+      "name": "佐渡市鷲崎",
+      "nameKana": null,
+      "latitude": 38.31666666666667,
+      "longitude": 138.51666666666668,
+      "forecastAreaCode": "341"
+    },
+    {
+      "stationCode": "34103",
+      "name": "佐渡市鷲崎",
+      "nameKana": null,
+      "latitude": 38.31666666666667,
+      "longitude": 138.51666666666668,
+      "forecastAreaCode": "341"
+    },
+    {
+      "stationCode": "34139",
+      "name": "小木",
+      "nameKana": null,
+      "latitude": 37.81666666666667,
+      "longitude": 138.28333333333333,
+      "forecastAreaCode": "341"
+    },
+    {
+      "stationCode": "35001",
+      "name": "富山",
+      "nameKana": null,
+      "latitude": 36.766666666666666,
+      "longitude": 137.21666666666667,
+      "forecastAreaCode": "350"
+    },
+    {
+      "stationCode": "35021",
+      "name": "伏木富山港新湊",
+      "nameKana": null,
+      "latitude": 36.78333333333333,
+      "longitude": 137.11666666666667,
+      "forecastAreaCode": "350"
+    },
+    {
+      "stationCode": "36001",
+      "name": "珠洲市長橋",
+      "nameKana": null,
+      "latitude": 37.5,
+      "longitude": 137.15,
+      "forecastAreaCode": "360"
+    },
+    {
+      "stationCode": "36020",
+      "name": "輪島港",
+      "nameKana": null,
+      "latitude": 37.4,
+      "longitude": 136.9,
+      "forecastAreaCode": "360"
+    },
+    {
+      "stationCode": "36021",
+      "name": "七尾港",
+      "nameKana": null,
+      "latitude": 37.05,
+      "longitude": 136.96666666666667,
+      "forecastAreaCode": "360"
+    },
+    {
+      "stationCode": "36101",
+      "name": "金沢",
+      "nameKana": null,
+      "latitude": 36.61666666666667,
+      "longitude": 136.6,
+      "forecastAreaCode": "361"
+    },
+    {
+      "stationCode": "37004",
+      "name": "福井港",
+      "nameKana": "ふくいこう",
+      "latitude": 36.213,
+      "longitude": 136.129,
+      "forecastAreaCode": "370"
+    },
+    {
+      "stationCode": "37020",
+      "name": "敦賀港",
+      "nameKana": null,
+      "latitude": 35.666666666666664,
+      "longitude": 136.06666666666666,
+      "forecastAreaCode": "370"
+    },
+    {
+      "stationCode": "38001",
+      "name": "沼津市内浦",
+      "nameKana": null,
+      "latitude": 35.016666666666666,
+      "longitude": 138.88333333333333,
+      "forecastAreaCode": "380"
+    },
+    {
+      "stationCode": "38002",
+      "name": "清水",
+      "nameKana": null,
+      "latitude": 35.016666666666666,
+      "longitude": 138.51666666666668,
+      "forecastAreaCode": "380"
+    },
+    {
+      "stationCode": "38004",
+      "name": "南伊豆町石廊崎",
+      "nameKana": null,
+      "latitude": 34.61666666666667,
+      "longitude": 138.85,
+      "forecastAreaCode": "380"
+    },
+    {
+      "stationCode": "38005",
+      "name": "御前崎",
+      "nameKana": null,
+      "latitude": 34.61666666666667,
+      "longitude": 138.21666666666667,
+      "forecastAreaCode": "380"
+    },
+    {
+      "stationCode": "38006",
+      "name": "舞阪",
+      "nameKana": null,
+      "latitude": 34.68333333333333,
+      "longitude": 137.61666666666667,
+      "forecastAreaCode": "380"
+    },
+    {
+      "stationCode": "38020",
+      "name": "下田港",
+      "nameKana": null,
+      "latitude": 34.68333333333333,
+      "longitude": 138.96666666666667,
+      "forecastAreaCode": "380"
+    },
+    {
+      "stationCode": "38030",
+      "name": "伊東",
+      "nameKana": null,
+      "latitude": 34.9,
+      "longitude": 139.13333333333333,
+      "forecastAreaCode": "380"
+    },
+    {
+      "stationCode": "38031",
+      "name": "西伊豆町田子",
+      "nameKana": null,
+      "latitude": 34.8,
+      "longitude": 138.76666666666668,
+      "forecastAreaCode": "380"
+    },
+    {
+      "stationCode": "38032",
+      "name": "焼津",
+      "nameKana": null,
+      "latitude": 34.86666666666667,
+      "longitude": 138.33333333333334,
+      "forecastAreaCode": "380"
+    },
+    {
+      "stationCode": "38034",
+      "name": "南伊豆",
+      "nameKana": null,
+      "latitude": 34.61666666666667,
+      "longitude": 138.88333333333333,
+      "forecastAreaCode": "380"
+    },
+    {
+      "stationCode": "38070",
+      "name": "静岡沖５０ｋｍ",
+      "nameKana": null,
+      "latitude": 34.21666666666667,
+      "longitude": 137.7,
+      "forecastAreaCode": "380"
+    },
+    {
+      "stationCode": "38090",
+      "name": "静岡御前崎沖",
+      "nameKana": null,
+      "latitude": 34.4,
+      "longitude": 138.28333333333333,
+      "forecastAreaCode": "380"
+    },
+    {
+      "stationCode": "39001",
+      "name": "田原市赤羽根",
+      "nameKana": null,
+      "latitude": 34.6,
+      "longitude": 137.18333333333334,
+      "forecastAreaCode": "390"
+    },
+    {
+      "stationCode": "39090",
+      "name": "伊勢湾口沖",
+      "nameKana": null,
+      "latitude": 34.36666666666667,
+      "longitude": 137.11666666666667,
+      "forecastAreaCode": "390"
+    },
+    {
+      "stationCode": "39101",
+      "name": "名古屋",
+      "nameKana": null,
+      "latitude": 35.083333333333336,
+      "longitude": 136.88333333333333,
+      "forecastAreaCode": "391"
+    },
+    {
+      "stationCode": "39102",
+      "name": "半田市衣浦",
+      "nameKana": null,
+      "latitude": 34.88333333333333,
+      "longitude": 136.95,
+      "forecastAreaCode": "391"
+    },
+    {
+      "stationCode": "39103",
+      "name": "四日市",
+      "nameKana": null,
+      "latitude": 34.96666666666667,
+      "longitude": 136.63333333333333,
+      "forecastAreaCode": "391"
+    },
+    {
+      "stationCode": "39120",
+      "name": "豊橋市三河港",
+      "nameKana": null,
+      "latitude": 34.733333333333334,
+      "longitude": 137.31666666666666,
+      "forecastAreaCode": "391"
+    },
+    {
+      "stationCode": "40001",
+      "name": "鳥羽",
+      "nameKana": null,
+      "latitude": 34.483333333333334,
+      "longitude": 136.81666666666666,
+      "forecastAreaCode": "400"
+    },
+    {
+      "stationCode": "40002",
+      "name": "尾鷲",
+      "nameKana": null,
+      "latitude": 34.083333333333336,
+      "longitude": 136.2,
+      "forecastAreaCode": "400"
+    },
+    {
+      "stationCode": "40003",
+      "name": "熊野市遊木",
+      "nameKana": null,
+      "latitude": 33.93333333333333,
+      "longitude": 136.16666666666666,
+      "forecastAreaCode": "400"
+    },
+    {
+      "stationCode": "40050",
+      "name": "三重南東沖９０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 33.36666666666667,
+      "longitude": 136.91666666666666,
+      "forecastAreaCode": "400"
+    },
+    {
+      "stationCode": "40060",
+      "name": "三重南東沖８０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 33.766666666666666,
+      "longitude": 137.58333333333334,
+      "forecastAreaCode": "400"
+    },
+    {
+      "stationCode": "40061",
+      "name": "三重南東沖８０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 33.483333333333334,
+      "longitude": 136.93333333333334,
+      "forecastAreaCode": "400"
+    },
+    {
+      "stationCode": "40062",
+      "name": "三重南東沖８０ｋｍＣ",
+      "nameKana": null,
+      "latitude": 33.36666666666667,
+      "longitude": 136.8,
+      "forecastAreaCode": "400"
+    },
+    {
+      "stationCode": "40063",
+      "name": "三重南東沖７０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 33.46666666666667,
+      "longitude": 136.8,
+      "forecastAreaCode": "400"
+    },
+    {
+      "stationCode": "40070",
+      "name": "三重南東沖６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 33.85,
+      "longitude": 137.36666666666667,
+      "forecastAreaCode": "400"
+    },
+    {
+      "stationCode": "40071",
+      "name": "三重南東沖６０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 33.65,
+      "longitude": 136.83333333333334,
+      "forecastAreaCode": "400"
+    },
+    {
+      "stationCode": "40072",
+      "name": "三重南東沖５０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 33.65,
+      "longitude": 136.6,
+      "forecastAreaCode": "400"
+    },
+    {
+      "stationCode": "40080",
+      "name": "三重南東沖４０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 33.75,
+      "longitude": 136.65,
+      "forecastAreaCode": "400"
+    },
+    {
+      "stationCode": "40081",
+      "name": "三重南東沖４０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 33.68333333333333,
+      "longitude": 136.46666666666667,
+      "forecastAreaCode": "400"
+    },
+    {
+      "stationCode": "40082",
+      "name": "三重南東沖３０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 33.8,
+      "longitude": 136.55,
+      "forecastAreaCode": "400"
+    },
+    {
+      "stationCode": "40090",
+      "name": "三重尾鷲沖",
+      "nameKana": null,
+      "latitude": 33.9,
+      "longitude": 136.26666666666668,
+      "forecastAreaCode": "400"
+    },
+    {
+      "stationCode": "50001",
+      "name": "舞鶴",
+      "nameKana": null,
+      "latitude": 35.483333333333334,
+      "longitude": 135.38333333333333,
+      "forecastAreaCode": "500"
+    },
+    {
+      "stationCode": "51001",
+      "name": "大阪天保山",
+      "nameKana": null,
+      "latitude": 34.65,
+      "longitude": 135.43333333333334,
+      "forecastAreaCode": "510"
+    },
+    {
+      "stationCode": "51002",
+      "name": "岬町淡輪",
+      "nameKana": null,
+      "latitude": 34.333333333333336,
+      "longitude": 135.18333333333334,
+      "forecastAreaCode": "510"
+    },
+    {
+      "stationCode": "52001",
+      "name": "豊岡市津居山",
+      "nameKana": null,
+      "latitude": 35.65,
+      "longitude": 134.83333333333334,
+      "forecastAreaCode": "520"
+    },
+    {
+      "stationCode": "52101",
+      "name": "神戸",
+      "nameKana": null,
+      "latitude": 34.68333333333333,
+      "longitude": 135.18333333333334,
+      "forecastAreaCode": "521"
+    },
+    {
+      "stationCode": "52102",
+      "name": "姫路",
+      "nameKana": null,
+      "latitude": 34.78333333333333,
+      "longitude": 134.66666666666666,
+      "forecastAreaCode": "521"
+    },
+    {
+      "stationCode": "52201",
+      "name": "洲本",
+      "nameKana": null,
+      "latitude": 34.333333333333336,
+      "longitude": 134.9,
+      "forecastAreaCode": "522"
+    },
+    {
+      "stationCode": "52202",
+      "name": "洲本",
+      "nameKana": null,
+      "latitude": 34.35,
+      "longitude": 134.9,
+      "forecastAreaCode": "522"
+    },
+    {
+      "stationCode": "53001",
+      "name": "那智勝浦町浦神",
+      "nameKana": null,
+      "latitude": 33.56666666666667,
+      "longitude": 135.9,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53002",
+      "name": "串本町袋港",
+      "nameKana": null,
+      "latitude": 33.483333333333334,
+      "longitude": 135.76666666666668,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53003",
+      "name": "白浜町細野",
+      "nameKana": null,
+      "latitude": 33.68333333333333,
+      "longitude": 135.38333333333333,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53004",
+      "name": "和歌山",
+      "nameKana": null,
+      "latitude": 34.21666666666667,
+      "longitude": 135.15,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53005",
+      "name": "御坊",
+      "nameKana": null,
+      "latitude": 33.85,
+      "longitude": 135.16666666666666,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53006",
+      "name": "御坊市祓井戸",
+      "nameKana": null,
+      "latitude": 33.85,
+      "longitude": 135.16666666666666,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53007",
+      "name": "白浜町堅田",
+      "nameKana": null,
+      "latitude": 33.68333333333333,
+      "longitude": 135.38333333333333,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53060",
+      "name": "和歌山沖８０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 33.21666666666667,
+      "longitude": 136.68333333333334,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53061",
+      "name": "和歌山沖８０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 33.166666666666664,
+      "longitude": 136.58333333333334,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53062",
+      "name": "和歌山沖７０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 33.3,
+      "longitude": 136.6,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53063",
+      "name": "和歌山沖７０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 33.233333333333334,
+      "longitude": 136.56666666666666,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53064",
+      "name": "和歌山沖８０ｋｍＣ",
+      "nameKana": null,
+      "latitude": 32.88333333333333,
+      "longitude": 135.3,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53065",
+      "name": "和歌山沖８０ｋｍＤ",
+      "nameKana": null,
+      "latitude": 32.85,
+      "longitude": 135.18333333333334,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53066",
+      "name": "和歌山沖８０ｋｍＥ",
+      "nameKana": null,
+      "latitude": 32.9,
+      "longitude": 135.15,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53067",
+      "name": "和歌山沖７０ｋｍＣ",
+      "nameKana": null,
+      "latitude": 32.8,
+      "longitude": 135.76666666666668,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53068",
+      "name": "和歌山沖７０ｋｍＤ",
+      "nameKana": null,
+      "latitude": 32.86666666666667,
+      "longitude": 135.66666666666666,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53069",
+      "name": "和歌山沖７０ｋｍＥ",
+      "nameKana": null,
+      "latitude": 32.983333333333334,
+      "longitude": 135.23333333333332,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53070",
+      "name": "和歌山沖５０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 33.483333333333334,
+      "longitude": 136.45,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53071",
+      "name": "和歌山沖５０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 33.38333333333333,
+      "longitude": 136.38333333333333,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53072",
+      "name": "和歌山沖６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 32.9,
+      "longitude": 135.83333333333334,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53073",
+      "name": "和歌山沖６０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 32.93333333333333,
+      "longitude": 135.76666666666668,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53074",
+      "name": "和歌山沖６０ｋｍＣ",
+      "nameKana": null,
+      "latitude": 33.18333333333333,
+      "longitude": 135.1,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53075",
+      "name": "和歌山沖５０ｋｍＣ",
+      "nameKana": null,
+      "latitude": 33.03333333333333,
+      "longitude": 135.83333333333334,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53076",
+      "name": "和歌山沖５０ｋｍＤ",
+      "nameKana": null,
+      "latitude": 33.083333333333336,
+      "longitude": 135.41666666666666,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53077",
+      "name": "和歌山沖５０ｋｍＥ",
+      "nameKana": null,
+      "latitude": 33.233333333333334,
+      "longitude": 135.16666666666666,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53078",
+      "name": "和歌山沖５０ｋｍＦ",
+      "nameKana": null,
+      "latitude": 33.28333333333333,
+      "longitude": 134.98333333333332,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53079",
+      "name": "和歌山沖４０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 33.333333333333336,
+      "longitude": 136.26666666666668,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53080",
+      "name": "和歌山沖３０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 33.55,
+      "longitude": 136.33333333333334,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53081",
+      "name": "和歌山沖３０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 33.45,
+      "longitude": 136.25,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53082",
+      "name": "和歌山沖４０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 33.15,
+      "longitude": 135.96666666666667,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53083",
+      "name": "和歌山沖４０ｋｍＣ",
+      "nameKana": null,
+      "latitude": 33.13333333333333,
+      "longitude": 135.86666666666667,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53084",
+      "name": "和歌山沖４０ｋｍＤ",
+      "nameKana": null,
+      "latitude": 33.083333333333336,
+      "longitude": 135.71666666666667,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53085",
+      "name": "和歌山沖４０ｋｍＥ",
+      "nameKana": null,
+      "latitude": 33.13333333333333,
+      "longitude": 135.51666666666668,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53086",
+      "name": "和歌山沖４０ｋｍＦ",
+      "nameKana": null,
+      "latitude": 33.18333333333333,
+      "longitude": 135.33333333333334,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53087",
+      "name": "和歌山沖４０ｋｍＧ",
+      "nameKana": null,
+      "latitude": 33.31666666666667,
+      "longitude": 135.06666666666666,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53088",
+      "name": "和歌山沖３０ｋｍＣ",
+      "nameKana": null,
+      "latitude": 33.166666666666664,
+      "longitude": 135.75,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53089",
+      "name": "和歌山沖３０ｋｍＤ",
+      "nameKana": null,
+      "latitude": 33.233333333333334,
+      "longitude": 135.46666666666667,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "53090",
+      "name": "和歌山白浜沖",
+      "nameKana": null,
+      "latitude": 33.65,
+      "longitude": 135.15,
+      "forecastAreaCode": "530"
+    },
+    {
+      "stationCode": "54001",
+      "name": "境港市境",
+      "nameKana": null,
+      "latitude": 35.55,
+      "longitude": 133.25,
+      "forecastAreaCode": "540"
+    },
+    {
+      "stationCode": "54030",
+      "name": "岩美町田後",
+      "nameKana": null,
+      "latitude": 35.6,
+      "longitude": 134.31666666666666,
+      "forecastAreaCode": "540"
+    },
+    {
+      "stationCode": "55001",
+      "name": "浜田",
+      "nameKana": null,
+      "latitude": 34.9,
+      "longitude": 132.06666666666666,
+      "forecastAreaCode": "550"
+    },
+    {
+      "stationCode": "55101",
+      "name": "隠岐西郷",
+      "nameKana": null,
+      "latitude": 36.2,
+      "longitude": 133.33333333333334,
+      "forecastAreaCode": "551"
+    },
+    {
+      "stationCode": "56001",
+      "name": "玉野市宇野",
+      "nameKana": null,
+      "latitude": 34.483333333333334,
+      "longitude": 133.95,
+      "forecastAreaCode": "560"
+    },
+    {
+      "stationCode": "57001",
+      "name": "広島",
+      "nameKana": null,
+      "latitude": 34.35,
+      "longitude": 132.46666666666667,
+      "forecastAreaCode": "570"
+    },
+    {
+      "stationCode": "57002",
+      "name": "呉",
+      "nameKana": null,
+      "latitude": 34.233333333333334,
+      "longitude": 132.55,
+      "forecastAreaCode": "570"
+    },
+    {
+      "stationCode": "58001",
+      "name": "小松島",
+      "nameKana": null,
+      "latitude": 34.016666666666666,
+      "longitude": 134.58333333333334,
+      "forecastAreaCode": "580"
+    },
+    {
+      "stationCode": "58002",
+      "name": "徳島由岐",
+      "nameKana": null,
+      "latitude": 33.766666666666666,
+      "longitude": 134.6,
+      "forecastAreaCode": "580"
+    },
+    {
+      "stationCode": "58070",
+      "name": "徳島沖５０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 33.333333333333336,
+      "longitude": 134.86666666666667,
+      "forecastAreaCode": "580"
+    },
+    {
+      "stationCode": "58071",
+      "name": "徳島沖５０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 33.25,
+      "longitude": 134.76666666666668,
+      "forecastAreaCode": "580"
+    },
+    {
+      "stationCode": "58080",
+      "name": "徳島沖４０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 33.416666666666664,
+      "longitude": 134.75,
+      "forecastAreaCode": "580"
+    },
+    {
+      "stationCode": "58081",
+      "name": "徳島沖４０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 33.31666666666667,
+      "longitude": 134.66666666666666,
+      "forecastAreaCode": "580"
+    },
+    {
+      "stationCode": "58090",
+      "name": "徳島海陽沖",
+      "nameKana": null,
+      "latitude": 33.46666666666667,
+      "longitude": 134.48333333333332,
+      "forecastAreaCode": "580"
+    },
+    {
+      "stationCode": "59001",
+      "name": "高松",
+      "nameKana": null,
+      "latitude": 34.35,
+      "longitude": 134.05,
+      "forecastAreaCode": "590"
+    },
+    {
+      "stationCode": "59020",
+      "name": "坂出市与島港",
+      "nameKana": null,
+      "latitude": 34.38333333333333,
+      "longitude": 133.81666666666666,
+      "forecastAreaCode": "590"
+    },
+    {
+      "stationCode": "59022",
+      "name": "多度津港",
+      "nameKana": null,
+      "latitude": 34.28333333333333,
+      "longitude": 133.75,
+      "forecastAreaCode": "590"
+    },
+    {
+      "stationCode": "60001",
+      "name": "宇和島",
+      "nameKana": null,
+      "latitude": 33.233333333333334,
+      "longitude": 132.55,
+      "forecastAreaCode": "600"
+    },
+    {
+      "stationCode": "60101",
+      "name": "松山",
+      "nameKana": null,
+      "latitude": 33.86666666666667,
+      "longitude": 132.71666666666667,
+      "forecastAreaCode": "601"
+    },
+    {
+      "stationCode": "60120",
+      "name": "今治市小島",
+      "nameKana": null,
+      "latitude": 34.13333333333333,
+      "longitude": 132.98333333333332,
+      "forecastAreaCode": "601"
+    },
+    {
+      "stationCode": "60121",
+      "name": "今治市馬島",
+      "nameKana": null,
+      "latitude": 34.11666666666667,
+      "longitude": 132.98333333333332,
+      "forecastAreaCode": "601"
+    },
+    {
+      "stationCode": "61001",
+      "name": "室戸市室戸岬",
+      "nameKana": null,
+      "latitude": 33.266666666666666,
+      "longitude": 134.16666666666666,
+      "forecastAreaCode": "610"
+    },
+    {
+      "stationCode": "61002",
+      "name": "高知",
+      "nameKana": null,
+      "latitude": 33.5,
+      "longitude": 133.56666666666666,
+      "forecastAreaCode": "610"
+    },
+    {
+      "stationCode": "61003",
+      "name": "土佐清水",
+      "nameKana": null,
+      "latitude": 32.78333333333333,
+      "longitude": 132.96666666666667,
+      "forecastAreaCode": "610"
+    },
+    {
+      "stationCode": "61020",
+      "name": "須崎港",
+      "nameKana": null,
+      "latitude": 33.38333333333333,
+      "longitude": 133.3,
+      "forecastAreaCode": "610"
+    },
+    {
+      "stationCode": "61030",
+      "name": "中土佐町久礼港",
+      "nameKana": null,
+      "latitude": 33.333333333333336,
+      "longitude": 133.25,
+      "forecastAreaCode": "610"
+    },
+    {
+      "stationCode": "61050",
+      "name": "高知沖１００ｋｍＡ",
+      "nameKana": null,
+      "latitude": 32.38333333333333,
+      "longitude": 134.48333333333332,
+      "forecastAreaCode": "610"
+    },
+    {
+      "stationCode": "61060",
+      "name": "高知沖７０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 32.65,
+      "longitude": 134.36666666666667,
+      "forecastAreaCode": "610"
+    },
+    {
+      "stationCode": "61061",
+      "name": "高知沖８０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 32.63333333333333,
+      "longitude": 134.51666666666668,
+      "forecastAreaCode": "610"
+    },
+    {
+      "stationCode": "61062",
+      "name": "高知沖７０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 32.71666666666667,
+      "longitude": 134.6,
+      "forecastAreaCode": "610"
+    },
+    {
+      "stationCode": "61063",
+      "name": "高知沖７０ｋｍＣ",
+      "nameKana": null,
+      "latitude": 32.68333333333333,
+      "longitude": 134.43333333333334,
+      "forecastAreaCode": "610"
+    },
+    {
+      "stationCode": "61070",
+      "name": "高知沖６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 32.766666666666666,
+      "longitude": 134.51666666666668,
+      "forecastAreaCode": "610"
+    },
+    {
+      "stationCode": "61090",
+      "name": "高知足摺岬沖",
+      "nameKana": null,
+      "latitude": 32.63333333333333,
+      "longitude": 133.15,
+      "forecastAreaCode": "610"
+    },
+    {
+      "stationCode": "61091",
+      "name": "高知室戸岬沖",
+      "nameKana": null,
+      "latitude": 33.083333333333336,
+      "longitude": 134.18333333333334,
+      "forecastAreaCode": "610"
+    },
+    {
+      "stationCode": "70021",
+      "name": "下関市南風泊港",
+      "nameKana": null,
+      "latitude": 33.95,
+      "longitude": 130.88333333333333,
+      "forecastAreaCode": "700"
+    },
+    {
+      "stationCode": "70101",
+      "name": "下関市彦島弟子待",
+      "nameKana": null,
+      "latitude": 33.93333333333333,
+      "longitude": 130.93333333333334,
+      "forecastAreaCode": "701"
+    },
+    {
+      "stationCode": "70102",
+      "name": "徳山",
+      "nameKana": null,
+      "latitude": 34.03333333333333,
+      "longitude": 131.8,
+      "forecastAreaCode": "701"
+    },
+    {
+      "stationCode": "70120",
+      "name": "宇部港",
+      "nameKana": null,
+      "latitude": 33.93333333333333,
+      "longitude": 131.25,
+      "forecastAreaCode": "701"
+    },
+    {
+      "stationCode": "70121",
+      "name": "三田尻中関港",
+      "nameKana": null,
+      "latitude": 34.03333333333333,
+      "longitude": 131.58333333333334,
+      "forecastAreaCode": "701"
+    },
+    {
+      "stationCode": "70122",
+      "name": "下関港長府",
+      "nameKana": null,
+      "latitude": 34.016666666666666,
+      "longitude": 131.0,
+      "forecastAreaCode": "701"
+    },
+    {
+      "stationCode": "71001",
+      "name": "北九州市門司",
+      "nameKana": null,
+      "latitude": 33.95,
+      "longitude": 130.96666666666667,
+      "forecastAreaCode": "710"
+    },
+    {
+      "stationCode": "71002",
+      "name": "北九州市門司",
+      "nameKana": null,
+      "latitude": 33.95,
+      "longitude": 130.95,
+      "forecastAreaCode": "710"
+    },
+    {
+      "stationCode": "71021",
+      "name": "苅田港",
+      "nameKana": null,
+      "latitude": 33.78333333333333,
+      "longitude": 130.98333333333332,
+      "forecastAreaCode": "710"
+    },
+    {
+      "stationCode": "71022",
+      "name": "北九州港青浜",
+      "nameKana": null,
+      "latitude": 33.95,
+      "longitude": 131.01666666666668,
+      "forecastAreaCode": "710"
+    },
+    {
+      "stationCode": "71101",
+      "name": "福岡市博多",
+      "nameKana": null,
+      "latitude": 33.61666666666667,
+      "longitude": 130.4,
+      "forecastAreaCode": "711"
+    },
+    {
+      "stationCode": "71120",
+      "name": "北九州港日明",
+      "nameKana": null,
+      "latitude": 33.916666666666664,
+      "longitude": 130.88333333333333,
+      "forecastAreaCode": "711"
+    },
+    {
+      "stationCode": "71201",
+      "name": "大牟田市三池",
+      "nameKana": null,
+      "latitude": 33.016666666666666,
+      "longitude": 130.41666666666666,
+      "forecastAreaCode": "712"
+    },
+    {
+      "stationCode": "71202",
+      "name": "太良町大浦野崎",
+      "nameKana": null,
+      "latitude": 32.983333333333334,
+      "longitude": 130.21666666666667,
+      "forecastAreaCode": "712"
+    },
+    {
+      "stationCode": "71203",
+      "name": "三角",
+      "nameKana": null,
+      "latitude": 32.61666666666667,
+      "longitude": 130.45,
+      "forecastAreaCode": "712"
+    },
+    {
+      "stationCode": "71220",
+      "name": "八代港",
+      "nameKana": null,
+      "latitude": 32.516666666666666,
+      "longitude": 130.56666666666666,
+      "forecastAreaCode": "712"
+    },
+    {
+      "stationCode": "71221",
+      "name": "天草市本渡港",
+      "nameKana": null,
+      "latitude": 32.43333333333333,
+      "longitude": 130.21666666666667,
+      "forecastAreaCode": "712"
+    },
+    {
+      "stationCode": "71222",
+      "name": "熊本港",
+      "nameKana": null,
+      "latitude": 32.75,
+      "longitude": 130.56666666666666,
+      "forecastAreaCode": "712"
+    },
+    {
+      "stationCode": "72020",
+      "name": "唐津港",
+      "nameKana": null,
+      "latitude": 33.46666666666667,
+      "longitude": 129.96666666666667,
+      "forecastAreaCode": "720"
+    },
+    {
+      "stationCode": "72030",
+      "name": "玄海町仮屋",
+      "nameKana": null,
+      "latitude": 33.46666666666667,
+      "longitude": 129.85,
+      "forecastAreaCode": "720"
+    },
+    {
+      "stationCode": "73001",
+      "name": "長崎",
+      "nameKana": null,
+      "latitude": 32.733333333333334,
+      "longitude": 129.86666666666667,
+      "forecastAreaCode": "730"
+    },
+    {
+      "stationCode": "73002",
+      "name": "口之津",
+      "nameKana": null,
+      "latitude": 32.6,
+      "longitude": 130.2,
+      "forecastAreaCode": "730"
+    },
+    {
+      "stationCode": "73003",
+      "name": "福江島福江港",
+      "nameKana": null,
+      "latitude": 32.7,
+      "longitude": 128.85,
+      "forecastAreaCode": "730"
+    },
+    {
+      "stationCode": "73004",
+      "name": "佐世保",
+      "nameKana": null,
+      "latitude": 33.15,
+      "longitude": 129.71666666666667,
+      "forecastAreaCode": "730"
+    },
+    {
+      "stationCode": "73020",
+      "name": "長崎港皇后",
+      "nameKana": null,
+      "latitude": 32.71666666666667,
+      "longitude": 129.83333333333334,
+      "forecastAreaCode": "730"
+    },
+    {
+      "stationCode": "73021",
+      "name": "平戸市田平港",
+      "nameKana": null,
+      "latitude": 33.36666666666667,
+      "longitude": 129.58333333333334,
+      "forecastAreaCode": "730"
+    },
+    {
+      "stationCode": "73101",
+      "name": "対馬美津島",
+      "nameKana": null,
+      "latitude": 34.266666666666666,
+      "longitude": 129.31666666666666,
+      "forecastAreaCode": "731"
+    },
+    {
+      "stationCode": "73102",
+      "name": "対馬比田勝",
+      "nameKana": null,
+      "latitude": 34.65,
+      "longitude": 129.48333333333332,
+      "forecastAreaCode": "731"
+    },
+    {
+      "stationCode": "73110",
+      "name": "対馬市厳原",
+      "nameKana": null,
+      "latitude": 34.2,
+      "longitude": 129.3,
+      "forecastAreaCode": "731"
+    },
+    {
+      "stationCode": "73120",
+      "name": "壱岐島郷ノ浦港",
+      "nameKana": null,
+      "latitude": 33.75,
+      "longitude": 129.68333333333334,
+      "forecastAreaCode": "731"
+    },
+    {
+      "stationCode": "74000",
+      "name": "苓北町都呂々",
+      "nameKana": null,
+      "latitude": 32.46666666666667,
+      "longitude": 130.03333333333333,
+      "forecastAreaCode": "740"
+    },
+    {
+      "stationCode": "75001",
+      "name": "大分",
+      "nameKana": null,
+      "latitude": 33.266666666666666,
+      "longitude": 131.68333333333334,
+      "forecastAreaCode": "750"
+    },
+    {
+      "stationCode": "75020",
+      "name": "別府港",
+      "nameKana": null,
+      "latitude": 33.3,
+      "longitude": 131.5,
+      "forecastAreaCode": "750"
+    },
+    {
+      "stationCode": "75100",
+      "name": "佐伯市松浦",
+      "nameKana": null,
+      "latitude": 32.95,
+      "longitude": 131.96666666666667,
+      "forecastAreaCode": "751"
+    },
+    {
+      "stationCode": "76001",
+      "name": "日向市細島",
+      "nameKana": null,
+      "latitude": 32.45,
+      "longitude": 131.66666666666666,
+      "forecastAreaCode": "760"
+    },
+    {
+      "stationCode": "76002",
+      "name": "日南市油津",
+      "nameKana": null,
+      "latitude": 31.583333333333332,
+      "longitude": 131.41666666666666,
+      "forecastAreaCode": "760"
+    },
+    {
+      "stationCode": "76020",
+      "name": "宮崎港",
+      "nameKana": null,
+      "latitude": 31.9,
+      "longitude": 131.45,
+      "forecastAreaCode": "760"
+    },
+    {
+      "stationCode": "76090",
+      "name": "宮崎日向沖",
+      "nameKana": null,
+      "latitude": 32.38333333333333,
+      "longitude": 131.91666666666666,
+      "forecastAreaCode": "760"
+    },
+    {
+      "stationCode": "77001",
+      "name": "佐多町大泊",
+      "nameKana": null,
+      "latitude": 31.016666666666666,
+      "longitude": 130.68333333333334,
+      "forecastAreaCode": "770"
+    },
+    {
+      "stationCode": "77002",
+      "name": "南大隈町大泊",
+      "nameKana": null,
+      "latitude": 31.016666666666666,
+      "longitude": 130.68333333333334,
+      "forecastAreaCode": "770"
+    },
+    {
+      "stationCode": "77020",
+      "name": "志布志港",
+      "nameKana": null,
+      "latitude": 31.483333333333334,
+      "longitude": 131.11666666666667,
+      "forecastAreaCode": "770"
+    },
+    {
+      "stationCode": "77101",
+      "name": "種子島田之脇",
+      "nameKana": null,
+      "latitude": 30.7,
+      "longitude": 131.06666666666666,
+      "forecastAreaCode": "771"
+    },
+    {
+      "stationCode": "77102",
+      "name": "種子島西之表",
+      "nameKana": null,
+      "latitude": 30.733333333333334,
+      "longitude": 131.0,
+      "forecastAreaCode": "771"
+    },
+    {
+      "stationCode": "77103",
+      "name": "種子島熊野",
+      "nameKana": null,
+      "latitude": 30.466666666666665,
+      "longitude": 130.96666666666667,
+      "forecastAreaCode": "771"
+    },
+    {
+      "stationCode": "77201",
+      "name": "名瀬市小湊",
+      "nameKana": null,
+      "latitude": 28.316666666666666,
+      "longitude": 129.53333333333333,
+      "forecastAreaCode": "772"
+    },
+    {
+      "stationCode": "77202",
+      "name": "名瀬市名瀬",
+      "nameKana": null,
+      "latitude": 28.383333333333333,
+      "longitude": 129.5,
+      "forecastAreaCode": "772"
+    },
+    {
+      "stationCode": "77203",
+      "name": "中之島",
+      "nameKana": null,
+      "latitude": 29.85,
+      "longitude": 129.85,
+      "forecastAreaCode": "772"
+    },
+    {
+      "stationCode": "77204",
+      "name": "奄美市小湊",
+      "nameKana": null,
+      "latitude": 28.316666666666666,
+      "longitude": 129.53333333333333,
+      "forecastAreaCode": "772"
+    },
+    {
+      "stationCode": "77205",
+      "name": "奄美市名瀬",
+      "nameKana": null,
+      "latitude": 28.4,
+      "longitude": 129.5,
+      "forecastAreaCode": "772"
+    },
+    {
+      "stationCode": "77301",
+      "name": "鹿児島",
+      "nameKana": null,
+      "latitude": 31.583333333333332,
+      "longitude": 130.56666666666666,
+      "forecastAreaCode": "773"
+    },
+    {
+      "stationCode": "77302",
+      "name": "枕崎",
+      "nameKana": null,
+      "latitude": 31.266666666666666,
+      "longitude": 130.3,
+      "forecastAreaCode": "773"
+    },
+    {
+      "stationCode": "77303",
+      "name": "鹿児島",
+      "nameKana": null,
+      "latitude": 31.6,
+      "longitude": 130.56666666666666,
+      "forecastAreaCode": "773"
+    },
+    {
+      "stationCode": "77330",
+      "name": "阿久根",
+      "nameKana": null,
+      "latitude": 32.016666666666666,
+      "longitude": 130.18333333333334,
+      "forecastAreaCode": "773"
+    },
+    {
+      "stationCode": "80001",
+      "name": "那覇",
+      "nameKana": null,
+      "latitude": 26.216666666666665,
+      "longitude": 127.66666666666667,
+      "forecastAreaCode": "800"
+    },
+    {
+      "stationCode": "80002",
+      "name": "久米島",
+      "nameKana": "くめじま",
+      "latitude": 26.351,
+      "longitude": 126.741,
+      "forecastAreaCode": "800"
+    },
+    {
+      "stationCode": "80003",
+      "name": "沖縄市中城湾港",
+      "nameKana": null,
+      "latitude": 26.333333333333332,
+      "longitude": 127.83333333333333,
+      "forecastAreaCode": "800"
+    },
+    {
+      "stationCode": "80030",
+      "name": "南城市安座真",
+      "nameKana": null,
+      "latitude": 26.183333333333334,
+      "longitude": 127.81666666666666,
+      "forecastAreaCode": "800"
+    },
+    {
+      "stationCode": "80102",
+      "name": "南大東漁港",
+      "nameKana": null,
+      "latitude": 25.866666666666667,
+      "longitude": 131.23333333333332,
+      "forecastAreaCode": "801"
+    },
+    {
+      "stationCode": "80201",
+      "name": "宮古島平良",
+      "nameKana": null,
+      "latitude": 24.8,
+      "longitude": 125.28333333333333,
+      "forecastAreaCode": "802"
+    },
+    {
+      "stationCode": "80202",
+      "name": "石垣島石垣港",
+      "nameKana": null,
+      "latitude": 24.333333333333332,
+      "longitude": 124.15,
+      "forecastAreaCode": "802"
+    },
+    {
+      "stationCode": "80203",
+      "name": "西表島",
+      "nameKana": "いりおもてじま",
+      "latitude": 24.388,
+      "longitude": 123.748,
+      "forecastAreaCode": "802"
+    },
+    {
+      "stationCode": "80204",
+      "name": "与那国島久部良",
+      "nameKana": null,
+      "latitude": 24.45,
+      "longitude": 122.95,
+      "forecastAreaCode": "802"
+    },
+    {
+      "stationCode": "80205",
+      "name": "石垣島石垣港",
+      "nameKana": null,
+      "latitude": 24.333333333333332,
+      "longitude": 124.16666666666667,
+      "forecastAreaCode": "802"
+    },
+    {
+      "stationCode": "80206",
+      "name": "宮古島平良",
+      "nameKana": null,
+      "latitude": 24.816666666666666,
+      "longitude": 125.28333333333333,
+      "forecastAreaCode": "802"
+    },
+    {
+      "stationCode": "91010",
+      "name": "釧路沖１１０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 42.06666666666667,
+      "longitude": 145.43333333333334,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "91011",
+      "name": "十勝沖１１０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 41.9,
+      "longitude": 144.7,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "91012",
+      "name": "十勝沖１２０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 41.65,
+      "longitude": 144.66666666666666,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "91020",
+      "name": "釧路沖１３０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 41.88333333333333,
+      "longitude": 145.65,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "91021",
+      "name": "釧路沖１３０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 42.1,
+      "longitude": 146.23333333333332,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "91030",
+      "name": "釧路沖１５０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 41.666666666666664,
+      "longitude": 145.53333333333333,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "91031",
+      "name": "十勝沖１５０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 41.516666666666666,
+      "longitude": 144.9,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "91032",
+      "name": "釧路沖１６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 41.53333333333333,
+      "longitude": 145.25,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "91033",
+      "name": "釧路沖１７０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 41.666666666666664,
+      "longitude": 146.16666666666666,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "91040",
+      "name": "釧路沖１８０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 41.36666666666667,
+      "longitude": 145.6,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92010",
+      "name": "青森東方沖１２０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 40.45,
+      "longitude": 143.2,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92030",
+      "name": "青森東方沖１６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 40.96666666666667,
+      "longitude": 143.45,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92040",
+      "name": "青森東方沖１８０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 40.88333333333333,
+      "longitude": 143.76666666666668,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92041",
+      "name": "青森東方沖２００ｋｍＡ",
+      "nameKana": null,
+      "latitude": 40.78333333333333,
+      "longitude": 144.08333333333334,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92042",
+      "name": "青森東方沖２００ｋｍＢ",
+      "nameKana": null,
+      "latitude": 40.55,
+      "longitude": 144.13333333333333,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92060",
+      "name": "青森東方沖２６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 40.53333333333333,
+      "longitude": 144.93333333333334,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92070",
+      "name": "青森東方沖３１０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 40.9,
+      "longitude": 145.4,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92110",
+      "name": "岩手沖１１０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 39.7,
+      "longitude": 143.36666666666667,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92111",
+      "name": "岩手沖１２０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 40.06666666666667,
+      "longitude": 143.31666666666666,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92112",
+      "name": "岩手沖１２０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 39.3,
+      "longitude": 143.45,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92120",
+      "name": "岩手沖１４０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 40.43333333333333,
+      "longitude": 143.55,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92121",
+      "name": "岩手沖１４０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 40.083333333333336,
+      "longitude": 143.65,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92122",
+      "name": "岩手沖１４０ｋｍＣ",
+      "nameKana": null,
+      "latitude": 39.63333333333333,
+      "longitude": 143.71666666666667,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92130",
+      "name": "岩手沖１５０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 39.18333333333333,
+      "longitude": 143.75,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92131",
+      "name": "岩手沖１６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 39.766666666666666,
+      "longitude": 143.93333333333334,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92132",
+      "name": "岩手沖１７０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 40.43333333333333,
+      "longitude": 143.88333333333333,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92133",
+      "name": "岩手沖１７０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 40.03333333333333,
+      "longitude": 143.95,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92134",
+      "name": "岩手沖１７０ｋｍＣ",
+      "nameKana": null,
+      "latitude": 39.05,
+      "longitude": 143.93333333333334,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92150",
+      "name": "岩手沖２２０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 39.0,
+      "longitude": 144.58333333333334,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92151",
+      "name": "岩手沖２３０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 39.516666666666666,
+      "longitude": 144.71666666666667,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92152",
+      "name": "岩手沖２４０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 40.03333333333333,
+      "longitude": 144.81666666666666,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92170",
+      "name": "岩手沖３８０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 40.3,
+      "longitude": 146.2,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92171",
+      "name": "岩手沖３２０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 39.6,
+      "longitude": 145.8,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92210",
+      "name": "宮城沖１１０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 38.766666666666666,
+      "longitude": 143.15,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92211",
+      "name": "宮城沖１１０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 38.45,
+      "longitude": 142.83333333333334,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92212",
+      "name": "宮城沖１２０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 37.983333333333334,
+      "longitude": 142.9,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92220",
+      "name": "宮城沖１３０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 38.43333333333333,
+      "longitude": 143.16666666666666,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92221",
+      "name": "宮城沖１４０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 38.78333333333333,
+      "longitude": 143.48333333333332,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92230",
+      "name": "宮城沖１５０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 37.96666666666667,
+      "longitude": 143.25,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92231",
+      "name": "宮城沖１６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 38.833333333333336,
+      "longitude": 143.78333333333333,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92232",
+      "name": "宮城沖１６０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 38.4,
+      "longitude": 143.51666666666668,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92240",
+      "name": "宮城沖１８０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 38.3,
+      "longitude": 143.78333333333333,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92241",
+      "name": "宮城沖１８０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 37.93333333333333,
+      "longitude": 143.56666666666666,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92242",
+      "name": "宮城沖１９０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 38.06666666666667,
+      "longitude": 143.75,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92250",
+      "name": "宮城沖２３０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 38.5,
+      "longitude": 144.45,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92251",
+      "name": "宮城沖２４０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 37.983333333333334,
+      "longitude": 144.33333333333334,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92270",
+      "name": "宮城沖３５０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 38.81666666666667,
+      "longitude": 145.6,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92500",
+      "name": "福島沖１００ｋｍＡ",
+      "nameKana": null,
+      "latitude": 37.2,
+      "longitude": 142.2,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92510",
+      "name": "福島沖１２０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 37.6,
+      "longitude": 142.61666666666667,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92520",
+      "name": "福島沖１３０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 37.1,
+      "longitude": 142.5,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92521",
+      "name": "福島沖１４０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 37.53333333333333,
+      "longitude": 142.93333333333334,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92530",
+      "name": "福島沖１６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 37.06666666666667,
+      "longitude": 142.81666666666666,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92531",
+      "name": "福島沖１７０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 37.43333333333333,
+      "longitude": 143.23333333333332,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92540",
+      "name": "福島沖１８０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 37.21666666666667,
+      "longitude": 143.06666666666666,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92550",
+      "name": "福島沖２４０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 37.483333333333334,
+      "longitude": 144.18333333333334,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "92551",
+      "name": "福島沖２５０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 37.016666666666666,
+      "longitude": 143.95,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93010",
+      "name": "茨城沖１１０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 36.68333333333333,
+      "longitude": 142.15,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93011",
+      "name": "茨城沖１２０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 35.96666666666667,
+      "longitude": 142.11666666666667,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93020",
+      "name": "茨城沖１４０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 36.6,
+      "longitude": 142.43333333333334,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93021",
+      "name": "茨城沖１４０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 35.95,
+      "longitude": 142.4,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93030",
+      "name": "茨城沖１６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 36.38333333333333,
+      "longitude": 142.61666666666667,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93031",
+      "name": "茨城沖１６０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 36.15,
+      "longitude": 142.55,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93050",
+      "name": "茨城沖２２０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 36.13333333333333,
+      "longitude": 143.28333333333333,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93051",
+      "name": "茨城沖２４０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 36.56666666666667,
+      "longitude": 143.6,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93100",
+      "name": "千葉東方沖１００ｋｍＡ",
+      "nameKana": null,
+      "latitude": 35.233333333333334,
+      "longitude": 141.86666666666667,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93110",
+      "name": "千葉東方沖１１０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 35.4,
+      "longitude": 142.05,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93111",
+      "name": "千葉南東沖１１０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 34.233333333333334,
+      "longitude": 140.73333333333332,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93112",
+      "name": "千葉南東沖１２０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 34.53333333333333,
+      "longitude": 141.35,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93113",
+      "name": "千葉南東沖１２０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 34.266666666666666,
+      "longitude": 141.03333333333333,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93114",
+      "name": "千葉南東沖１２０ｋｍＣ",
+      "nameKana": null,
+      "latitude": 33.95,
+      "longitude": 140.51666666666668,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93120",
+      "name": "千葉南東沖１４０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 34.36666666666667,
+      "longitude": 141.53333333333333,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93121",
+      "name": "千葉南東沖１４０ｋｍＢ",
+      "nameKana": null,
+      "latitude": 34.2,
+      "longitude": 141.33333333333334,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93130",
+      "name": "千葉南東沖１６０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 33.86666666666667,
+      "longitude": 141.13333333333333,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93131",
+      "name": "千葉東方沖１７０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 35.21666666666667,
+      "longitude": 142.68333333333334,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93140",
+      "name": "千葉南東沖１８０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 33.96666666666667,
+      "longitude": 141.73333333333332,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93141",
+      "name": "千葉東方沖１８０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 34.71666666666667,
+      "longitude": 142.51666666666668,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93142",
+      "name": "千葉東方沖１９０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 35.666666666666664,
+      "longitude": 142.96666666666667,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "93143",
+      "name": "千葉東方沖２００ｋｍＡ",
+      "nameKana": null,
+      "latitude": 34.266666666666666,
+      "longitude": 142.23333333333332,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "95300",
+      "name": "和歌山沖１００ｋｍＡ",
+      "nameKana": null,
+      "latitude": 33.13333333333333,
+      "longitude": 136.81666666666666,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "95301",
+      "name": "和歌山沖１００ｋｍＢ",
+      "nameKana": null,
+      "latitude": 33.06666666666667,
+      "longitude": 136.83333333333334,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "95302",
+      "name": "和歌山沖１００ｋｍＣ",
+      "nameKana": null,
+      "latitude": 33.0,
+      "longitude": 136.78333333333333,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "95303",
+      "name": "和歌山沖１００ｋｍＤ",
+      "nameKana": null,
+      "latitude": 32.95,
+      "longitude": 136.73333333333332,
+      "forecastAreaCode": "000"
+    },
+    {
+      "stationCode": "95310",
+      "name": "和歌山沖１１０ｋｍＡ",
+      "nameKana": null,
+      "latitude": 33.05,
+      "longitude": 136.93333333333334,
+      "forecastAreaCode": "000"
+    }
+  ],
+  "offshorePublicationMappings": [
+    {
+      "publicationCode": "00305",
+      "name": "根室南東沖５０ｋｍ",
+      "nameKana": "ねむろなんとうおき５０ｋｍ",
+      "stationCodes": [
+        "10071"
+      ]
+    },
+    {
+      "publicationCode": "00306",
+      "name": "根室南東沖６０ｋｍ",
+      "nameKana": "ねむろなんとうおき６０ｋｍ",
+      "stationCodes": [
+        "10073"
+      ]
+    },
+    {
+      "publicationCode": "00308",
+      "name": "根室南東沖８０ｋｍ",
+      "nameKana": "ねむろなんとうおき８０ｋｍ",
+      "stationCodes": [
+        "10062"
+      ]
+    },
+    {
+      "publicationCode": "00405",
+      "name": "釧路沖５０ｋｍ",
+      "nameKana": "くしろおき５０ｋｍ",
+      "stationCodes": [
+        "10072"
+      ]
+    },
+    {
+      "publicationCode": "00406",
+      "name": "釧路沖６０ｋｍ",
+      "nameKana": "くしろおき６０ｋｍ",
+      "stationCodes": [
+        "10070"
+      ]
+    },
+    {
+      "publicationCode": "00408",
+      "name": "釧路沖８０ｋｍ",
+      "nameKana": "くしろおき８０ｋｍ",
+      "stationCodes": [
+        "10060",
+        "10061"
+      ]
+    },
+    {
+      "publicationCode": "00410",
+      "name": "釧路沖１００ｋｍ",
+      "nameKana": "くしろおき１００ｋｍ",
+      "stationCodes": [
+        "10050"
+      ]
+    },
+    {
+      "publicationCode": "00411",
+      "name": "釧路沖１１０ｋｍ",
+      "nameKana": "くしろおき１１０ｋｍ",
+      "stationCodes": [
+        "91010"
+      ]
+    },
+    {
+      "publicationCode": "00413",
+      "name": "釧路沖１３０ｋｍ",
+      "nameKana": "くしろおき１３０ｋｍ",
+      "stationCodes": [
+        "91020",
+        "91021"
+      ]
+    },
+    {
+      "publicationCode": "00415",
+      "name": "釧路沖１５０ｋｍ",
+      "nameKana": "くしろおき１５０ｋｍ",
+      "stationCodes": [
+        "91030"
+      ]
+    },
+    {
+      "publicationCode": "00416",
+      "name": "釧路沖１６０ｋｍ",
+      "nameKana": "くしろおき１６０ｋｍ",
+      "stationCodes": [
+        "91032"
+      ]
+    },
+    {
+      "publicationCode": "00417",
+      "name": "釧路沖１７０ｋｍ",
+      "nameKana": "くしろおき１７０ｋｍ",
+      "stationCodes": [
+        "91033"
+      ]
+    },
+    {
+      "publicationCode": "00418",
+      "name": "釧路沖１８０ｋｍ",
+      "nameKana": "くしろおき１８０ｋｍ",
+      "stationCodes": [
+        "91040"
+      ]
+    },
+    {
+      "publicationCode": "00506",
+      "name": "十勝沖６０ｋｍ",
+      "nameKana": "とかちおき６０ｋｍ",
+      "stationCodes": [
+        "10170"
+      ]
+    },
+    {
+      "publicationCode": "00508",
+      "name": "十勝沖８０ｋｍ",
+      "nameKana": "とかちおき８０ｋｍ",
+      "stationCodes": [
+        "10160",
+        "10161",
+        "10162"
+      ]
+    },
+    {
+      "publicationCode": "00509",
+      "name": "十勝沖９０ｋｍ",
+      "nameKana": "とかちおき９０ｋｍ",
+      "stationCodes": [
+        "10153"
+      ]
+    },
+    {
+      "publicationCode": "00510",
+      "name": "十勝沖１００ｋｍ",
+      "nameKana": "とかちおき１００ｋｍ",
+      "stationCodes": [
+        "10150"
+      ]
+    },
+    {
+      "publicationCode": "00511",
+      "name": "十勝沖１１０ｋｍ",
+      "nameKana": "とかちおき１１０ｋｍ",
+      "stationCodes": [
+        "91011"
+      ]
+    },
+    {
+      "publicationCode": "00512",
+      "name": "十勝沖１２０ｋｍ",
+      "nameKana": "とかちおき１２０ｋｍ",
+      "stationCodes": [
+        "91012"
+      ]
+    },
+    {
+      "publicationCode": "00515",
+      "name": "十勝沖１５０ｋｍ",
+      "nameKana": "とかちおき１５０ｋｍ",
+      "stationCodes": [
+        "91031"
+      ]
+    },
+    {
+      "publicationCode": "00605",
+      "name": "浦河沖５０ｋｍ",
+      "nameKana": "うらかわおき５０ｋｍ",
+      "stationCodes": [
+        "10172"
+      ]
+    },
+    {
+      "publicationCode": "00606",
+      "name": "浦河沖６０ｋｍ",
+      "nameKana": "うらかわおき６０ｋｍ",
+      "stationCodes": [
+        "10171"
+      ]
+    },
+    {
+      "publicationCode": "00607",
+      "name": "浦河沖７０ｋｍ",
+      "nameKana": "うらかわおき７０ｋｍ",
+      "stationCodes": [
+        "10163"
+      ]
+    },
+    {
+      "publicationCode": "00610",
+      "name": "浦河沖１００ｋｍ",
+      "nameKana": "うらかわおき１００ｋｍ",
+      "stationCodes": [
+        "10151",
+        "10152"
+      ]
+    },
+    {
+      "publicationCode": "01403",
+      "name": "青森東方沖３０ｋｍ",
+      "nameKana": "あおもりとうほうおき３０ｋｍ",
+      "stationCodes": [
+        "20181"
+      ]
+    },
+    {
+      "publicationCode": "01404",
+      "name": "青森東方沖４０ｋｍ",
+      "nameKana": "あおもりとうほうおき４０ｋｍ",
+      "stationCodes": [
+        "20180"
+      ]
+    },
+    {
+      "publicationCode": "01405",
+      "name": "青森東方沖５０ｋｍ",
+      "nameKana": "あおもりとうほうおき５０ｋｍ",
+      "stationCodes": [
+        "20172",
+        "20173"
+      ]
+    },
+    {
+      "publicationCode": "01406",
+      "name": "青森東方沖６０ｋｍ",
+      "nameKana": "あおもりとうほうおき６０ｋｍ",
+      "stationCodes": [
+        "20170",
+        "20171"
+      ]
+    },
+    {
+      "publicationCode": "01408",
+      "name": "青森東方沖８０ｋｍ",
+      "nameKana": "あおもりとうほうおき８０ｋｍ",
+      "stationCodes": [
+        "20160"
+      ]
+    },
+    {
+      "publicationCode": "01409",
+      "name": "青森東方沖９０ｋｍ",
+      "nameKana": "あおもりとうほうおき９０ｋｍ",
+      "stationCodes": [
+        "20151"
+      ]
+    },
+    {
+      "publicationCode": "01410",
+      "name": "青森東方沖１００ｋｍ",
+      "nameKana": "あおもりとうほうおき１００ｋｍ",
+      "stationCodes": [
+        "20150"
+      ]
+    },
+    {
+      "publicationCode": "01412",
+      "name": "青森東方沖１２０ｋｍ",
+      "nameKana": "あおもりとうほうおき１２０ｋｍ",
+      "stationCodes": [
+        "92010"
+      ]
+    },
+    {
+      "publicationCode": "01416",
+      "name": "青森東方沖１６０ｋｍ",
+      "nameKana": "あおもりとうほうおき１６０ｋｍ",
+      "stationCodes": [
+        "92030"
+      ]
+    },
+    {
+      "publicationCode": "01418",
+      "name": "青森東方沖１８０ｋｍ",
+      "nameKana": "あおもりとうほうおき１８０ｋｍ",
+      "stationCodes": [
+        "92040"
+      ]
+    },
+    {
+      "publicationCode": "01420",
+      "name": "青森東方沖２００ｋｍ",
+      "nameKana": "あおもりとうほうおき２００ｋｍ",
+      "stationCodes": [
+        "92041",
+        "92042"
+      ]
+    },
+    {
+      "publicationCode": "01426",
+      "name": "青森東方沖２６０ｋｍ",
+      "nameKana": "あおもりとうほうおき２６０ｋｍ",
+      "stationCodes": [
+        "92060"
+      ]
+    },
+    {
+      "publicationCode": "01431",
+      "name": "青森東方沖３１０ｋｍ",
+      "nameKana": "あおもりとうほうおき３１０ｋｍ",
+      "stationCodes": [
+        "92070"
+      ]
+    },
+    {
+      "publicationCode": "01603",
+      "name": "岩手沖３０ｋｍ",
+      "nameKana": "いわておき３０ｋｍ",
+      "stationCodes": [
+        "21083",
+        "21084"
+      ]
+    },
+    {
+      "publicationCode": "01604",
+      "name": "岩手沖４０ｋｍ",
+      "nameKana": "いわておき４０ｋｍ",
+      "stationCodes": [
+        "21080",
+        "21081",
+        "21082"
+      ]
+    },
+    {
+      "publicationCode": "01606",
+      "name": "岩手沖６０ｋｍ",
+      "nameKana": "いわておき６０ｋｍ",
+      "stationCodes": [
+        "21070",
+        "21071",
+        "21072"
+      ]
+    },
+    {
+      "publicationCode": "01607",
+      "name": "岩手沖７０ｋｍ",
+      "nameKana": "いわておき７０ｋｍ",
+      "stationCodes": [
+        "21060"
+      ]
+    },
+    {
+      "publicationCode": "01608",
+      "name": "岩手沖８０ｋｍ",
+      "nameKana": "いわておき８０ｋｍ",
+      "stationCodes": [
+        "21061"
+      ]
+    },
+    {
+      "publicationCode": "01609",
+      "name": "岩手沖９０ｋｍ",
+      "nameKana": "いわておき９０ｋｍ",
+      "stationCodes": [
+        "21050",
+        "21051"
+      ]
+    },
+    {
+      "publicationCode": "01611",
+      "name": "岩手沖１１０ｋｍ",
+      "nameKana": "いわておき１１０ｋｍ",
+      "stationCodes": [
+        "92110"
+      ]
+    },
+    {
+      "publicationCode": "01612",
+      "name": "岩手沖１２０ｋｍ",
+      "nameKana": "いわておき１２０ｋｍ",
+      "stationCodes": [
+        "92111",
+        "92112"
+      ]
+    },
+    {
+      "publicationCode": "01614",
+      "name": "岩手沖１４０ｋｍ",
+      "nameKana": "いわておき１４０ｋｍ",
+      "stationCodes": [
+        "92120",
+        "92121",
+        "92122"
+      ]
+    },
+    {
+      "publicationCode": "01615",
+      "name": "岩手沖１５０ｋｍ",
+      "nameKana": "いわておき１５０ｋｍ",
+      "stationCodes": [
+        "92130"
+      ]
+    },
+    {
+      "publicationCode": "01616",
+      "name": "岩手沖１６０ｋｍ",
+      "nameKana": "いわておき１６０ｋｍ",
+      "stationCodes": [
+        "92131"
+      ]
+    },
+    {
+      "publicationCode": "01617",
+      "name": "岩手沖１７０ｋｍ",
+      "nameKana": "いわておき１７０ｋｍ",
+      "stationCodes": [
+        "92132",
+        "92133",
+        "92134"
+      ]
+    },
+    {
+      "publicationCode": "01622",
+      "name": "岩手沖２２０ｋｍ",
+      "nameKana": "いわておき２２０ｋｍ",
+      "stationCodes": [
+        "92150"
+      ]
+    },
+    {
+      "publicationCode": "01623",
+      "name": "岩手沖２３０ｋｍ",
+      "nameKana": "いわておき２３０ｋｍ",
+      "stationCodes": [
+        "92151"
+      ]
+    },
+    {
+      "publicationCode": "01624",
+      "name": "岩手沖２４０ｋｍ",
+      "nameKana": "いわておき２４０ｋｍ",
+      "stationCodes": [
+        "92152"
+      ]
+    },
+    {
+      "publicationCode": "01703",
+      "name": "宮城沖３０ｋｍ",
+      "nameKana": "みやぎおき３０ｋｍ",
+      "stationCodes": [
+        "22081"
+      ]
+    },
+    {
+      "publicationCode": "01704",
+      "name": "宮城沖４０ｋｍ",
+      "nameKana": "みやぎおき４０ｋｍ",
+      "stationCodes": [
+        "22080"
+      ]
+    },
+    {
+      "publicationCode": "01705",
+      "name": "宮城沖５０ｋｍ",
+      "nameKana": "みやぎおき５０ｋｍ",
+      "stationCodes": [
+        "22071",
+        "22072"
+      ]
+    },
+    {
+      "publicationCode": "01706",
+      "name": "宮城沖６０ｋｍ",
+      "nameKana": "みやぎおき６０ｋｍ",
+      "stationCodes": [
+        "22070"
+      ]
+    },
+    {
+      "publicationCode": "01708",
+      "name": "宮城沖８０ｋｍ",
+      "nameKana": "みやぎおき８０ｋｍ",
+      "stationCodes": [
+        "22060",
+        "22061"
+      ]
+    },
+    {
+      "publicationCode": "01709",
+      "name": "宮城沖９０ｋｍ",
+      "nameKana": "みやぎおき９０ｋｍ",
+      "stationCodes": [
+        "22050"
+      ]
+    },
+    {
+      "publicationCode": "01711",
+      "name": "宮城沖１１０ｋｍ",
+      "nameKana": "みやぎおき１１０ｋｍ",
+      "stationCodes": [
+        "92210",
+        "92211"
+      ]
+    },
+    {
+      "publicationCode": "01712",
+      "name": "宮城沖１２０ｋｍ",
+      "nameKana": "みやぎおき１２０ｋｍ",
+      "stationCodes": [
+        "92212"
+      ]
+    },
+    {
+      "publicationCode": "01713",
+      "name": "宮城沖１３０ｋｍ",
+      "nameKana": "みやぎおき１３０ｋｍ",
+      "stationCodes": [
+        "92220"
+      ]
+    },
+    {
+      "publicationCode": "01714",
+      "name": "宮城沖１４０ｋｍ",
+      "nameKana": "みやぎおき１４０ｋｍ",
+      "stationCodes": [
+        "92221"
+      ]
+    },
+    {
+      "publicationCode": "01715",
+      "name": "宮城沖１５０ｋｍ",
+      "nameKana": "みやぎおき１５０ｋｍ",
+      "stationCodes": [
+        "92230"
+      ]
+    },
+    {
+      "publicationCode": "01716",
+      "name": "宮城沖１６０ｋｍ",
+      "nameKana": "みやぎおき１６０ｋｍ",
+      "stationCodes": [
+        "92231",
+        "92232"
+      ]
+    },
+    {
+      "publicationCode": "01718",
+      "name": "宮城沖１８０ｋｍ",
+      "nameKana": "みやぎおき１８０ｋｍ",
+      "stationCodes": [
+        "92240",
+        "92241"
+      ]
+    },
+    {
+      "publicationCode": "01719",
+      "name": "宮城沖１９０ｋｍ",
+      "nameKana": "みやぎおき１９０ｋｍ",
+      "stationCodes": [
+        "92242"
+      ]
+    },
+    {
+      "publicationCode": "01723",
+      "name": "宮城沖２３０ｋｍ",
+      "nameKana": "みやぎおき２３０ｋｍ",
+      "stationCodes": [
+        "92250"
+      ]
+    },
+    {
+      "publicationCode": "01724",
+      "name": "宮城沖２４０ｋｍ",
+      "nameKana": "みやぎおき２４０ｋｍ",
+      "stationCodes": [
+        "92251"
+      ]
+    },
+    {
+      "publicationCode": "02003",
+      "name": "福島沖３０ｋｍ",
+      "nameKana": "ふくしまおき３０ｋｍ",
+      "stationCodes": [
+        "25080",
+        "25081"
+      ]
+    },
+    {
+      "publicationCode": "02005",
+      "name": "福島沖５０ｋｍ",
+      "nameKana": "ふくしまおき５０ｋｍ",
+      "stationCodes": [
+        "25070",
+        "25071"
+      ]
+    },
+    {
+      "publicationCode": "02007",
+      "name": "福島沖７０ｋｍ",
+      "nameKana": "ふくしまおき７０ｋｍ",
+      "stationCodes": [
+        "25060",
+        "25061"
+      ]
+    },
+    {
+      "publicationCode": "02009",
+      "name": "福島沖９０ｋｍ",
+      "nameKana": "ふくしまおき９０ｋｍ",
+      "stationCodes": [
+        "25050"
+      ]
+    },
+    {
+      "publicationCode": "02010",
+      "name": "福島沖１００ｋｍ",
+      "nameKana": "ふくしまおき１００ｋｍ",
+      "stationCodes": [
+        "92500"
+      ]
+    },
+    {
+      "publicationCode": "02012",
+      "name": "福島沖１２０ｋｍ",
+      "nameKana": "ふくしまおき１２０ｋｍ",
+      "stationCodes": [
+        "92510"
+      ]
+    },
+    {
+      "publicationCode": "02013",
+      "name": "福島沖１３０ｋｍ",
+      "nameKana": "ふくしまおき１３０ｋｍ",
+      "stationCodes": [
+        "92520"
+      ]
+    },
+    {
+      "publicationCode": "02014",
+      "name": "福島沖１４０ｋｍ",
+      "nameKana": "ふくしまおき１４０ｋｍ",
+      "stationCodes": [
+        "92521"
+      ]
+    },
+    {
+      "publicationCode": "02016",
+      "name": "福島沖１６０ｋｍ",
+      "nameKana": "ふくしまおき１６０ｋｍ",
+      "stationCodes": [
+        "92530"
+      ]
+    },
+    {
+      "publicationCode": "02017",
+      "name": "福島沖１７０ｋｍ",
+      "nameKana": "ふくしまおき１７０ｋｍ",
+      "stationCodes": [
+        "92531"
+      ]
+    },
+    {
+      "publicationCode": "02018",
+      "name": "福島沖１８０ｋｍ",
+      "nameKana": "ふくしまおき１８０ｋｍ",
+      "stationCodes": [
+        "92540"
+      ]
+    },
+    {
+      "publicationCode": "02024",
+      "name": "福島沖２４０ｋｍ",
+      "nameKana": "ふくしまおき２４０ｋｍ",
+      "stationCodes": [
+        "92550"
+      ]
+    },
+    {
+      "publicationCode": "02025",
+      "name": "福島沖２５０ｋｍ",
+      "nameKana": "ふくしまおき２５０ｋｍ",
+      "stationCodes": [
+        "92551"
+      ]
+    },
+    {
+      "publicationCode": "02104",
+      "name": "茨城沖４０ｋｍ",
+      "nameKana": "いばらきおき４０ｋｍ",
+      "stationCodes": [
+        "30080"
+      ]
+    },
+    {
+      "publicationCode": "02105",
+      "name": "茨城沖５０ｋｍ",
+      "nameKana": "いばらきおき５０ｋｍ",
+      "stationCodes": [
+        "30071",
+        "30072"
+      ]
+    },
+    {
+      "publicationCode": "02106",
+      "name": "茨城沖６０ｋｍ",
+      "nameKana": "いばらきおき６０ｋｍ",
+      "stationCodes": [
+        "30070"
+      ]
+    },
+    {
+      "publicationCode": "02107",
+      "name": "茨城沖７０ｋｍ",
+      "nameKana": "いばらきおき７０ｋｍ",
+      "stationCodes": [
+        "30060"
+      ]
+    },
+    {
+      "publicationCode": "02109",
+      "name": "茨城沖９０ｋｍ",
+      "nameKana": "いばらきおき９０ｋｍ",
+      "stationCodes": [
+        "30050",
+        "30051"
+      ]
+    },
+    {
+      "publicationCode": "02111",
+      "name": "茨城沖１１０ｋｍ",
+      "nameKana": "いばらきおき１１０ｋｍ",
+      "stationCodes": [
+        "93010"
+      ]
+    },
+    {
+      "publicationCode": "02112",
+      "name": "茨城沖１２０ｋｍ",
+      "nameKana": "いばらきおき１２０ｋｍ",
+      "stationCodes": [
+        "93011"
+      ]
+    },
+    {
+      "publicationCode": "02114",
+      "name": "茨城沖１４０ｋｍ",
+      "nameKana": "いばらきおき１４０ｋｍ",
+      "stationCodes": [
+        "93020",
+        "93021"
+      ]
+    },
+    {
+      "publicationCode": "02116",
+      "name": "茨城沖１６０ｋｍ",
+      "nameKana": "いばらきおき１６０ｋｍ",
+      "stationCodes": [
+        "93030",
+        "93031"
+      ]
+    },
+    {
+      "publicationCode": "02122",
+      "name": "茨城沖２２０ｋｍ",
+      "nameKana": "いばらきおき２２０ｋｍ",
+      "stationCodes": [
+        "93050"
+      ]
+    },
+    {
+      "publicationCode": "02124",
+      "name": "茨城沖２４０ｋｍ",
+      "nameKana": "いばらきおき２４０ｋｍ",
+      "stationCodes": [
+        "93051"
+      ]
+    },
+    {
+      "publicationCode": "02204",
+      "name": "千葉東方沖４０ｋｍ",
+      "nameKana": "ちばとうほうおき４０ｋｍ",
+      "stationCodes": [
+        "31082"
+      ]
+    },
+    {
+      "publicationCode": "02205",
+      "name": "千葉東方沖５０ｋｍ",
+      "nameKana": "ちばとうほうおき５０ｋｍ",
+      "stationCodes": [
+        "31074",
+        "31075"
+      ]
+    },
+    {
+      "publicationCode": "02206",
+      "name": "千葉東方沖６０ｋｍ",
+      "nameKana": "ちばとうほうおき６０ｋｍ",
+      "stationCodes": [
+        "31071",
+        "31072"
+      ]
+    },
+    {
+      "publicationCode": "02207",
+      "name": "千葉東方沖７０ｋｍ",
+      "nameKana": "ちばとうほうおき７０ｋｍ",
+      "stationCodes": [
+        "31062",
+        "31063"
+      ]
+    },
+    {
+      "publicationCode": "02208",
+      "name": "千葉東方沖８０ｋｍ",
+      "nameKana": "ちばとうほうおき８０ｋｍ",
+      "stationCodes": [
+        "31060"
+      ]
+    },
+    {
+      "publicationCode": "02209",
+      "name": "千葉東方沖９０ｋｍ",
+      "nameKana": "ちばとうほうおき９０ｋｍ",
+      "stationCodes": [
+        "31050"
+      ]
+    },
+    {
+      "publicationCode": "02210",
+      "name": "千葉東方沖１００ｋｍ",
+      "nameKana": "ちばとうほうおき１００ｋｍ",
+      "stationCodes": [
+        "93100"
+      ]
+    },
+    {
+      "publicationCode": "02211",
+      "name": "千葉東方沖１１０ｋｍ",
+      "nameKana": "ちばとうほうおき１１０ｋｍ",
+      "stationCodes": [
+        "93110"
+      ]
+    },
+    {
+      "publicationCode": "02217",
+      "name": "千葉東方沖１７０ｋｍ",
+      "nameKana": "ちばとうほうおき１７０ｋｍ",
+      "stationCodes": [
+        "93131"
+      ]
+    },
+    {
+      "publicationCode": "02218",
+      "name": "千葉東方沖１８０ｋｍ",
+      "nameKana": "ちばとうほうおき１８０ｋｍ",
+      "stationCodes": [
+        "93141"
+      ]
+    },
+    {
+      "publicationCode": "02219",
+      "name": "千葉東方沖１９０ｋｍ",
+      "nameKana": "ちばとうほうおき１９０ｋｍ",
+      "stationCodes": [
+        "93142"
+      ]
+    },
+    {
+      "publicationCode": "02220",
+      "name": "千葉東方沖２００ｋｍ",
+      "nameKana": "ちばとうほうおき２００ｋｍ",
+      "stationCodes": [
+        "93143"
+      ]
+    },
+    {
+      "publicationCode": "02303",
+      "name": "千葉南東沖３０ｋｍ",
+      "nameKana": "ちばなんとうおき３０ｋｍ",
+      "stationCodes": [
+        "31081",
+        "31083",
+        "31084"
+      ]
+    },
+    {
+      "publicationCode": "02304",
+      "name": "千葉南東沖４０ｋｍ",
+      "nameKana": "ちばなんとうおき４０ｋｍ",
+      "stationCodes": [
+        "31080"
+      ]
+    },
+    {
+      "publicationCode": "02306",
+      "name": "千葉南東沖６０ｋｍ",
+      "nameKana": "ちばなんとうおき６０ｋｍ",
+      "stationCodes": [
+        "31070",
+        "31073"
+      ]
+    },
+    {
+      "publicationCode": "02308",
+      "name": "千葉南東沖８０ｋｍ",
+      "nameKana": "ちばなんとうおき８０ｋｍ",
+      "stationCodes": [
+        "31061",
+        "31064"
+      ]
+    },
+    {
+      "publicationCode": "02309",
+      "name": "千葉南東沖９０ｋｍ",
+      "nameKana": "ちばなんとうおき９０ｋｍ",
+      "stationCodes": [
+        "31051"
+      ]
+    },
+    {
+      "publicationCode": "02311",
+      "name": "千葉南東沖１１０ｋｍ",
+      "nameKana": "ちばなんとうおき１１０ｋｍ",
+      "stationCodes": [
+        "93111"
+      ]
+    },
+    {
+      "publicationCode": "02312",
+      "name": "千葉南東沖１２０ｋｍ",
+      "nameKana": "ちばなんとうおき１２０ｋｍ",
+      "stationCodes": [
+        "93112",
+        "93113",
+        "93114"
+      ]
+    },
+    {
+      "publicationCode": "02314",
+      "name": "千葉南東沖１４０ｋｍ",
+      "nameKana": "ちばなんとうおき１４０ｋｍ",
+      "stationCodes": [
+        "93120",
+        "93121"
+      ]
+    },
+    {
+      "publicationCode": "02316",
+      "name": "千葉南東沖１６０ｋｍ",
+      "nameKana": "ちばなんとうおき１６０ｋｍ",
+      "stationCodes": [
+        "93130"
+      ]
+    },
+    {
+      "publicationCode": "02318",
+      "name": "千葉南東沖１８０ｋｍ",
+      "nameKana": "ちばなんとうおき１８０ｋｍ",
+      "stationCodes": [
+        "93140"
+      ]
+    },
+    {
+      "publicationCode": "03204",
+      "name": "神奈川沖４０ｋｍ",
+      "nameKana": "かながわおき４０ｋｍ",
+      "stationCodes": [
+        "33080"
+      ]
+    },
+    {
+      "publicationCode": "04005",
+      "name": "静岡沖５０ｋｍ",
+      "nameKana": "しずおかおき５０ｋｍ",
+      "stationCodes": [
+        "38070"
+      ]
+    },
+    {
+      "publicationCode": "04303",
+      "name": "三重南東沖３０ｋｍ",
+      "nameKana": "みえなんとうおき３０ｋｍ",
+      "stationCodes": [
+        "40082"
+      ]
+    },
+    {
+      "publicationCode": "04304",
+      "name": "三重南東沖４０ｋｍ",
+      "nameKana": "みえなんとうおき４０ｋｍ",
+      "stationCodes": [
+        "40080",
+        "40081"
+      ]
+    },
+    {
+      "publicationCode": "04305",
+      "name": "三重南東沖５０ｋｍ",
+      "nameKana": "みえなんとうおき５０ｋｍ",
+      "stationCodes": [
+        "40072"
+      ]
+    },
+    {
+      "publicationCode": "04306",
+      "name": "三重南東沖６０ｋｍ",
+      "nameKana": "みえなんとうおき６０ｋｍ",
+      "stationCodes": [
+        "40070",
+        "40071"
+      ]
+    },
+    {
+      "publicationCode": "04307",
+      "name": "三重南東沖７０ｋｍ",
+      "nameKana": "みえなんとうおき７０ｋｍ",
+      "stationCodes": [
+        "40063"
+      ]
+    },
+    {
+      "publicationCode": "04308",
+      "name": "三重南東沖８０ｋｍ",
+      "nameKana": "みえなんとうおき８０ｋｍ",
+      "stationCodes": [
+        "40060",
+        "40061",
+        "40062"
+      ]
+    },
+    {
+      "publicationCode": "04309",
+      "name": "三重南東沖９０ｋｍ",
+      "nameKana": "みえなんとうおき９０ｋｍ",
+      "stationCodes": [
+        "40050"
+      ]
+    },
+    {
+      "publicationCode": "04903",
+      "name": "和歌山沖３０ｋｍ",
+      "nameKana": "わかやまおき３０ｋｍ",
+      "stationCodes": [
+        "53080",
+        "53081",
+        "53088",
+        "53089"
+      ]
+    },
+    {
+      "publicationCode": "04904",
+      "name": "和歌山沖４０ｋｍ",
+      "nameKana": "わかやまおき４０ｋｍ",
+      "stationCodes": [
+        "53079",
+        "53082",
+        "53083",
+        "53084"
+      ]
+    },
+    {
+      "publicationCode": "04905",
+      "name": "和歌山沖５０ｋｍ",
+      "nameKana": "わかやまおき５０ｋｍ",
+      "stationCodes": [
+        "53070",
+        "53071",
+        "53075",
+        "53076"
+      ]
+    },
+    {
+      "publicationCode": "04906",
+      "name": "和歌山沖６０ｋｍ",
+      "nameKana": "わかやまおき６０ｋｍ",
+      "stationCodes": [
+        "53072",
+        "53073",
+        "53074"
+      ]
+    },
+    {
+      "publicationCode": "04907",
+      "name": "和歌山沖７０ｋｍ",
+      "nameKana": "わかやまおき７０ｋｍ",
+      "stationCodes": [
+        "53062",
+        "53063",
+        "53067",
+        "53068"
+      ]
+    },
+    {
+      "publicationCode": "04908",
+      "name": "和歌山沖８０ｋｍ",
+      "nameKana": "わかやまおき８０ｋｍ",
+      "stationCodes": [
+        "53060",
+        "53061",
+        "53064",
+        "53065"
+      ]
+    },
+    {
+      "publicationCode": "04910",
+      "name": "和歌山沖１００ｋｍ",
+      "nameKana": "わかやまおき１００ｋｍ",
+      "stationCodes": [
+        "95300",
+        "95301",
+        "95302",
+        "95303"
+      ]
+    },
+    {
+      "publicationCode": "04911",
+      "name": "和歌山沖１１０ｋｍ",
+      "nameKana": "わかやまおき１１０ｋｍ",
+      "stationCodes": [
+        "95310"
+      ]
+    },
+    {
+      "publicationCode": "05504",
+      "name": "徳島沖４０ｋｍ",
+      "nameKana": "とくしまおき４０ｋｍ",
+      "stationCodes": [
+        "58080",
+        "58081"
+      ]
+    },
+    {
+      "publicationCode": "05505",
+      "name": "徳島沖５０ｋｍ",
+      "nameKana": "とくしまおき５０ｋｍ",
+      "stationCodes": [
+        "58070",
+        "58071"
+      ]
+    },
+    {
+      "publicationCode": "05903",
+      "name": "高知沖３０ｋｍ",
+      "nameKana": "こうちおき３０ｋｍ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "05904",
+      "name": "高知沖４０ｋｍ",
+      "nameKana": "こうちおき４０ｋｍ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "05905",
+      "name": "高知沖５０ｋｍ",
+      "nameKana": "こうちおき５０ｋｍ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "05906",
+      "name": "高知沖６０ｋｍ",
+      "nameKana": "こうちおき６０ｋｍ",
+      "stationCodes": [
+        "61070"
+      ]
+    },
+    {
+      "publicationCode": "05907",
+      "name": "高知沖７０ｋｍ",
+      "nameKana": "こうちおき７０ｋｍ",
+      "stationCodes": [
+        "61060",
+        "61062",
+        "61063"
+      ]
+    },
+    {
+      "publicationCode": "05908",
+      "name": "高知沖８０ｋｍ",
+      "nameKana": "こうちおき８０ｋｍ",
+      "stationCodes": [
+        "61061"
+      ]
+    },
+    {
+      "publicationCode": "05909",
+      "name": "高知沖９０ｋｍ",
+      "nameKana": "こうちおき９０ｋｍ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "05910",
+      "name": "高知沖１００ｋｍ",
+      "nameKana": "こうちおき１００ｋｍ",
+      "stationCodes": [
+        "61050"
+      ]
+    },
+    {
+      "publicationCode": "05911",
+      "name": "高知沖１１０ｋｍ",
+      "nameKana": "こうちおき１１０ｋｍ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "05912",
+      "name": "高知沖１２０ｋｍ",
+      "nameKana": "こうちおき１２０ｋｍ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "05913",
+      "name": "高知沖１３０ｋｍ",
+      "nameKana": "こうちおき１３０ｋｍ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "05914",
+      "name": "高知沖１４０ｋｍ",
+      "nameKana": "こうちおき１４０ｋｍ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "07203",
+      "name": "宮崎沖３０ｋｍ",
+      "nameKana": "みやざきおき３０ｋｍ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "07204",
+      "name": "宮崎沖４０ｋｍ",
+      "nameKana": "みやざきおき４０ｋｍ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "07205",
+      "name": "宮崎沖５０ｋｍ",
+      "nameKana": "みやざきおき５０ｋｍ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "07206",
+      "name": "宮崎沖６０ｋｍ",
+      "nameKana": "みやざきおき６０ｋｍ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "07209",
+      "name": "宮崎沖９０ｋｍ",
+      "nameKana": "みやざきおき９０ｋｍ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "07210",
+      "name": "宮崎沖１００ｋｍ",
+      "nameKana": "みやざきおき１００ｋｍ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "07213",
+      "name": "宮崎沖１３０ｋｍ",
+      "nameKana": "みやざきおき１３０ｋｍ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "10001",
+      "name": "釧路",
+      "nameKana": "くしろ",
+      "stationCodes": [
+        "10001"
+      ]
+    },
+    {
+      "publicationCode": "10002",
+      "name": "根室市花咲",
+      "nameKana": "ねむろしはなさき",
+      "stationCodes": [
+        "10002"
+      ]
+    },
+    {
+      "publicationCode": "10020",
+      "name": "根室港",
+      "nameKana": "ねむろこう",
+      "stationCodes": [
+        "10020"
+      ]
+    },
+    {
+      "publicationCode": "10021",
+      "name": "浜中町霧多布港",
+      "nameKana": "はまなかちょうきりたっぷこう",
+      "stationCodes": [
+        "10021"
+      ]
+    },
+    {
+      "publicationCode": "10050",
+      "name": "釧路沖１００ｋｍＡ",
+      "nameKana": "くしろおき１００ｋｍＡ",
+      "stationCodes": [
+        "10050"
+      ]
+    },
+    {
+      "publicationCode": "10060",
+      "name": "釧路沖８０ｋｍＡ",
+      "nameKana": "くしろおき８０ｋｍＡ",
+      "stationCodes": [
+        "10060",
+        "10061"
+      ]
+    },
+    {
+      "publicationCode": "10061",
+      "name": "釧路沖８０ｋｍＢ",
+      "nameKana": "くしろおき８０ｋｍＢ",
+      "stationCodes": [
+        "10060",
+        "10061"
+      ]
+    },
+    {
+      "publicationCode": "10062",
+      "name": "根室南東沖８０ｋｍＡ",
+      "nameKana": "ねむろなんとうおき８０ｋｍＡ",
+      "stationCodes": [
+        "10062"
+      ]
+    },
+    {
+      "publicationCode": "10070",
+      "name": "釧路沖６０ｋｍＡ",
+      "nameKana": "くしろおき６０ｋｍＡ",
+      "stationCodes": [
+        "10070"
+      ]
+    },
+    {
+      "publicationCode": "10071",
+      "name": "根室南東沖５０ｋｍＡ",
+      "nameKana": "ねむろなんとうおき５０ｋｍＡ",
+      "stationCodes": [
+        "10071"
+      ]
+    },
+    {
+      "publicationCode": "10072",
+      "name": "釧路沖５０ｋｍＡ",
+      "nameKana": "くしろおき５０ｋｍＡ",
+      "stationCodes": [
+        "10072"
+      ]
+    },
+    {
+      "publicationCode": "10073",
+      "name": "根室南東沖６０ｋｍＡ",
+      "nameKana": "ねむろなんとうおき６０ｋｍＡ",
+      "stationCodes": [
+        "10073"
+      ]
+    },
+    {
+      "publicationCode": "10101",
+      "name": "浦河",
+      "nameKana": "うらかわ",
+      "stationCodes": [
+        "10100",
+        "10101"
+      ]
+    },
+    {
+      "publicationCode": "10102",
+      "name": "十勝港",
+      "nameKana": "とかちこう",
+      "stationCodes": [
+        "10102"
+      ]
+    },
+    {
+      "publicationCode": "10103",
+      "name": "えりも町庶野",
+      "nameKana": "えりもちょうしょや",
+      "stationCodes": [
+        "10103"
+      ]
+    },
+    {
+      "publicationCode": "10150",
+      "name": "十勝沖１００ｋｍＡ",
+      "nameKana": "とかちおき１００ｋｍＡ",
+      "stationCodes": [
+        "10150"
+      ]
+    },
+    {
+      "publicationCode": "10151",
+      "name": "浦河沖１００ｋｍＡ",
+      "nameKana": "うらかわおき１００ｋｍＡ",
+      "stationCodes": [
+        "10151",
+        "10152"
+      ]
+    },
+    {
+      "publicationCode": "10152",
+      "name": "浦河沖１００ｋｍＢ",
+      "nameKana": "うらかわおき１００ｋｍＢ",
+      "stationCodes": [
+        "10151",
+        "10152"
+      ]
+    },
+    {
+      "publicationCode": "10153",
+      "name": "十勝沖９０ｋｍＡ",
+      "nameKana": "とかちおき９０ｋｍＡ",
+      "stationCodes": [
+        "10153"
+      ]
+    },
+    {
+      "publicationCode": "10160",
+      "name": "十勝沖８０ｋｍＡ",
+      "nameKana": "とかちおき８０ｋｍＡ",
+      "stationCodes": [
+        "10160",
+        "10161",
+        "10162"
+      ]
+    },
+    {
+      "publicationCode": "10161",
+      "name": "十勝沖８０ｋｍＢ",
+      "nameKana": "とかちおき８０ｋｍＢ",
+      "stationCodes": [
+        "10160",
+        "10161",
+        "10162"
+      ]
+    },
+    {
+      "publicationCode": "10162",
+      "name": "十勝沖８０ｋｍＣ",
+      "nameKana": "とかちおき８０ｋｍＣ",
+      "stationCodes": [
+        "10160",
+        "10161",
+        "10162"
+      ]
+    },
+    {
+      "publicationCode": "10163",
+      "name": "浦河沖７０ｋｍＡ",
+      "nameKana": "うらかわおき７０ｋｍＡ",
+      "stationCodes": [
+        "10163"
+      ]
+    },
+    {
+      "publicationCode": "10170",
+      "name": "十勝沖６０ｋｍＡ",
+      "nameKana": "とかちおき６０ｋｍＡ",
+      "stationCodes": [
+        "10170"
+      ]
+    },
+    {
+      "publicationCode": "10171",
+      "name": "浦河沖６０ｋｍＡ",
+      "nameKana": "うらかわおき６０ｋｍＡ",
+      "stationCodes": [
+        "10171"
+      ]
+    },
+    {
+      "publicationCode": "10172",
+      "name": "浦河沖５０ｋｍＡ",
+      "nameKana": "うらかわおき５０ｋｍＡ",
+      "stationCodes": [
+        "10172"
+      ]
+    },
+    {
+      "publicationCode": "10202",
+      "name": "函館",
+      "nameKana": "はこだて",
+      "stationCodes": [
+        "10202"
+      ]
+    },
+    {
+      "publicationCode": "10203",
+      "name": "苫小牧西港",
+      "nameKana": "とまこまいにしこう",
+      "stationCodes": [
+        "10203"
+      ]
+    },
+    {
+      "publicationCode": "10204",
+      "name": "福島町吉岡",
+      "nameKana": "ふくしまちょうよしおか",
+      "stationCodes": [
+        "10204"
+      ]
+    },
+    {
+      "publicationCode": "10221",
+      "name": "苫小牧東港",
+      "nameKana": "とまこまいひがしこう",
+      "stationCodes": [
+        "10221"
+      ]
+    },
+    {
+      "publicationCode": "10222",
+      "name": "白老港",
+      "nameKana": "しらおいこう",
+      "stationCodes": [
+        "10222"
+      ]
+    },
+    {
+      "publicationCode": "10223",
+      "name": "渡島森港",
+      "nameKana": "おしまもりこう",
+      "stationCodes": [
+        "10223"
+      ]
+    },
+    {
+      "publicationCode": "10224",
+      "name": "室蘭港",
+      "nameKana": "むろらんこう",
+      "stationCodes": [
+        "10224"
+      ]
+    },
+    {
+      "publicationCode": "11001",
+      "name": "稚内",
+      "nameKana": "わっかない",
+      "stationCodes": [
+        "11001"
+      ]
+    },
+    {
+      "publicationCode": "11002",
+      "name": "留萌",
+      "nameKana": "るもい",
+      "stationCodes": [
+        "11002"
+      ]
+    },
+    {
+      "publicationCode": "11003",
+      "name": "小樽",
+      "nameKana": "おたる",
+      "stationCodes": [
+        "11003"
+      ]
+    },
+    {
+      "publicationCode": "11022",
+      "name": "石狩湾新港",
+      "nameKana": "いしかりわんしんこう",
+      "stationCodes": [
+        "11022"
+      ]
+    },
+    {
+      "publicationCode": "11023",
+      "name": "利尻島沓形港",
+      "nameKana": "りしりとうくつがたこう",
+      "stationCodes": [
+        "11023"
+      ]
+    },
+    {
+      "publicationCode": "11024",
+      "name": "羽幌港",
+      "nameKana": "はぼろこう",
+      "stationCodes": [
+        "11024"
+      ]
+    },
+    {
+      "publicationCode": "11030",
+      "name": "小樽市忍路",
+      "nameKana": "おたるしおしょろ",
+      "stationCodes": [
+        "11030"
+      ]
+    },
+    {
+      "publicationCode": "11101",
+      "name": "寿都",
+      "nameKana": "すっつ",
+      "stationCodes": [
+        "11101"
+      ]
+    },
+    {
+      "publicationCode": "11102",
+      "name": "江差",
+      "nameKana": "えさし",
+      "stationCodes": [
+        "11102"
+      ]
+    },
+    {
+      "publicationCode": "11121",
+      "name": "瀬棚港",
+      "nameKana": "せたなこう",
+      "stationCodes": [
+        "11121"
+      ]
+    },
+    {
+      "publicationCode": "11122",
+      "name": "岩内港",
+      "nameKana": "いわないこう",
+      "stationCodes": [
+        "11122"
+      ]
+    },
+    {
+      "publicationCode": "11123",
+      "name": "奥尻島奥尻港",
+      "nameKana": "おくしりとうおくしりこう",
+      "stationCodes": [
+        "11123"
+      ]
+    },
+    {
+      "publicationCode": "11130",
+      "name": "奥尻島松江",
+      "nameKana": "おくしりとうまつえ",
+      "stationCodes": [
+        "11130"
+      ]
+    },
+    {
+      "publicationCode": "12001",
+      "name": "網走",
+      "nameKana": "あばしり",
+      "stationCodes": [
+        "12001"
+      ]
+    },
+    {
+      "publicationCode": "12003",
+      "name": "枝幸港",
+      "nameKana": "えさしこう",
+      "stationCodes": [
+        "12003"
+      ]
+    },
+    {
+      "publicationCode": "12020",
+      "name": "紋別港",
+      "nameKana": "もんべつこう",
+      "stationCodes": [
+        "12020"
+      ]
+    },
+    {
+      "publicationCode": "20001",
+      "name": "深浦",
+      "nameKana": "ふかうら",
+      "stationCodes": [
+        "20001"
+      ]
+    },
+    {
+      "publicationCode": "20002",
+      "name": "竜飛",
+      "nameKana": "たっぴ",
+      "stationCodes": [
+        "20002"
+      ]
+    },
+    {
+      "publicationCode": "20090",
+      "name": "青森深浦沖",
+      "nameKana": "あおもりふかうらおき",
+      "stationCodes": [
+        "20090"
+      ]
+    },
+    {
+      "publicationCode": "20102",
+      "name": "むつ市関根浜",
+      "nameKana": "むつしせきねはま",
+      "stationCodes": [
+        "20102"
+      ]
+    },
+    {
+      "publicationCode": "20120",
+      "name": "むつ小川原港",
+      "nameKana": "むつおがわらこう",
+      "stationCodes": [
+        "20120"
+      ]
+    },
+    {
+      "publicationCode": "20121",
+      "name": "八戸港",
+      "nameKana": "はちのへこう",
+      "stationCodes": [
+        "20121"
+      ]
+    },
+    {
+      "publicationCode": "20150",
+      "name": "青森東方沖１００ｋｍＡ",
+      "nameKana": "あおもりとうほうおき１００ｋｍＡ",
+      "stationCodes": [
+        "20150"
+      ]
+    },
+    {
+      "publicationCode": "20151",
+      "name": "青森東方沖９０ｋｍＡ",
+      "nameKana": "あおもりとうほうおき９０ｋｍＡ",
+      "stationCodes": [
+        "20151"
+      ]
+    },
+    {
+      "publicationCode": "20160",
+      "name": "青森東方沖８０ｋｍＡ",
+      "nameKana": "あおもりとうほうおき８０ｋｍＡ",
+      "stationCodes": [
+        "20160"
+      ]
+    },
+    {
+      "publicationCode": "20170",
+      "name": "青森東方沖６０ｋｍＡ",
+      "nameKana": "あおもりとうほうおき６０ｋｍＡ",
+      "stationCodes": [
+        "20170",
+        "20171"
+      ]
+    },
+    {
+      "publicationCode": "20171",
+      "name": "青森東方沖６０ｋｍＢ",
+      "nameKana": "あおもりとうほうおき６０ｋｍＢ",
+      "stationCodes": [
+        "20170",
+        "20171"
+      ]
+    },
+    {
+      "publicationCode": "20172",
+      "name": "青森東方沖５０ｋｍＡ",
+      "nameKana": "あおもりとうほうおき５０ｋｍＡ",
+      "stationCodes": [
+        "20172",
+        "20173"
+      ]
+    },
+    {
+      "publicationCode": "20173",
+      "name": "青森東方沖５０ｋｍＢ",
+      "nameKana": "あおもりとうほうおき５０ｋｍＢ",
+      "stationCodes": [
+        "20172",
+        "20173"
+      ]
+    },
+    {
+      "publicationCode": "20180",
+      "name": "青森東方沖４０ｋｍＡ",
+      "nameKana": "あおもりとうほうおき４０ｋｍＡ",
+      "stationCodes": [
+        "20180"
+      ]
+    },
+    {
+      "publicationCode": "20181",
+      "name": "青森東方沖３０ｋｍＡ",
+      "nameKana": "あおもりとうほうおき３０ｋｍＡ",
+      "stationCodes": [
+        "20181"
+      ]
+    },
+    {
+      "publicationCode": "20190",
+      "name": "青森八戸沖",
+      "nameKana": "あおもりはちのへおき",
+      "stationCodes": [
+        "20190"
+      ]
+    },
+    {
+      "publicationCode": "20201",
+      "name": "青森",
+      "nameKana": "あおもり",
+      "stationCodes": [
+        "20201"
+      ]
+    },
+    {
+      "publicationCode": "20202",
+      "name": "むつ市大湊",
+      "nameKana": "むつしおおみなと",
+      "stationCodes": [
+        "20202"
+      ]
+    },
+    {
+      "publicationCode": "21001",
+      "name": "宮古",
+      "nameKana": "みやこ",
+      "stationCodes": [
+        "21001"
+      ]
+    },
+    {
+      "publicationCode": "21002",
+      "name": "大船渡",
+      "nameKana": "おおふなと",
+      "stationCodes": [
+        "21002"
+      ]
+    },
+    {
+      "publicationCode": "21003",
+      "name": "釜石",
+      "nameKana": "かまいし",
+      "stationCodes": [
+        "21003"
+      ]
+    },
+    {
+      "publicationCode": "21020",
+      "name": "久慈港",
+      "nameKana": "くじこう",
+      "stationCodes": [
+        "21020"
+      ]
+    },
+    {
+      "publicationCode": "21050",
+      "name": "岩手沖９０ｋｍＡ",
+      "nameKana": "いわておき９０ｋｍＡ",
+      "stationCodes": [
+        "21050",
+        "21051"
+      ]
+    },
+    {
+      "publicationCode": "21051",
+      "name": "岩手沖９０ｋｍＢ",
+      "nameKana": "いわておき９０ｋｍＢ",
+      "stationCodes": [
+        "21050",
+        "21051"
+      ]
+    },
+    {
+      "publicationCode": "21060",
+      "name": "岩手沖７０ｋｍＡ",
+      "nameKana": "いわておき７０ｋｍＡ",
+      "stationCodes": [
+        "21060"
+      ]
+    },
+    {
+      "publicationCode": "21061",
+      "name": "岩手沖８０ｋｍＡ",
+      "nameKana": "いわておき８０ｋｍＡ",
+      "stationCodes": [
+        "21061"
+      ]
+    },
+    {
+      "publicationCode": "21070",
+      "name": "岩手沖６０ｋｍＡ",
+      "nameKana": "いわておき６０ｋｍＡ",
+      "stationCodes": [
+        "21070",
+        "21071",
+        "21072"
+      ]
+    },
+    {
+      "publicationCode": "21071",
+      "name": "岩手沖６０ｋｍＢ",
+      "nameKana": "いわておき６０ｋｍＢ",
+      "stationCodes": [
+        "21070",
+        "21071",
+        "21072"
+      ]
+    },
+    {
+      "publicationCode": "21072",
+      "name": "岩手沖６０ｋｍＣ",
+      "nameKana": "いわておき６０ｋｍＣ",
+      "stationCodes": [
+        "21070",
+        "21071",
+        "21072"
+      ]
+    },
+    {
+      "publicationCode": "21080",
+      "name": "岩手沖４０ｋｍＡ",
+      "nameKana": "いわておき４０ｋｍＡ",
+      "stationCodes": [
+        "21080",
+        "21081",
+        "21082"
+      ]
+    },
+    {
+      "publicationCode": "21081",
+      "name": "岩手沖４０ｋｍＢ",
+      "nameKana": "いわておき４０ｋｍＢ",
+      "stationCodes": [
+        "21080",
+        "21081",
+        "21082"
+      ]
+    },
+    {
+      "publicationCode": "21082",
+      "name": "岩手沖４０ｋｍＣ",
+      "nameKana": "いわておき４０ｋｍＣ",
+      "stationCodes": [
+        "21080",
+        "21081",
+        "21082"
+      ]
+    },
+    {
+      "publicationCode": "21083",
+      "name": "岩手沖３０ｋｍＡ",
+      "nameKana": "いわておき３０ｋｍＡ",
+      "stationCodes": [
+        "21083",
+        "21084"
+      ]
+    },
+    {
+      "publicationCode": "21084",
+      "name": "岩手沖３０ｋｍＢ",
+      "nameKana": "いわておき３０ｋｍＢ",
+      "stationCodes": [
+        "21083",
+        "21084"
+      ]
+    },
+    {
+      "publicationCode": "21090",
+      "name": "岩手釜石沖",
+      "nameKana": "いわてかまいしおき",
+      "stationCodes": [
+        "21090"
+      ]
+    },
+    {
+      "publicationCode": "21091",
+      "name": "岩手宮古沖",
+      "nameKana": "いわてみやこおき",
+      "stationCodes": [
+        "21091"
+      ]
+    },
+    {
+      "publicationCode": "21092",
+      "name": "岩手久慈沖",
+      "nameKana": "いわてくじおき",
+      "stationCodes": [
+        "21092"
+      ]
+    },
+    {
+      "publicationCode": "22002",
+      "name": "石巻市鮎川",
+      "nameKana": "いしのまきしあゆかわ",
+      "stationCodes": [
+        "22002"
+      ]
+    },
+    {
+      "publicationCode": "22021",
+      "name": "仙台港",
+      "nameKana": "せんだいこう",
+      "stationCodes": [
+        "22021"
+      ]
+    },
+    {
+      "publicationCode": "22022",
+      "name": "石巻港",
+      "nameKana": "いしのまきこう",
+      "stationCodes": [
+        "22022"
+      ]
+    },
+    {
+      "publicationCode": "22050",
+      "name": "宮城沖９０ｋｍＡ",
+      "nameKana": "みやぎおき９０ｋｍＡ",
+      "stationCodes": [
+        "22050"
+      ]
+    },
+    {
+      "publicationCode": "22060",
+      "name": "宮城沖８０ｋｍＡ",
+      "nameKana": "みやぎおき８０ｋｍＡ",
+      "stationCodes": [
+        "22060",
+        "22061"
+      ]
+    },
+    {
+      "publicationCode": "22061",
+      "name": "宮城沖８０ｋｍＢ",
+      "nameKana": "みやぎおき８０ｋｍＢ",
+      "stationCodes": [
+        "22060",
+        "22061"
+      ]
+    },
+    {
+      "publicationCode": "22070",
+      "name": "宮城沖６０ｋｍＡ",
+      "nameKana": "みやぎおき６０ｋｍＡ",
+      "stationCodes": [
+        "22070"
+      ]
+    },
+    {
+      "publicationCode": "22071",
+      "name": "宮城沖５０ｋｍＡ",
+      "nameKana": "みやぎおき５０ｋｍＡ",
+      "stationCodes": [
+        "22071",
+        "22072"
+      ]
+    },
+    {
+      "publicationCode": "22072",
+      "name": "宮城沖５０ｋｍＢ",
+      "nameKana": "みやぎおき５０ｋｍＢ",
+      "stationCodes": [
+        "22071",
+        "22072"
+      ]
+    },
+    {
+      "publicationCode": "22080",
+      "name": "宮城沖４０ｋｍＡ",
+      "nameKana": "みやぎおき４０ｋｍＡ",
+      "stationCodes": [
+        "22080"
+      ]
+    },
+    {
+      "publicationCode": "22081",
+      "name": "宮城沖３０ｋｍＡ",
+      "nameKana": "みやぎおき３０ｋｍＡ",
+      "stationCodes": [
+        "22081"
+      ]
+    },
+    {
+      "publicationCode": "22090",
+      "name": "宮城金華山沖",
+      "nameKana": "みやぎきんかさんおき",
+      "stationCodes": [
+        "22090"
+      ]
+    },
+    {
+      "publicationCode": "22091",
+      "name": "気仙沼広田湾沖",
+      "nameKana": "けせんぬまひろたわんおき",
+      "stationCodes": [
+        "22091"
+      ]
+    },
+    {
+      "publicationCode": "22095",
+      "name": "宮城牡鹿沖",
+      "nameKana": "みやぎおしかおき",
+      "stationCodes": [
+        "22095"
+      ]
+    },
+    {
+      "publicationCode": "23001",
+      "name": "秋田",
+      "nameKana": "あきた",
+      "stationCodes": [
+        "23001"
+      ]
+    },
+    {
+      "publicationCode": "23090",
+      "name": "秋田男鹿沖",
+      "nameKana": "あきたおがおき",
+      "stationCodes": [
+        "23090"
+      ]
+    },
+    {
+      "publicationCode": "24001",
+      "name": "酒田",
+      "nameKana": "さかた",
+      "stationCodes": [
+        "24001"
+      ]
+    },
+    {
+      "publicationCode": "24030",
+      "name": "飛島",
+      "nameKana": "とびしま",
+      "stationCodes": [
+        "24030"
+      ]
+    },
+    {
+      "publicationCode": "24031",
+      "name": "鶴岡市鼠ケ関",
+      "nameKana": "つるおかしねずがせき",
+      "stationCodes": [
+        "24031"
+      ]
+    },
+    {
+      "publicationCode": "24090",
+      "name": "山形酒田沖",
+      "nameKana": "やまがたさかたおき",
+      "stationCodes": [
+        "24090"
+      ]
+    },
+    {
+      "publicationCode": "25002",
+      "name": "いわき市小名浜",
+      "nameKana": "いわきしおなはま",
+      "stationCodes": [
+        "25002"
+      ]
+    },
+    {
+      "publicationCode": "25030",
+      "name": "相馬",
+      "nameKana": "そうま",
+      "stationCodes": [
+        "25030"
+      ]
+    },
+    {
+      "publicationCode": "25050",
+      "name": "福島沖９０ｋｍＡ",
+      "nameKana": "ふくしまおき９０ｋｍＡ",
+      "stationCodes": [
+        "25050"
+      ]
+    },
+    {
+      "publicationCode": "25060",
+      "name": "福島沖７０ｋｍＡ",
+      "nameKana": "ふくしまおき７０ｋｍＡ",
+      "stationCodes": [
+        "25060",
+        "25061"
+      ]
+    },
+    {
+      "publicationCode": "25061",
+      "name": "福島沖７０ｋｍＢ",
+      "nameKana": "ふくしまおき７０ｋｍＢ",
+      "stationCodes": [
+        "25060",
+        "25061"
+      ]
+    },
+    {
+      "publicationCode": "25070",
+      "name": "福島沖５０ｋｍＡ",
+      "nameKana": "ふくしまおき５０ｋｍＡ",
+      "stationCodes": [
+        "25070",
+        "25071"
+      ]
+    },
+    {
+      "publicationCode": "25071",
+      "name": "福島沖５０ｋｍＢ",
+      "nameKana": "ふくしまおき５０ｋｍＢ",
+      "stationCodes": [
+        "25070",
+        "25071"
+      ]
+    },
+    {
+      "publicationCode": "25080",
+      "name": "福島沖３０ｋｍＡ",
+      "nameKana": "ふくしまおき３０ｋｍＡ",
+      "stationCodes": [
+        "25080",
+        "25081"
+      ]
+    },
+    {
+      "publicationCode": "25081",
+      "name": "福島沖３０ｋｍＢ",
+      "nameKana": "ふくしまおき３０ｋｍＢ",
+      "stationCodes": [
+        "25080",
+        "25081"
+      ]
+    },
+    {
+      "publicationCode": "25090",
+      "name": "福島小名浜沖",
+      "nameKana": "ふくしまおなはまおき",
+      "stationCodes": [
+        "25090"
+      ]
+    },
+    {
+      "publicationCode": "30001",
+      "name": "大洗",
+      "nameKana": "おおあらい",
+      "stationCodes": [
+        "30001"
+      ]
+    },
+    {
+      "publicationCode": "30020",
+      "name": "神栖市鹿島港",
+      "nameKana": "かみすしかしまこう",
+      "stationCodes": [
+        "30020"
+      ]
+    },
+    {
+      "publicationCode": "30050",
+      "name": "茨城沖９０ｋｍＡ",
+      "nameKana": "いばらきおき９０ｋｍＡ",
+      "stationCodes": [
+        "30050",
+        "30051"
+      ]
+    },
+    {
+      "publicationCode": "30051",
+      "name": "茨城沖９０ｋｍＢ",
+      "nameKana": "いばらきおき９０ｋｍＢ",
+      "stationCodes": [
+        "30050",
+        "30051"
+      ]
+    },
+    {
+      "publicationCode": "30060",
+      "name": "茨城沖７０ｋｍＡ",
+      "nameKana": "いばらきおき７０ｋｍＡ",
+      "stationCodes": [
+        "30060"
+      ]
+    },
+    {
+      "publicationCode": "30070",
+      "name": "茨城沖６０ｋｍＡ",
+      "nameKana": "いばらきおき６０ｋｍＡ",
+      "stationCodes": [
+        "30070"
+      ]
+    },
+    {
+      "publicationCode": "30071",
+      "name": "茨城沖５０ｋｍＡ",
+      "nameKana": "いばらきおき５０ｋｍＡ",
+      "stationCodes": [
+        "30071",
+        "30072"
+      ]
+    },
+    {
+      "publicationCode": "30072",
+      "name": "茨城沖５０ｋｍＢ",
+      "nameKana": "いばらきおき５０ｋｍＢ",
+      "stationCodes": [
+        "30071",
+        "30072"
+      ]
+    },
+    {
+      "publicationCode": "30080",
+      "name": "茨城沖４０ｋｍＡ",
+      "nameKana": "いばらきおき４０ｋｍＡ",
+      "stationCodes": [
+        "30080"
+      ]
+    },
+    {
+      "publicationCode": "30095",
+      "name": "茨城神栖沖",
+      "nameKana": "いばらきかみすおき",
+      "stationCodes": [
+        "30095"
+      ]
+    },
+    {
+      "publicationCode": "31001",
+      "name": "銚子",
+      "nameKana": "ちょうし",
+      "stationCodes": [
+        "31001"
+      ]
+    },
+    {
+      "publicationCode": "31002",
+      "name": "勝浦市興津",
+      "nameKana": "かつうらしおきつ",
+      "stationCodes": [
+        "31002"
+      ]
+    },
+    {
+      "publicationCode": "31050",
+      "name": "千葉東方沖９０ｋｍＡ",
+      "nameKana": "ちばとうほうおき９０ｋｍＡ",
+      "stationCodes": [
+        "31050"
+      ]
+    },
+    {
+      "publicationCode": "31051",
+      "name": "千葉南東沖９０ｋｍＡ",
+      "nameKana": "ちばなんとうおき９０ｋｍＡ",
+      "stationCodes": [
+        "31051"
+      ]
+    },
+    {
+      "publicationCode": "31060",
+      "name": "千葉東方沖８０ｋｍＡ",
+      "nameKana": "ちばとうほうおき８０ｋｍＡ",
+      "stationCodes": [
+        "31060"
+      ]
+    },
+    {
+      "publicationCode": "31061",
+      "name": "千葉南東沖８０ｋｍＡ",
+      "nameKana": "ちばなんとうおき８０ｋｍＡ",
+      "stationCodes": [
+        "31061",
+        "31064"
+      ]
+    },
+    {
+      "publicationCode": "31062",
+      "name": "千葉東方沖７０ｋｍＡ",
+      "nameKana": "ちばとうほうおき７０ｋｍＡ",
+      "stationCodes": [
+        "31062",
+        "31063"
+      ]
+    },
+    {
+      "publicationCode": "31063",
+      "name": "千葉東方沖７０ｋｍＢ",
+      "nameKana": "ちばとうほうおき７０ｋｍＢ",
+      "stationCodes": [
+        "31062",
+        "31063"
+      ]
+    },
+    {
+      "publicationCode": "31064",
+      "name": "千葉南東沖８０ｋｍＢ",
+      "nameKana": "ちばなんとうおき８０ｋｍＢ",
+      "stationCodes": [
+        "31061",
+        "31064"
+      ]
+    },
+    {
+      "publicationCode": "31070",
+      "name": "千葉南東沖６０ｋｍＡ",
+      "nameKana": "ちばなんとうおき６０ｋｍＡ",
+      "stationCodes": [
+        "31070",
+        "31073"
+      ]
+    },
+    {
+      "publicationCode": "31071",
+      "name": "千葉東方沖６０ｋｍＡ",
+      "nameKana": "ちばとうほうおき６０ｋｍＡ",
+      "stationCodes": [
+        "31071",
+        "31072"
+      ]
+    },
+    {
+      "publicationCode": "31072",
+      "name": "千葉東方沖６０ｋｍＢ",
+      "nameKana": "ちばとうほうおき６０ｋｍＢ",
+      "stationCodes": [
+        "31071",
+        "31072"
+      ]
+    },
+    {
+      "publicationCode": "31073",
+      "name": "千葉南東沖６０ｋｍＢ",
+      "nameKana": "ちばなんとうおき６０ｋｍＢ",
+      "stationCodes": [
+        "31070",
+        "31073"
+      ]
+    },
+    {
+      "publicationCode": "31074",
+      "name": "千葉東方沖５０ｋｍＡ",
+      "nameKana": "ちばとうほうおき５０ｋｍＡ",
+      "stationCodes": [
+        "31074",
+        "31075"
+      ]
+    },
+    {
+      "publicationCode": "31075",
+      "name": "千葉東方沖５０ｋｍＢ",
+      "nameKana": "ちばとうほうおき５０ｋｍＢ",
+      "stationCodes": [
+        "31074",
+        "31075"
+      ]
+    },
+    {
+      "publicationCode": "31080",
+      "name": "千葉南東沖４０ｋｍＡ",
+      "nameKana": "ちばなんとうおき４０ｋｍＡ",
+      "stationCodes": [
+        "31080"
+      ]
+    },
+    {
+      "publicationCode": "31081",
+      "name": "千葉南東沖３０ｋｍＡ",
+      "nameKana": "ちばなんとうおき３０ｋｍＡ",
+      "stationCodes": [
+        "31081",
+        "31083",
+        "31084"
+      ]
+    },
+    {
+      "publicationCode": "31082",
+      "name": "千葉東方沖４０ｋｍＡ",
+      "nameKana": "ちばとうほうおき４０ｋｍＡ",
+      "stationCodes": [
+        "31082"
+      ]
+    },
+    {
+      "publicationCode": "31083",
+      "name": "千葉南東沖３０ｋｍＢ",
+      "nameKana": "ちばなんとうおき３０ｋｍＢ",
+      "stationCodes": [
+        "31081",
+        "31083",
+        "31084"
+      ]
+    },
+    {
+      "publicationCode": "31084",
+      "name": "千葉南東沖３０ｋｍＣ",
+      "nameKana": "ちばなんとうおき３０ｋｍＣ",
+      "stationCodes": [
+        "31081",
+        "31083",
+        "31084"
+      ]
+    },
+    {
+      "publicationCode": "31101",
+      "name": "館山市布良",
+      "nameKana": "たてやましめら",
+      "stationCodes": [
+        "31101"
+      ]
+    },
+    {
+      "publicationCode": "31202",
+      "name": "東京晴海",
+      "nameKana": "とうきょうはるみ",
+      "stationCodes": [
+        "31202"
+      ]
+    },
+    {
+      "publicationCode": "31204",
+      "name": "横須賀",
+      "nameKana": "よこすか",
+      "stationCodes": [
+        "31204"
+      ]
+    },
+    {
+      "publicationCode": "31205",
+      "name": "千葉",
+      "nameKana": "ちば",
+      "stationCodes": [
+        "31201",
+        "31205"
+      ]
+    },
+    {
+      "publicationCode": "31206",
+      "name": "横浜",
+      "nameKana": "よこはま",
+      "stationCodes": [
+        "31203",
+        "31206"
+      ]
+    },
+    {
+      "publicationCode": "32001",
+      "name": "伊豆大島岡田",
+      "nameKana": "いずおおしまおかだ",
+      "stationCodes": [
+        "32001"
+      ]
+    },
+    {
+      "publicationCode": "32002",
+      "name": "三宅島坪田",
+      "nameKana": "みやけじまつぼた",
+      "stationCodes": [
+        "32002"
+      ]
+    },
+    {
+      "publicationCode": "32003",
+      "name": "八丈島八重根",
+      "nameKana": "はちじょうじまやえね",
+      "stationCodes": [
+        "32003"
+      ]
+    },
+    {
+      "publicationCode": "32004",
+      "name": "神津島神津島港",
+      "nameKana": "こうづしまこうづしまこう",
+      "stationCodes": [
+        "32004"
+      ]
+    },
+    {
+      "publicationCode": "32005",
+      "name": "三宅島阿古",
+      "nameKana": "みやけじまあこ",
+      "stationCodes": [
+        "32005"
+      ]
+    },
+    {
+      "publicationCode": "32006",
+      "name": "八丈島神湊",
+      "nameKana": "はちじょうじまかみなと",
+      "stationCodes": [
+        "32006"
+      ]
+    },
+    {
+      "publicationCode": "32101",
+      "name": "父島二見",
+      "nameKana": "ちちじまふたみ",
+      "stationCodes": [
+        "32101"
+      ]
+    },
+    {
+      "publicationCode": "32102",
+      "name": "南鳥島",
+      "nameKana": "みなみとりしま",
+      "stationCodes": [
+        "32102"
+      ]
+    },
+    {
+      "publicationCode": "33000",
+      "name": "小田原",
+      "nameKana": "おだわら",
+      "stationCodes": [
+        "33000"
+      ]
+    },
+    {
+      "publicationCode": "33001",
+      "name": "三浦市三崎漁港",
+      "nameKana": "みうらしみさきぎょこう",
+      "stationCodes": [
+        "33001"
+      ]
+    },
+    {
+      "publicationCode": "33030",
+      "name": "三浦市油壺",
+      "nameKana": "みうらしあぶらつぼ",
+      "stationCodes": [
+        "33030"
+      ]
+    },
+    {
+      "publicationCode": "33080",
+      "name": "神奈川沖４０ｋｍ",
+      "nameKana": "かながわおき４０ｋｍ",
+      "stationCodes": [
+        "33080"
+      ]
+    },
+    {
+      "publicationCode": "33095",
+      "name": "神奈川相模湾沖",
+      "nameKana": "かながわさがみわんおき",
+      "stationCodes": [
+        "33095"
+      ]
+    },
+    {
+      "publicationCode": "34001",
+      "name": "新潟",
+      "nameKana": "にいがた",
+      "stationCodes": [
+        "34001"
+      ]
+    },
+    {
+      "publicationCode": "34003",
+      "name": "粟島",
+      "nameKana": "あわしま",
+      "stationCodes": [
+        "34003"
+      ]
+    },
+    {
+      "publicationCode": "34004",
+      "name": "上越市直江津",
+      "nameKana": "じょうえつしなおえつ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "34030",
+      "name": "柏崎市鯨波",
+      "nameKana": "かしわざきしくじらなみ",
+      "stationCodes": [
+        "34030"
+      ]
+    },
+    {
+      "publicationCode": "34103",
+      "name": "佐渡市鷲崎",
+      "nameKana": "さどしわしざき",
+      "stationCodes": [
+        "34102",
+        "34103"
+      ]
+    },
+    {
+      "publicationCode": "34104",
+      "name": "佐渡市小木",
+      "nameKana": "さどしおぎ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "35001",
+      "name": "富山",
+      "nameKana": "とやま",
+      "stationCodes": [
+        "35001"
+      ]
+    },
+    {
+      "publicationCode": "35021",
+      "name": "伏木富山港新湊",
+      "nameKana": "ふしきとやまこうしんみなと",
+      "stationCodes": [
+        "35021"
+      ]
+    },
+    {
+      "publicationCode": "36001",
+      "name": "珠洲市長橋",
+      "nameKana": "すずしながはし",
+      "stationCodes": [
+        "36001"
+      ]
+    },
+    {
+      "publicationCode": "36002",
+      "name": "珠洲市飯田",
+      "nameKana": "すずしいいだ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "36020",
+      "name": "輪島港",
+      "nameKana": "わじまこう",
+      "stationCodes": [
+        "36020"
+      ]
+    },
+    {
+      "publicationCode": "36021",
+      "name": "七尾港",
+      "nameKana": "ななおこう",
+      "stationCodes": [
+        "36021"
+      ]
+    },
+    {
+      "publicationCode": "36101",
+      "name": "金沢",
+      "nameKana": "かなざわ",
+      "stationCodes": [
+        "36101"
+      ]
+    },
+    {
+      "publicationCode": "37004",
+      "name": "福井港",
+      "nameKana": "ふくいこう",
+      "stationCodes": [
+        "37004"
+      ]
+    },
+    {
+      "publicationCode": "37020",
+      "name": "敦賀港",
+      "nameKana": "つるがこう",
+      "stationCodes": [
+        "37020"
+      ]
+    },
+    {
+      "publicationCode": "38001",
+      "name": "沼津市内浦",
+      "nameKana": "ぬまづしうちうら",
+      "stationCodes": [
+        "38001"
+      ]
+    },
+    {
+      "publicationCode": "38002",
+      "name": "清水",
+      "nameKana": "しみず",
+      "stationCodes": [
+        "38002"
+      ]
+    },
+    {
+      "publicationCode": "38005",
+      "name": "御前崎",
+      "nameKana": "おまえざき",
+      "stationCodes": [
+        "38005"
+      ]
+    },
+    {
+      "publicationCode": "38006",
+      "name": "舞阪",
+      "nameKana": "まいさか",
+      "stationCodes": [
+        "38006"
+      ]
+    },
+    {
+      "publicationCode": "38007",
+      "name": "南伊豆町手石港",
+      "nameKana": "みなみいずちょうていしこう",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "38020",
+      "name": "下田港",
+      "nameKana": "しもだこう",
+      "stationCodes": [
+        "38020"
+      ]
+    },
+    {
+      "publicationCode": "38030",
+      "name": "伊東",
+      "nameKana": "いとう",
+      "stationCodes": [
+        "38030"
+      ]
+    },
+    {
+      "publicationCode": "38031",
+      "name": "西伊豆町田子",
+      "nameKana": "にしいずちょうたご",
+      "stationCodes": [
+        "38031"
+      ]
+    },
+    {
+      "publicationCode": "38032",
+      "name": "焼津",
+      "nameKana": "やいづ",
+      "stationCodes": [
+        "38032"
+      ]
+    },
+    {
+      "publicationCode": "38070",
+      "name": "静岡沖５０ｋｍ",
+      "nameKana": "しずおかおき５０ｋｍ",
+      "stationCodes": [
+        "38070"
+      ]
+    },
+    {
+      "publicationCode": "38090",
+      "name": "静岡御前崎沖",
+      "nameKana": "しずおかおまえざきおき",
+      "stationCodes": [
+        "38090"
+      ]
+    },
+    {
+      "publicationCode": "39001",
+      "name": "田原市赤羽根",
+      "nameKana": "たはらしあかばね",
+      "stationCodes": [
+        "39001"
+      ]
+    },
+    {
+      "publicationCode": "39090",
+      "name": "伊勢湾口沖",
+      "nameKana": "いせわんこうおき",
+      "stationCodes": [
+        "39090"
+      ]
+    },
+    {
+      "publicationCode": "39101",
+      "name": "名古屋",
+      "nameKana": "なごや",
+      "stationCodes": [
+        "39101"
+      ]
+    },
+    {
+      "publicationCode": "39102",
+      "name": "半田市衣浦",
+      "nameKana": "はんだしきぬうら",
+      "stationCodes": [
+        "39102"
+      ]
+    },
+    {
+      "publicationCode": "39103",
+      "name": "四日市",
+      "nameKana": "よっかいち",
+      "stationCodes": [
+        "39103"
+      ]
+    },
+    {
+      "publicationCode": "39120",
+      "name": "豊橋市三河港",
+      "nameKana": "とよはししみかわこう",
+      "stationCodes": [
+        "39120"
+      ]
+    },
+    {
+      "publicationCode": "40001",
+      "name": "鳥羽",
+      "nameKana": "とば",
+      "stationCodes": [
+        "40001"
+      ]
+    },
+    {
+      "publicationCode": "40002",
+      "name": "尾鷲",
+      "nameKana": "おわせ",
+      "stationCodes": [
+        "40002"
+      ]
+    },
+    {
+      "publicationCode": "40003",
+      "name": "熊野市遊木",
+      "nameKana": "くまのしゆき",
+      "stationCodes": [
+        "40003"
+      ]
+    },
+    {
+      "publicationCode": "40050",
+      "name": "三重南東沖９０ｋｍＡ",
+      "nameKana": "みえなんとうおき９０ｋｍＡ",
+      "stationCodes": [
+        "40050"
+      ]
+    },
+    {
+      "publicationCode": "40060",
+      "name": "三重南東沖８０ｋｍＡ",
+      "nameKana": "みえなんとうおき８０ｋｍＡ",
+      "stationCodes": [
+        "40060",
+        "40061",
+        "40062"
+      ]
+    },
+    {
+      "publicationCode": "40061",
+      "name": "三重南東沖８０ｋｍＢ",
+      "nameKana": "みえなんとうおき８０ｋｍＢ",
+      "stationCodes": [
+        "40060",
+        "40061",
+        "40062"
+      ]
+    },
+    {
+      "publicationCode": "40062",
+      "name": "三重南東沖８０ｋｍＣ",
+      "nameKana": "みえなんとうおき８０ｋｍＣ",
+      "stationCodes": [
+        "40060",
+        "40061",
+        "40062"
+      ]
+    },
+    {
+      "publicationCode": "40063",
+      "name": "三重南東沖７０ｋｍＡ",
+      "nameKana": "みえなんとうおき７０ｋｍＡ",
+      "stationCodes": [
+        "40063"
+      ]
+    },
+    {
+      "publicationCode": "40070",
+      "name": "三重南東沖６０ｋｍＡ",
+      "nameKana": "みえなんとうおき６０ｋｍＡ",
+      "stationCodes": [
+        "40070",
+        "40071"
+      ]
+    },
+    {
+      "publicationCode": "40071",
+      "name": "三重南東沖６０ｋｍＢ",
+      "nameKana": "みえなんとうおき６０ｋｍＢ",
+      "stationCodes": [
+        "40070",
+        "40071"
+      ]
+    },
+    {
+      "publicationCode": "40072",
+      "name": "三重南東沖５０ｋｍＡ",
+      "nameKana": "みえなんとうおき５０ｋｍＡ",
+      "stationCodes": [
+        "40072"
+      ]
+    },
+    {
+      "publicationCode": "40080",
+      "name": "三重南東沖４０ｋｍＡ",
+      "nameKana": "みえなんとうおき４０ｋｍＡ",
+      "stationCodes": [
+        "40080",
+        "40081"
+      ]
+    },
+    {
+      "publicationCode": "40081",
+      "name": "三重南東沖４０ｋｍＢ",
+      "nameKana": "みえなんとうおき４０ｋｍＢ",
+      "stationCodes": [
+        "40080",
+        "40081"
+      ]
+    },
+    {
+      "publicationCode": "40082",
+      "name": "三重南東沖３０ｋｍＡ",
+      "nameKana": "みえなんとうおき３０ｋｍＡ",
+      "stationCodes": [
+        "40082"
+      ]
+    },
+    {
+      "publicationCode": "40090",
+      "name": "三重尾鷲沖",
+      "nameKana": "みえおわせおき",
+      "stationCodes": [
+        "40090"
+      ]
+    },
+    {
+      "publicationCode": "50001",
+      "name": "舞鶴",
+      "nameKana": "まいづる",
+      "stationCodes": [
+        "50001"
+      ]
+    },
+    {
+      "publicationCode": "51001",
+      "name": "大阪天保山",
+      "nameKana": "おおさかてんぽうざん",
+      "stationCodes": [
+        "51001"
+      ]
+    },
+    {
+      "publicationCode": "51002",
+      "name": "岬町淡輪",
+      "nameKana": "みさきちょうたんのわ",
+      "stationCodes": [
+        "51002"
+      ]
+    },
+    {
+      "publicationCode": "52001",
+      "name": "豊岡市津居山",
+      "nameKana": "とよおかしついやま",
+      "stationCodes": [
+        "52001"
+      ]
+    },
+    {
+      "publicationCode": "52101",
+      "name": "神戸",
+      "nameKana": "こうべ",
+      "stationCodes": [
+        "52101"
+      ]
+    },
+    {
+      "publicationCode": "52102",
+      "name": "姫路",
+      "nameKana": "ひめじ",
+      "stationCodes": [
+        "52102"
+      ]
+    },
+    {
+      "publicationCode": "52202",
+      "name": "洲本",
+      "nameKana": "すもと",
+      "stationCodes": [
+        "52201",
+        "52202"
+      ]
+    },
+    {
+      "publicationCode": "53001",
+      "name": "那智勝浦町浦神",
+      "nameKana": "なちかつうらちょううらがみ",
+      "stationCodes": [
+        "53001"
+      ]
+    },
+    {
+      "publicationCode": "53002",
+      "name": "串本町袋港",
+      "nameKana": "くしもとちょうふくろこう",
+      "stationCodes": [
+        "53002"
+      ]
+    },
+    {
+      "publicationCode": "53004",
+      "name": "和歌山",
+      "nameKana": "わかやま",
+      "stationCodes": [
+        "53004"
+      ]
+    },
+    {
+      "publicationCode": "53006",
+      "name": "御坊市祓井戸",
+      "nameKana": "ごぼうしはらいど",
+      "stationCodes": [
+        "53006"
+      ]
+    },
+    {
+      "publicationCode": "53007",
+      "name": "白浜町堅田",
+      "nameKana": "しらはまちょうかたた",
+      "stationCodes": [
+        "53007"
+      ]
+    },
+    {
+      "publicationCode": "53060",
+      "name": "和歌山沖８０ｋｍＡ",
+      "nameKana": "わかやまおき８０ｋｍＡ",
+      "stationCodes": [
+        "53060",
+        "53061",
+        "53064",
+        "53065"
+      ]
+    },
+    {
+      "publicationCode": "53061",
+      "name": "和歌山沖８０ｋｍＢ",
+      "nameKana": "わかやまおき８０ｋｍＢ",
+      "stationCodes": [
+        "53060",
+        "53061",
+        "53064",
+        "53065"
+      ]
+    },
+    {
+      "publicationCode": "53062",
+      "name": "和歌山沖７０ｋｍＡ",
+      "nameKana": "わかやまおき７０ｋｍＡ",
+      "stationCodes": [
+        "53062",
+        "53063",
+        "53067",
+        "53068"
+      ]
+    },
+    {
+      "publicationCode": "53063",
+      "name": "和歌山沖７０ｋｍＢ",
+      "nameKana": "わかやまおき７０ｋｍＢ",
+      "stationCodes": [
+        "53062",
+        "53063",
+        "53067",
+        "53068"
+      ]
+    },
+    {
+      "publicationCode": "53064",
+      "name": "和歌山沖８０ｋｍＣ",
+      "nameKana": "わかやまおき８０ｋｍＣ",
+      "stationCodes": [
+        "53060",
+        "53061",
+        "53064",
+        "53065"
+      ]
+    },
+    {
+      "publicationCode": "53065",
+      "name": "和歌山沖８０ｋｍＤ",
+      "nameKana": "わかやまおき８０ｋｍＤ",
+      "stationCodes": [
+        "53060",
+        "53061",
+        "53064",
+        "53065"
+      ]
+    },
+    {
+      "publicationCode": "53066",
+      "name": "和歌山沖８０ｋｍＥ",
+      "nameKana": "わかやまおき８０ｋｍＥ",
+      "stationCodes": [
+        "53066"
+      ]
+    },
+    {
+      "publicationCode": "53067",
+      "name": "和歌山沖７０ｋｍＣ",
+      "nameKana": "わかやまおき７０ｋｍＣ",
+      "stationCodes": [
+        "53062",
+        "53063",
+        "53067",
+        "53068"
+      ]
+    },
+    {
+      "publicationCode": "53068",
+      "name": "和歌山沖７０ｋｍＤ",
+      "nameKana": "わかやまおき７０ｋｍＤ",
+      "stationCodes": [
+        "53062",
+        "53063",
+        "53067",
+        "53068"
+      ]
+    },
+    {
+      "publicationCode": "53069",
+      "name": "和歌山沖７０ｋｍＥ",
+      "nameKana": "わかやまおき７０ｋｍＥ",
+      "stationCodes": [
+        "53069"
+      ]
+    },
+    {
+      "publicationCode": "53070",
+      "name": "和歌山沖５０ｋｍＡ",
+      "nameKana": "わかやまおき５０ｋｍＡ",
+      "stationCodes": [
+        "53070",
+        "53071",
+        "53075",
+        "53076"
+      ]
+    },
+    {
+      "publicationCode": "53071",
+      "name": "和歌山沖５０ｋｍＢ",
+      "nameKana": "わかやまおき５０ｋｍＢ",
+      "stationCodes": [
+        "53070",
+        "53071",
+        "53075",
+        "53076"
+      ]
+    },
+    {
+      "publicationCode": "53072",
+      "name": "和歌山沖６０ｋｍＡ",
+      "nameKana": "わかやまおき６０ｋｍＡ",
+      "stationCodes": [
+        "53072",
+        "53073",
+        "53074"
+      ]
+    },
+    {
+      "publicationCode": "53073",
+      "name": "和歌山沖６０ｋｍＢ",
+      "nameKana": "わかやまおき６０ｋｍＢ",
+      "stationCodes": [
+        "53072",
+        "53073",
+        "53074"
+      ]
+    },
+    {
+      "publicationCode": "53074",
+      "name": "和歌山沖６０ｋｍＣ",
+      "nameKana": "わかやまおき６０ｋｍＣ",
+      "stationCodes": [
+        "53072",
+        "53073",
+        "53074"
+      ]
+    },
+    {
+      "publicationCode": "53075",
+      "name": "和歌山沖５０ｋｍＣ",
+      "nameKana": "わかやまおき５０ｋｍＣ",
+      "stationCodes": [
+        "53070",
+        "53071",
+        "53075",
+        "53076"
+      ]
+    },
+    {
+      "publicationCode": "53076",
+      "name": "和歌山沖５０ｋｍＤ",
+      "nameKana": "わかやまおき５０ｋｍＤ",
+      "stationCodes": [
+        "53070",
+        "53071",
+        "53075",
+        "53076"
+      ]
+    },
+    {
+      "publicationCode": "53077",
+      "name": "和歌山沖５０ｋｍＥ",
+      "nameKana": "わかやまおき５０ｋｍＥ",
+      "stationCodes": [
+        "53077"
+      ]
+    },
+    {
+      "publicationCode": "53078",
+      "name": "和歌山沖５０ｋｍＦ",
+      "nameKana": "わかやまおき５０ｋｍＦ",
+      "stationCodes": [
+        "53078"
+      ]
+    },
+    {
+      "publicationCode": "53079",
+      "name": "和歌山沖４０ｋｍＡ",
+      "nameKana": "わかやまおき４０ｋｍＡ",
+      "stationCodes": [
+        "53079",
+        "53082",
+        "53083",
+        "53084"
+      ]
+    },
+    {
+      "publicationCode": "53080",
+      "name": "和歌山沖３０ｋｍＡ",
+      "nameKana": "わかやまおき３０ｋｍＡ",
+      "stationCodes": [
+        "53080",
+        "53081",
+        "53088",
+        "53089"
+      ]
+    },
+    {
+      "publicationCode": "53081",
+      "name": "和歌山沖３０ｋｍＢ",
+      "nameKana": "わかやまおき３０ｋｍＢ",
+      "stationCodes": [
+        "53080",
+        "53081",
+        "53088",
+        "53089"
+      ]
+    },
+    {
+      "publicationCode": "53082",
+      "name": "和歌山沖４０ｋｍＢ",
+      "nameKana": "わかやまおき４０ｋｍＢ",
+      "stationCodes": [
+        "53079",
+        "53082",
+        "53083",
+        "53084"
+      ]
+    },
+    {
+      "publicationCode": "53083",
+      "name": "和歌山沖４０ｋｍＣ",
+      "nameKana": "わかやまおき４０ｋｍＣ",
+      "stationCodes": [
+        "53079",
+        "53082",
+        "53083",
+        "53084"
+      ]
+    },
+    {
+      "publicationCode": "53084",
+      "name": "和歌山沖４０ｋｍＤ",
+      "nameKana": "わかやまおき４０ｋｍＤ",
+      "stationCodes": [
+        "53079",
+        "53082",
+        "53083",
+        "53084"
+      ]
+    },
+    {
+      "publicationCode": "53085",
+      "name": "和歌山沖４０ｋｍＥ",
+      "nameKana": "わかやまおき４０ｋｍＥ",
+      "stationCodes": [
+        "53085"
+      ]
+    },
+    {
+      "publicationCode": "53086",
+      "name": "和歌山沖４０ｋｍＦ",
+      "nameKana": "わかやまおき４０ｋｍＦ",
+      "stationCodes": [
+        "53086"
+      ]
+    },
+    {
+      "publicationCode": "53087",
+      "name": "和歌山沖４０ｋｍＧ",
+      "nameKana": "わかやまおき４０ｋｍＧ",
+      "stationCodes": [
+        "53087"
+      ]
+    },
+    {
+      "publicationCode": "53088",
+      "name": "和歌山沖３０ｋｍＣ",
+      "nameKana": "わかやまおき３０ｋｍＣ",
+      "stationCodes": [
+        "53080",
+        "53081",
+        "53088",
+        "53089"
+      ]
+    },
+    {
+      "publicationCode": "53089",
+      "name": "和歌山沖３０ｋｍＤ",
+      "nameKana": "わかやまおき３０ｋｍＤ",
+      "stationCodes": [
+        "53080",
+        "53081",
+        "53088",
+        "53089"
+      ]
+    },
+    {
+      "publicationCode": "53090",
+      "name": "和歌山白浜沖",
+      "nameKana": "わかやましらはまおき",
+      "stationCodes": [
+        "53090"
+      ]
+    },
+    {
+      "publicationCode": "54001",
+      "name": "境港市境",
+      "nameKana": "さかいみなとしさかい",
+      "stationCodes": [
+        "54001"
+      ]
+    },
+    {
+      "publicationCode": "54030",
+      "name": "岩美町田後",
+      "nameKana": "いわみちょうたじり",
+      "stationCodes": [
+        "54030"
+      ]
+    },
+    {
+      "publicationCode": "55001",
+      "name": "浜田",
+      "nameKana": "はまだ",
+      "stationCodes": [
+        "55001"
+      ]
+    },
+    {
+      "publicationCode": "55101",
+      "name": "隠岐西郷",
+      "nameKana": "おきさいごう",
+      "stationCodes": [
+        "55101"
+      ]
+    },
+    {
+      "publicationCode": "56001",
+      "name": "玉野市宇野",
+      "nameKana": "たまのしうの",
+      "stationCodes": [
+        "56001"
+      ]
+    },
+    {
+      "publicationCode": "57001",
+      "name": "広島",
+      "nameKana": "ひろしま",
+      "stationCodes": [
+        "57001"
+      ]
+    },
+    {
+      "publicationCode": "57002",
+      "name": "呉",
+      "nameKana": "くれ",
+      "stationCodes": [
+        "57002"
+      ]
+    },
+    {
+      "publicationCode": "58001",
+      "name": "小松島",
+      "nameKana": "こまつしま",
+      "stationCodes": [
+        "58001"
+      ]
+    },
+    {
+      "publicationCode": "58002",
+      "name": "徳島由岐",
+      "nameKana": "とくしまゆき",
+      "stationCodes": [
+        "58002"
+      ]
+    },
+    {
+      "publicationCode": "58070",
+      "name": "徳島沖５０ｋｍＡ",
+      "nameKana": "とくしまおき５０ｋｍＡ",
+      "stationCodes": [
+        "58070",
+        "58071"
+      ]
+    },
+    {
+      "publicationCode": "58071",
+      "name": "徳島沖５０ｋｍＢ",
+      "nameKana": "とくしまおき５０ｋｍＢ",
+      "stationCodes": [
+        "58070",
+        "58071"
+      ]
+    },
+    {
+      "publicationCode": "58080",
+      "name": "徳島沖４０ｋｍＡ",
+      "nameKana": "とくしまおき４０ｋｍＡ",
+      "stationCodes": [
+        "58080",
+        "58081"
+      ]
+    },
+    {
+      "publicationCode": "58081",
+      "name": "徳島沖４０ｋｍＢ",
+      "nameKana": "とくしまおき４０ｋｍＢ",
+      "stationCodes": [
+        "58080",
+        "58081"
+      ]
+    },
+    {
+      "publicationCode": "58090",
+      "name": "徳島海陽沖",
+      "nameKana": "とくしまかいようおき",
+      "stationCodes": [
+        "58090"
+      ]
+    },
+    {
+      "publicationCode": "59001",
+      "name": "高松",
+      "nameKana": "たかまつ",
+      "stationCodes": [
+        "59001"
+      ]
+    },
+    {
+      "publicationCode": "59020",
+      "name": "坂出市与島港",
+      "nameKana": "さかいでしよしまこう",
+      "stationCodes": [
+        "59020"
+      ]
+    },
+    {
+      "publicationCode": "59022",
+      "name": "多度津港",
+      "nameKana": "たどつこう",
+      "stationCodes": [
+        "59022"
+      ]
+    },
+    {
+      "publicationCode": "60001",
+      "name": "宇和島",
+      "nameKana": "うわじま",
+      "stationCodes": [
+        "60001"
+      ]
+    },
+    {
+      "publicationCode": "60101",
+      "name": "松山",
+      "nameKana": "まつやま",
+      "stationCodes": [
+        "60101"
+      ]
+    },
+    {
+      "publicationCode": "60121",
+      "name": "今治市馬島",
+      "nameKana": "いまばりしうましま",
+      "stationCodes": [
+        "60121"
+      ]
+    },
+    {
+      "publicationCode": "61001",
+      "name": "室戸市室戸岬",
+      "nameKana": "むろとしむろとみさき",
+      "stationCodes": [
+        "61001"
+      ]
+    },
+    {
+      "publicationCode": "61002",
+      "name": "高知",
+      "nameKana": "こうち",
+      "stationCodes": [
+        "61002"
+      ]
+    },
+    {
+      "publicationCode": "61003",
+      "name": "土佐清水",
+      "nameKana": "とさしみず",
+      "stationCodes": [
+        "61003"
+      ]
+    },
+    {
+      "publicationCode": "61020",
+      "name": "須崎港",
+      "nameKana": "すさきこう",
+      "stationCodes": [
+        "61020"
+      ]
+    },
+    {
+      "publicationCode": "61030",
+      "name": "中土佐町久礼港",
+      "nameKana": "なかとさちょうくれこう",
+      "stationCodes": [
+        "61030"
+      ]
+    },
+    {
+      "publicationCode": "61051",
+      "name": "高知沖９０ｋｍＡ",
+      "nameKana": "こうちおき９０ｋｍＡ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "61052",
+      "name": "高知沖９０ｋｍＢ",
+      "nameKana": "こうちおき９０ｋｍＢ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "61053",
+      "name": "高知沖９０ｋｍＣ",
+      "nameKana": "こうちおき９０ｋｍＣ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "61054",
+      "name": "高知沖９０ｋｍＤ",
+      "nameKana": "こうちおき９０ｋｍＤ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "61055",
+      "name": "高知沖９０ｋｍＥ",
+      "nameKana": "こうちおき９０ｋｍＥ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "61061",
+      "name": "高知沖８０ｋｍＡ",
+      "nameKana": "こうちおき８０ｋｍＡ",
+      "stationCodes": [
+        "61061"
+      ]
+    },
+    {
+      "publicationCode": "61062",
+      "name": "高知沖７０ｋｍＢ",
+      "nameKana": "こうちおき７０ｋｍＢ",
+      "stationCodes": [
+        "61060",
+        "61062",
+        "61063"
+      ]
+    },
+    {
+      "publicationCode": "61063",
+      "name": "高知沖７０ｋｍＣ",
+      "nameKana": "こうちおき７０ｋｍＣ",
+      "stationCodes": [
+        "61060",
+        "61062",
+        "61063"
+      ]
+    },
+    {
+      "publicationCode": "61064",
+      "name": "高知沖８０ｋｍＢ",
+      "nameKana": "こうちおき８０ｋｍＢ",
+      "stationCodes": [
+        "61061"
+      ]
+    },
+    {
+      "publicationCode": "61065",
+      "name": "高知沖７０ｋｍＤ",
+      "nameKana": "こうちおき７０ｋｍＤ",
+      "stationCodes": [
+        "61060",
+        "61062",
+        "61063"
+      ]
+    },
+    {
+      "publicationCode": "61066",
+      "name": "高知沖７０ｋｍＥ",
+      "nameKana": "こうちおき７０ｋｍＥ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "61070",
+      "name": "高知沖６０ｋｍＡ",
+      "nameKana": "こうちおき６０ｋｍＡ",
+      "stationCodes": [
+        "61070"
+      ]
+    },
+    {
+      "publicationCode": "61071",
+      "name": "高知沖６０ｋｍＢ",
+      "nameKana": "こうちおき６０ｋｍＢ",
+      "stationCodes": [
+        "61070"
+      ]
+    },
+    {
+      "publicationCode": "61072",
+      "name": "高知沖６０ｋｍＣ",
+      "nameKana": "こうちおき６０ｋｍＣ",
+      "stationCodes": [
+        "61070"
+      ]
+    },
+    {
+      "publicationCode": "61073",
+      "name": "高知沖５０ｋｍＡ",
+      "nameKana": "こうちおき５０ｋｍＡ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "61074",
+      "name": "高知沖５０ｋｍＢ",
+      "nameKana": "こうちおき５０ｋｍＢ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "61075",
+      "name": "高知沖５０ｋｍＣ",
+      "nameKana": "こうちおき５０ｋｍＣ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "61076",
+      "name": "高知沖５０ｋｍＤ",
+      "nameKana": "こうちおき５０ｋｍＤ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "61080",
+      "name": "高知沖３０ｋｍＡ",
+      "nameKana": "こうちおき３０ｋｍＡ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "61081",
+      "name": "高知沖４０ｋｍＡ",
+      "nameKana": "こうちおき４０ｋｍＡ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "61082",
+      "name": "高知沖３０ｋｍＢ",
+      "nameKana": "こうちおき３０ｋｍＢ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "61090",
+      "name": "高知足摺岬沖",
+      "nameKana": "こうちあしずりみさきおき",
+      "stationCodes": [
+        "61090"
+      ]
+    },
+    {
+      "publicationCode": "61091",
+      "name": "高知室戸岬沖",
+      "nameKana": "こうちむろとみさきおき",
+      "stationCodes": [
+        "61091"
+      ]
+    },
+    {
+      "publicationCode": "61095",
+      "name": "高知室戸岬東方沖",
+      "nameKana": "こうちむろとみさきとうほうおき",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "70001",
+      "name": "萩港",
+      "nameKana": "はぎこう",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "70021",
+      "name": "下関市南風泊港",
+      "nameKana": "しものせきしはえどまりこう",
+      "stationCodes": [
+        "70021"
+      ]
+    },
+    {
+      "publicationCode": "70101",
+      "name": "下関市彦島弟子待",
+      "nameKana": "しものせきしひこしまでしまつ",
+      "stationCodes": [
+        "70101"
+      ]
+    },
+    {
+      "publicationCode": "70102",
+      "name": "徳山",
+      "nameKana": "とくやま",
+      "stationCodes": [
+        "70102"
+      ]
+    },
+    {
+      "publicationCode": "70120",
+      "name": "宇部港",
+      "nameKana": "うべこう",
+      "stationCodes": [
+        "70120"
+      ]
+    },
+    {
+      "publicationCode": "70121",
+      "name": "三田尻中関港",
+      "nameKana": "みたじりなかのせきこう",
+      "stationCodes": [
+        "70121"
+      ]
+    },
+    {
+      "publicationCode": "70122",
+      "name": "下関港長府",
+      "nameKana": "しものせきこうちょうふ",
+      "stationCodes": [
+        "70122"
+      ]
+    },
+    {
+      "publicationCode": "71002",
+      "name": "北九州市門司",
+      "nameKana": "きたきゅうしゅうしもじ",
+      "stationCodes": [
+        "71001",
+        "71002"
+      ]
+    },
+    {
+      "publicationCode": "71021",
+      "name": "苅田港",
+      "nameKana": "かんだこう",
+      "stationCodes": [
+        "71021"
+      ]
+    },
+    {
+      "publicationCode": "71022",
+      "name": "北九州港青浜",
+      "nameKana": "きたきゅうしゅうこうあおはま",
+      "stationCodes": [
+        "71022"
+      ]
+    },
+    {
+      "publicationCode": "71101",
+      "name": "福岡市博多",
+      "nameKana": "ふくおかしはかた",
+      "stationCodes": [
+        "71101"
+      ]
+    },
+    {
+      "publicationCode": "71120",
+      "name": "北九州港日明",
+      "nameKana": "きたきゅうしゅうこうひあがり",
+      "stationCodes": [
+        "71120"
+      ]
+    },
+    {
+      "publicationCode": "71201",
+      "name": "大牟田市三池",
+      "nameKana": "おおむたしみいけ",
+      "stationCodes": [
+        "71201"
+      ]
+    },
+    {
+      "publicationCode": "71202",
+      "name": "太良町大浦野崎",
+      "nameKana": "たらちょうおおうらのざき",
+      "stationCodes": [
+        "71202"
+      ]
+    },
+    {
+      "publicationCode": "71203",
+      "name": "三角",
+      "nameKana": "みすみ",
+      "stationCodes": [
+        "71203"
+      ]
+    },
+    {
+      "publicationCode": "71204",
+      "name": "島原港",
+      "nameKana": "しまばらこう",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "71220",
+      "name": "八代港",
+      "nameKana": "やつしろこう",
+      "stationCodes": [
+        "71220"
+      ]
+    },
+    {
+      "publicationCode": "71221",
+      "name": "天草市本渡港",
+      "nameKana": "あまくさしほんどこう",
+      "stationCodes": [
+        "71221"
+      ]
+    },
+    {
+      "publicationCode": "71222",
+      "name": "熊本港",
+      "nameKana": "くまもとこう",
+      "stationCodes": [
+        "71222"
+      ]
+    },
+    {
+      "publicationCode": "72020",
+      "name": "唐津港",
+      "nameKana": "からつこう",
+      "stationCodes": [
+        "72020"
+      ]
+    },
+    {
+      "publicationCode": "72030",
+      "name": "玄海町仮屋",
+      "nameKana": "げんかいちょうかりや",
+      "stationCodes": [
+        "72030"
+      ]
+    },
+    {
+      "publicationCode": "73001",
+      "name": "長崎",
+      "nameKana": "ながさき",
+      "stationCodes": [
+        "73001"
+      ]
+    },
+    {
+      "publicationCode": "73002",
+      "name": "口之津",
+      "nameKana": "くちのつ",
+      "stationCodes": [
+        "73002"
+      ]
+    },
+    {
+      "publicationCode": "73003",
+      "name": "福江島福江港",
+      "nameKana": "ふくえじまふくえこう",
+      "stationCodes": [
+        "73003"
+      ]
+    },
+    {
+      "publicationCode": "73004",
+      "name": "佐世保",
+      "nameKana": "させぼ",
+      "stationCodes": [
+        "73004"
+      ]
+    },
+    {
+      "publicationCode": "73020",
+      "name": "長崎港皇后",
+      "nameKana": "ながさきこうこうごう",
+      "stationCodes": [
+        "73020"
+      ]
+    },
+    {
+      "publicationCode": "73021",
+      "name": "平戸市田平港",
+      "nameKana": "ひらどしたびらこう",
+      "stationCodes": [
+        "73021"
+      ]
+    },
+    {
+      "publicationCode": "73102",
+      "name": "対馬比田勝",
+      "nameKana": "つしまひたかつ",
+      "stationCodes": [
+        "73102"
+      ]
+    },
+    {
+      "publicationCode": "73110",
+      "name": "対馬市厳原",
+      "nameKana": "つしましいづはら",
+      "stationCodes": [
+        "73110"
+      ]
+    },
+    {
+      "publicationCode": "73120",
+      "name": "壱岐島郷ノ浦港",
+      "nameKana": "いきのしまごうのうらこう",
+      "stationCodes": [
+        "73120"
+      ]
+    },
+    {
+      "publicationCode": "74000",
+      "name": "苓北町都呂々",
+      "nameKana": "れいほくまちとろろ",
+      "stationCodes": [
+        "74000"
+      ]
+    },
+    {
+      "publicationCode": "75001",
+      "name": "大分",
+      "nameKana": "おおいた",
+      "stationCodes": [
+        "75001"
+      ]
+    },
+    {
+      "publicationCode": "75002",
+      "name": "別府市亀川",
+      "nameKana": "べっぷしかめがわ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "75020",
+      "name": "別府港",
+      "nameKana": "べっぷこう",
+      "stationCodes": [
+        "75020"
+      ]
+    },
+    {
+      "publicationCode": "75100",
+      "name": "佐伯市松浦",
+      "nameKana": "さいきしまつうら",
+      "stationCodes": [
+        "75100"
+      ]
+    },
+    {
+      "publicationCode": "76001",
+      "name": "日向市細島",
+      "nameKana": "ひゆうがしほそしま",
+      "stationCodes": [
+        "76001"
+      ]
+    },
+    {
+      "publicationCode": "76002",
+      "name": "日南市油津",
+      "nameKana": "にちなんしあぶらつ",
+      "stationCodes": [
+        "76002"
+      ]
+    },
+    {
+      "publicationCode": "76020",
+      "name": "宮崎港",
+      "nameKana": "みやざきこう",
+      "stationCodes": [
+        "76020"
+      ]
+    },
+    {
+      "publicationCode": "76050",
+      "name": "宮崎沖９０ｋｍＡ",
+      "nameKana": "みやざきおき９０ｋｍＡ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "76051",
+      "name": "宮崎沖９０ｋｍＢ",
+      "nameKana": "みやざきおき９０ｋｍＢ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "76070",
+      "name": "宮崎沖６０ｋｍＡ",
+      "nameKana": "みやざきおき６０ｋｍＡ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "76071",
+      "name": "宮崎沖６０ｋｍＢ",
+      "nameKana": "みやざきおき６０ｋｍＢ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "76072",
+      "name": "宮崎沖５０ｋｍＡ",
+      "nameKana": "みやざきおき５０ｋｍＡ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "76073",
+      "name": "宮崎沖６０ｋｍＣ",
+      "nameKana": "みやざきおき６０ｋｍＣ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "76074",
+      "name": "宮崎沖６０ｋｍＤ",
+      "nameKana": "みやざきおき６０ｋｍＤ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "76080",
+      "name": "宮崎沖４０ｋｍＡ",
+      "nameKana": "みやざきおき４０ｋｍＡ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "76081",
+      "name": "宮崎沖３０ｋｍＡ",
+      "nameKana": "みやざきおき３０ｋｍＡ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "76090",
+      "name": "宮崎日向沖",
+      "nameKana": "みやざきひゅうがおき",
+      "stationCodes": [
+        "76090"
+      ]
+    },
+    {
+      "publicationCode": "77002",
+      "name": "南大隅町大泊",
+      "nameKana": "みなみおおすみちょうおおどまり",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "77020",
+      "name": "志布志港",
+      "nameKana": "しぶしこう",
+      "stationCodes": [
+        "77020"
+      ]
+    },
+    {
+      "publicationCode": "77102",
+      "name": "種子島西之表",
+      "nameKana": "たねがしまにしのおもて",
+      "stationCodes": [
+        "77102"
+      ]
+    },
+    {
+      "publicationCode": "77103",
+      "name": "種子島熊野",
+      "nameKana": "たねがしまくまの",
+      "stationCodes": [
+        "77103"
+      ]
+    },
+    {
+      "publicationCode": "77203",
+      "name": "中之島",
+      "nameKana": "なかのしま",
+      "stationCodes": [
+        "77203"
+      ]
+    },
+    {
+      "publicationCode": "77204",
+      "name": "奄美市小湊",
+      "nameKana": "あまみしこみなと",
+      "stationCodes": [
+        "77204"
+      ]
+    },
+    {
+      "publicationCode": "77205",
+      "name": "奄美市名瀬",
+      "nameKana": "あまみしなぜ",
+      "stationCodes": [
+        "77205"
+      ]
+    },
+    {
+      "publicationCode": "77302",
+      "name": "枕崎",
+      "nameKana": "まくらざき",
+      "stationCodes": [
+        "77302"
+      ]
+    },
+    {
+      "publicationCode": "77303",
+      "name": "鹿児島",
+      "nameKana": "かごしま",
+      "stationCodes": [
+        "77301",
+        "77303"
+      ]
+    },
+    {
+      "publicationCode": "77330",
+      "name": "阿久根",
+      "nameKana": "あくね",
+      "stationCodes": [
+        "77330"
+      ]
+    },
+    {
+      "publicationCode": "80001",
+      "name": "那覇",
+      "nameKana": "なは",
+      "stationCodes": [
+        "80001"
+      ]
+    },
+    {
+      "publicationCode": "80002",
+      "name": "久米島",
+      "nameKana": "くめじま",
+      "stationCodes": [
+        "80002"
+      ]
+    },
+    {
+      "publicationCode": "80003",
+      "name": "沖縄市中城湾港",
+      "nameKana": "おきなわしなかぐすくわんこう",
+      "stationCodes": [
+        "80003"
+      ]
+    },
+    {
+      "publicationCode": "80030",
+      "name": "南城市安座真",
+      "nameKana": "なんじょうしあざま",
+      "stationCodes": [
+        "80030"
+      ]
+    },
+    {
+      "publicationCode": "80102",
+      "name": "南大東漁港",
+      "nameKana": "みなみだいとうぎょこう",
+      "stationCodes": [
+        "80102"
+      ]
+    },
+    {
+      "publicationCode": "80203",
+      "name": "西表島",
+      "nameKana": "いりおもてじま",
+      "stationCodes": [
+        "80203"
+      ]
+    },
+    {
+      "publicationCode": "80204",
+      "name": "与那国島久部良",
+      "nameKana": "よなぐにじまくぶら",
+      "stationCodes": [
+        "80204"
+      ]
+    },
+    {
+      "publicationCode": "80205",
+      "name": "石垣島石垣港",
+      "nameKana": "いしがきじまいしがきこう",
+      "stationCodes": [
+        "80202",
+        "80205"
+      ]
+    },
+    {
+      "publicationCode": "80206",
+      "name": "宮古島平良",
+      "nameKana": "みやこじまひらら",
+      "stationCodes": [
+        "80201",
+        "80206"
+      ]
+    },
+    {
+      "publicationCode": "91010",
+      "name": "釧路沖１１０ｋｍＡ",
+      "nameKana": "くしろおき１１０ｋｍＡ",
+      "stationCodes": [
+        "91010"
+      ]
+    },
+    {
+      "publicationCode": "91011",
+      "name": "十勝沖１１０ｋｍＡ",
+      "nameKana": "とかちおき１１０ｋｍＡ",
+      "stationCodes": [
+        "91011"
+      ]
+    },
+    {
+      "publicationCode": "91012",
+      "name": "十勝沖１２０ｋｍＡ",
+      "nameKana": "とかちおき１２０ｋｍＡ",
+      "stationCodes": [
+        "91012"
+      ]
+    },
+    {
+      "publicationCode": "91020",
+      "name": "釧路沖１３０ｋｍＡ",
+      "nameKana": "くしろおき１３０ｋｍＡ",
+      "stationCodes": [
+        "91020",
+        "91021"
+      ]
+    },
+    {
+      "publicationCode": "91021",
+      "name": "釧路沖１３０ｋｍＢ",
+      "nameKana": "くしろおき１３０ｋｍＢ",
+      "stationCodes": [
+        "91020",
+        "91021"
+      ]
+    },
+    {
+      "publicationCode": "91030",
+      "name": "釧路沖１５０ｋｍＡ",
+      "nameKana": "くしろおき１５０ｋｍＡ",
+      "stationCodes": [
+        "91030"
+      ]
+    },
+    {
+      "publicationCode": "91031",
+      "name": "十勝沖１５０ｋｍＡ",
+      "nameKana": "とかちおき１５０ｋｍＡ",
+      "stationCodes": [
+        "91031"
+      ]
+    },
+    {
+      "publicationCode": "91032",
+      "name": "釧路沖１６０ｋｍＡ",
+      "nameKana": "くしろおき１６０ｋｍＡ",
+      "stationCodes": [
+        "91032"
+      ]
+    },
+    {
+      "publicationCode": "91033",
+      "name": "釧路沖１７０ｋｍＡ",
+      "nameKana": "くしろおき１７０ｋｍＡ",
+      "stationCodes": [
+        "91033"
+      ]
+    },
+    {
+      "publicationCode": "91040",
+      "name": "釧路沖１８０ｋｍＡ",
+      "nameKana": "くしろおき１８０ｋｍＡ",
+      "stationCodes": [
+        "91040"
+      ]
+    },
+    {
+      "publicationCode": "92010",
+      "name": "青森東方沖１２０ｋｍＡ",
+      "nameKana": "あおもりとうほうおき１２０ｋｍＡ",
+      "stationCodes": [
+        "92010"
+      ]
+    },
+    {
+      "publicationCode": "92030",
+      "name": "青森東方沖１６０ｋｍＡ",
+      "nameKana": "あおもりとうほうおき１６０ｋｍＡ",
+      "stationCodes": [
+        "92030"
+      ]
+    },
+    {
+      "publicationCode": "92040",
+      "name": "青森東方沖１８０ｋｍＡ",
+      "nameKana": "あおもりとうほうおき１８０ｋｍＡ",
+      "stationCodes": [
+        "92040"
+      ]
+    },
+    {
+      "publicationCode": "92041",
+      "name": "青森東方沖２００ｋｍＡ",
+      "nameKana": "あおもりとうほうおき２００ｋｍＡ",
+      "stationCodes": [
+        "92041",
+        "92042"
+      ]
+    },
+    {
+      "publicationCode": "92042",
+      "name": "青森東方沖２００ｋｍＢ",
+      "nameKana": "あおもりとうほうおき２００ｋｍＢ",
+      "stationCodes": [
+        "92041",
+        "92042"
+      ]
+    },
+    {
+      "publicationCode": "92060",
+      "name": "青森東方沖２６０ｋｍＡ",
+      "nameKana": "あおもりとうほうおき２６０ｋｍＡ",
+      "stationCodes": [
+        "92060"
+      ]
+    },
+    {
+      "publicationCode": "92070",
+      "name": "青森東方沖３１０ｋｍＡ",
+      "nameKana": "あおもりとうほうおき３１０ｋｍＡ",
+      "stationCodes": [
+        "92070"
+      ]
+    },
+    {
+      "publicationCode": "92110",
+      "name": "岩手沖１１０ｋｍＡ",
+      "nameKana": "いわておき１１０ｋｍＡ",
+      "stationCodes": [
+        "92110"
+      ]
+    },
+    {
+      "publicationCode": "92111",
+      "name": "岩手沖１２０ｋｍＡ",
+      "nameKana": "いわておき１２０ｋｍＡ",
+      "stationCodes": [
+        "92111",
+        "92112"
+      ]
+    },
+    {
+      "publicationCode": "92112",
+      "name": "岩手沖１２０ｋｍＢ",
+      "nameKana": "いわておき１２０ｋｍＢ",
+      "stationCodes": [
+        "92111",
+        "92112"
+      ]
+    },
+    {
+      "publicationCode": "92120",
+      "name": "岩手沖１４０ｋｍＡ",
+      "nameKana": "いわておき１４０ｋｍＡ",
+      "stationCodes": [
+        "92120",
+        "92121",
+        "92122"
+      ]
+    },
+    {
+      "publicationCode": "92121",
+      "name": "岩手沖１４０ｋｍＢ",
+      "nameKana": "いわておき１４０ｋｍＢ",
+      "stationCodes": [
+        "92120",
+        "92121",
+        "92122"
+      ]
+    },
+    {
+      "publicationCode": "92122",
+      "name": "岩手沖１４０ｋｍＣ",
+      "nameKana": "いわておき１４０ｋｍＣ",
+      "stationCodes": [
+        "92120",
+        "92121",
+        "92122"
+      ]
+    },
+    {
+      "publicationCode": "92130",
+      "name": "岩手沖１５０ｋｍＡ",
+      "nameKana": "いわておき１５０ｋｍＡ",
+      "stationCodes": [
+        "92130"
+      ]
+    },
+    {
+      "publicationCode": "92131",
+      "name": "岩手沖１６０ｋｍＡ",
+      "nameKana": "いわておき１６０ｋｍＡ",
+      "stationCodes": [
+        "92131"
+      ]
+    },
+    {
+      "publicationCode": "92132",
+      "name": "岩手沖１７０ｋｍＡ",
+      "nameKana": "いわておき１７０ｋｍＡ",
+      "stationCodes": [
+        "92132",
+        "92133",
+        "92134"
+      ]
+    },
+    {
+      "publicationCode": "92133",
+      "name": "岩手沖１７０ｋｍＢ",
+      "nameKana": "いわておき１７０ｋｍＢ",
+      "stationCodes": [
+        "92132",
+        "92133",
+        "92134"
+      ]
+    },
+    {
+      "publicationCode": "92134",
+      "name": "岩手沖１７０ｋｍＣ",
+      "nameKana": "いわておき１７０ｋｍＣ",
+      "stationCodes": [
+        "92132",
+        "92133",
+        "92134"
+      ]
+    },
+    {
+      "publicationCode": "92150",
+      "name": "岩手沖２２０ｋｍＡ",
+      "nameKana": "いわておき２２０ｋｍＡ",
+      "stationCodes": [
+        "92150"
+      ]
+    },
+    {
+      "publicationCode": "92151",
+      "name": "岩手沖２３０ｋｍＡ",
+      "nameKana": "いわておき２３０ｋｍＡ",
+      "stationCodes": [
+        "92151"
+      ]
+    },
+    {
+      "publicationCode": "92152",
+      "name": "岩手沖２４０ｋｍＡ",
+      "nameKana": "いわておき２４０ｋｍＡ",
+      "stationCodes": [
+        "92152"
+      ]
+    },
+    {
+      "publicationCode": "92210",
+      "name": "宮城沖１１０ｋｍＡ",
+      "nameKana": "みやぎおき１１０ｋｍＡ",
+      "stationCodes": [
+        "92210",
+        "92211"
+      ]
+    },
+    {
+      "publicationCode": "92211",
+      "name": "宮城沖１１０ｋｍＢ",
+      "nameKana": "みやぎおき１１０ｋｍＢ",
+      "stationCodes": [
+        "92210",
+        "92211"
+      ]
+    },
+    {
+      "publicationCode": "92212",
+      "name": "宮城沖１２０ｋｍＡ",
+      "nameKana": "みやぎおき１２０ｋｍＡ",
+      "stationCodes": [
+        "92212"
+      ]
+    },
+    {
+      "publicationCode": "92220",
+      "name": "宮城沖１３０ｋｍＡ",
+      "nameKana": "みやぎおき１３０ｋｍＡ",
+      "stationCodes": [
+        "92220"
+      ]
+    },
+    {
+      "publicationCode": "92221",
+      "name": "宮城沖１４０ｋｍＡ",
+      "nameKana": "みやぎおき１４０ｋｍＡ",
+      "stationCodes": [
+        "92221"
+      ]
+    },
+    {
+      "publicationCode": "92230",
+      "name": "宮城沖１５０ｋｍＡ",
+      "nameKana": "みやぎおき１５０ｋｍＡ",
+      "stationCodes": [
+        "92230"
+      ]
+    },
+    {
+      "publicationCode": "92231",
+      "name": "宮城沖１６０ｋｍＡ",
+      "nameKana": "みやぎおき１６０ｋｍＡ",
+      "stationCodes": [
+        "92231",
+        "92232"
+      ]
+    },
+    {
+      "publicationCode": "92232",
+      "name": "宮城沖１６０ｋｍＢ",
+      "nameKana": "みやぎおき１６０ｋｍＢ",
+      "stationCodes": [
+        "92231",
+        "92232"
+      ]
+    },
+    {
+      "publicationCode": "92240",
+      "name": "宮城沖１８０ｋｍＡ",
+      "nameKana": "みやぎおき１８０ｋｍＡ",
+      "stationCodes": [
+        "92240",
+        "92241"
+      ]
+    },
+    {
+      "publicationCode": "92241",
+      "name": "宮城沖１８０ｋｍＢ",
+      "nameKana": "みやぎおき１８０ｋｍＢ",
+      "stationCodes": [
+        "92240",
+        "92241"
+      ]
+    },
+    {
+      "publicationCode": "92242",
+      "name": "宮城沖１９０ｋｍＡ",
+      "nameKana": "みやぎおき１９０ｋｍＡ",
+      "stationCodes": [
+        "92242"
+      ]
+    },
+    {
+      "publicationCode": "92250",
+      "name": "宮城沖２３０ｋｍＡ",
+      "nameKana": "みやぎおき２３０ｋｍＡ",
+      "stationCodes": [
+        "92250"
+      ]
+    },
+    {
+      "publicationCode": "92251",
+      "name": "宮城沖２４０ｋｍＡ",
+      "nameKana": "みやぎおき２４０ｋｍＡ",
+      "stationCodes": [
+        "92251"
+      ]
+    },
+    {
+      "publicationCode": "92500",
+      "name": "福島沖１００ｋｍＡ",
+      "nameKana": "ふくしまおき１００ｋｍＡ",
+      "stationCodes": [
+        "92500"
+      ]
+    },
+    {
+      "publicationCode": "92510",
+      "name": "福島沖１２０ｋｍＡ",
+      "nameKana": "ふくしまおき１２０ｋｍＡ",
+      "stationCodes": [
+        "92510"
+      ]
+    },
+    {
+      "publicationCode": "92520",
+      "name": "福島沖１３０ｋｍＡ",
+      "nameKana": "ふくしまおき１３０ｋｍＡ",
+      "stationCodes": [
+        "92520"
+      ]
+    },
+    {
+      "publicationCode": "92521",
+      "name": "福島沖１４０ｋｍＡ",
+      "nameKana": "ふくしまおき１４０ｋｍＡ",
+      "stationCodes": [
+        "92521"
+      ]
+    },
+    {
+      "publicationCode": "92530",
+      "name": "福島沖１６０ｋｍＡ",
+      "nameKana": "ふくしまおき１６０ｋｍＡ",
+      "stationCodes": [
+        "92530"
+      ]
+    },
+    {
+      "publicationCode": "92531",
+      "name": "福島沖１７０ｋｍＡ",
+      "nameKana": "ふくしまおき１７０ｋｍＡ",
+      "stationCodes": [
+        "92531"
+      ]
+    },
+    {
+      "publicationCode": "92540",
+      "name": "福島沖１８０ｋｍＡ",
+      "nameKana": "ふくしまおき１８０ｋｍＡ",
+      "stationCodes": [
+        "92540"
+      ]
+    },
+    {
+      "publicationCode": "92550",
+      "name": "福島沖２４０ｋｍＡ",
+      "nameKana": "ふくしまおき２４０ｋｍＡ",
+      "stationCodes": [
+        "92550"
+      ]
+    },
+    {
+      "publicationCode": "92551",
+      "name": "福島沖２５０ｋｍＡ",
+      "nameKana": "ふくしまおき２５０ｋｍＡ",
+      "stationCodes": [
+        "92551"
+      ]
+    },
+    {
+      "publicationCode": "93010",
+      "name": "茨城沖１１０ｋｍＡ",
+      "nameKana": "いばらきおき１１０ｋｍＡ",
+      "stationCodes": [
+        "93010"
+      ]
+    },
+    {
+      "publicationCode": "93011",
+      "name": "茨城沖１２０ｋｍＡ",
+      "nameKana": "いばらきおき１２０ｋｍＡ",
+      "stationCodes": [
+        "93011"
+      ]
+    },
+    {
+      "publicationCode": "93020",
+      "name": "茨城沖１４０ｋｍＡ",
+      "nameKana": "いばらきおき１４０ｋｍＡ",
+      "stationCodes": [
+        "93020",
+        "93021"
+      ]
+    },
+    {
+      "publicationCode": "93021",
+      "name": "茨城沖１４０ｋｍＢ",
+      "nameKana": "いばらきおき１４０ｋｍＢ",
+      "stationCodes": [
+        "93020",
+        "93021"
+      ]
+    },
+    {
+      "publicationCode": "93030",
+      "name": "茨城沖１６０ｋｍＡ",
+      "nameKana": "いばらきおき１６０ｋｍＡ",
+      "stationCodes": [
+        "93030",
+        "93031"
+      ]
+    },
+    {
+      "publicationCode": "93031",
+      "name": "茨城沖１６０ｋｍＢ",
+      "nameKana": "いばらきおき１６０ｋｍＢ",
+      "stationCodes": [
+        "93030",
+        "93031"
+      ]
+    },
+    {
+      "publicationCode": "93050",
+      "name": "茨城沖２２０ｋｍＡ",
+      "nameKana": "いばらきおき２２０ｋｍＡ",
+      "stationCodes": [
+        "93050"
+      ]
+    },
+    {
+      "publicationCode": "93051",
+      "name": "茨城沖２４０ｋｍＡ",
+      "nameKana": "いばらきおき２４０ｋｍＡ",
+      "stationCodes": [
+        "93051"
+      ]
+    },
+    {
+      "publicationCode": "93100",
+      "name": "千葉東方沖１００ｋｍＡ",
+      "nameKana": "ちばとうほうおき１００ｋｍＡ",
+      "stationCodes": [
+        "93100"
+      ]
+    },
+    {
+      "publicationCode": "93110",
+      "name": "千葉東方沖１１０ｋｍＡ",
+      "nameKana": "ちばとうほうおき１１０ｋｍＡ",
+      "stationCodes": [
+        "93110"
+      ]
+    },
+    {
+      "publicationCode": "93111",
+      "name": "千葉南東沖１１０ｋｍＡ",
+      "nameKana": "ちばなんとうおき１１０ｋｍＡ",
+      "stationCodes": [
+        "93111"
+      ]
+    },
+    {
+      "publicationCode": "93112",
+      "name": "千葉南東沖１２０ｋｍＡ",
+      "nameKana": "ちばなんとうおき１２０ｋｍＡ",
+      "stationCodes": [
+        "93112",
+        "93113",
+        "93114"
+      ]
+    },
+    {
+      "publicationCode": "93113",
+      "name": "千葉南東沖１２０ｋｍＢ",
+      "nameKana": "ちばなんとうおき１２０ｋｍＢ",
+      "stationCodes": [
+        "93112",
+        "93113",
+        "93114"
+      ]
+    },
+    {
+      "publicationCode": "93114",
+      "name": "千葉南東沖１２０ｋｍＣ",
+      "nameKana": "ちばなんとうおき１２０ｋｍＣ",
+      "stationCodes": [
+        "93112",
+        "93113",
+        "93114"
+      ]
+    },
+    {
+      "publicationCode": "93120",
+      "name": "千葉南東沖１４０ｋｍＡ",
+      "nameKana": "ちばなんとうおき１４０ｋｍＡ",
+      "stationCodes": [
+        "93120",
+        "93121"
+      ]
+    },
+    {
+      "publicationCode": "93121",
+      "name": "千葉南東沖１４０ｋｍＢ",
+      "nameKana": "ちばなんとうおき１４０ｋｍＢ",
+      "stationCodes": [
+        "93120",
+        "93121"
+      ]
+    },
+    {
+      "publicationCode": "93130",
+      "name": "千葉南東沖１６０ｋｍＡ",
+      "nameKana": "ちばなんとうおき１６０ｋｍＡ",
+      "stationCodes": [
+        "93130"
+      ]
+    },
+    {
+      "publicationCode": "93131",
+      "name": "千葉東方沖１７０ｋｍＡ",
+      "nameKana": "ちばとうほうおき１７０ｋｍＡ",
+      "stationCodes": [
+        "93131"
+      ]
+    },
+    {
+      "publicationCode": "93140",
+      "name": "千葉南東沖１８０ｋｍＡ",
+      "nameKana": "ちばなんとうおき１８０ｋｍＡ",
+      "stationCodes": [
+        "93140"
+      ]
+    },
+    {
+      "publicationCode": "93141",
+      "name": "千葉東方沖１８０ｋｍＡ",
+      "nameKana": "ちばとうほうおき１８０ｋｍＡ",
+      "stationCodes": [
+        "93141"
+      ]
+    },
+    {
+      "publicationCode": "93142",
+      "name": "千葉東方沖１９０ｋｍＡ",
+      "nameKana": "ちばとうほうおき１９０ｋｍＡ",
+      "stationCodes": [
+        "93142"
+      ]
+    },
+    {
+      "publicationCode": "93143",
+      "name": "千葉東方沖２００ｋｍＡ",
+      "nameKana": "ちばとうほうおき２００ｋｍＡ",
+      "stationCodes": [
+        "93143"
+      ]
+    },
+    {
+      "publicationCode": "95300",
+      "name": "和歌山沖１００ｋｍＡ",
+      "nameKana": "わかやまおき１００ｋｍＡ",
+      "stationCodes": [
+        "95300",
+        "95301",
+        "95302",
+        "95303"
+      ]
+    },
+    {
+      "publicationCode": "95301",
+      "name": "和歌山沖１００ｋｍＢ",
+      "nameKana": "わかやまおき１００ｋｍＢ",
+      "stationCodes": [
+        "95300",
+        "95301",
+        "95302",
+        "95303"
+      ]
+    },
+    {
+      "publicationCode": "95302",
+      "name": "和歌山沖１００ｋｍＣ",
+      "nameKana": "わかやまおき１００ｋｍＣ",
+      "stationCodes": [
+        "95300",
+        "95301",
+        "95302",
+        "95303"
+      ]
+    },
+    {
+      "publicationCode": "95303",
+      "name": "和歌山沖１００ｋｍＤ",
+      "nameKana": "わかやまおき１００ｋｍＤ",
+      "stationCodes": [
+        "95300",
+        "95301",
+        "95302",
+        "95303"
+      ]
+    },
+    {
+      "publicationCode": "95310",
+      "name": "和歌山沖１１０ｋｍＡ",
+      "nameKana": "わかやまおき１１０ｋｍＡ",
+      "stationCodes": [
+        "95310"
+      ]
+    },
+    {
+      "publicationCode": "96100",
+      "name": "高知沖１００ｋｍＢ",
+      "nameKana": "こうちおき１００ｋｍＢ",
+      "stationCodes": [
+        "61050"
+      ]
+    },
+    {
+      "publicationCode": "96110",
+      "name": "高知沖１１０ｋｍＡ",
+      "nameKana": "こうちおき１１０ｋｍＡ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "96111",
+      "name": "高知沖１２０ｋｍＡ",
+      "nameKana": "こうちおき１２０ｋｍＡ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "96112",
+      "name": "高知沖１２０ｋｍＢ",
+      "nameKana": "こうちおき１２０ｋｍＢ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "96113",
+      "name": "高知沖１２０ｋｍＣ",
+      "nameKana": "こうちおき１２０ｋｍＣ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "96120",
+      "name": "高知沖１３０ｋｍＡ",
+      "nameKana": "こうちおき１３０ｋｍＡ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "96121",
+      "name": "高知沖１４０ｋｍＡ",
+      "nameKana": "こうちおき１４０ｋｍＡ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "97600",
+      "name": "宮崎沖１００ｋｍＡ",
+      "nameKana": "みやざきおき１００ｋｍＡ",
+      "stationCodes": []
+    },
+    {
+      "publicationCode": "97620",
+      "name": "宮崎沖１３０ｋｍＡ",
+      "nameKana": "みやざきおき１３０ｋｍＡ",
+      "stationCodes": []
+    }
+  ]
+}

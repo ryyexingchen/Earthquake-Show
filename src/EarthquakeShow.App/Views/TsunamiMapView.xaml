@@ -27,6 +27,22 @@
                                Text="JMA 沿岸线 · 观测点仅在有官方坐标时显示" />
                 </StackPanel>
             </Border>
+            <Border Margin="10"
+                    Padding="8,6"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Bottom"
+                    Background="#EAF4F5"
+                    BorderBrush="#9EB8BF"
+                    BorderThickness="1"
+                    CornerRadius="4">
+                <WrapPanel>
+                    <TextBlock Margin="0,0,10,0" FontWeight="SemiBold" Text="等级" />
+                    <TextBlock Margin="0,0,8,0" Foreground="#2C89C4" Text="● 预报 &lt;0.2m" />
+                    <TextBlock Margin="0,0,8,0" Foreground="#9A7600" Text="● 注意报 0.2–1m" />
+                    <TextBlock Margin="0,0,8,0" Foreground="#C5302B" Text="● 警报 1–3m" />
+                    <TextBlock Foreground="#75359D" Text="● 大警报 &gt;3m" />
+                </WrapPanel>
+            </Border>
         </Grid>
     </Border>
 </UserControl>

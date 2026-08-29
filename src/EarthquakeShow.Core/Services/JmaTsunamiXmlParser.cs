@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
+using System.Text.RegularExpressions;
 using EarthquakeShow.Core.Models;
 
 namespace EarthquakeShow.Core.Services;
@@ -15,6 +16,9 @@ public sealed record JmaTsunamiXmlParseOptions(
 
 public static class JmaTsunamiXmlParser
 {
+    private static readonly Regex CoordinatePattern = new(
+        "^(?<latitude>[+-]?[0-9]+(?:\\.[0-9]+)?)(?<longitude>[+-][0-9]+(?:\\.[0-9]+)?)(?<depth>[+-][0-9]+)?/",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
     public static JmaTsunamiReport Parse(string xml, JmaTsunamiXmlParseOptions options)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(xml);
@@ -28,6 +32,9 @@ public static class JmaTsunamiXmlParser
             "ReportDateTime");
         DateTimeOffset receivedAt = options.ReceivedAt ??
             ParseDateTime(RequiredValue(root, "DateTime"), "DateTime");
+        DateTimeOffset? originTime = ParseOptionalDateTime(FirstValue(root, "OriginTime"), "OriginTime");
+        Hypocenter? hypocenter = ParseHypocenter(root);
+        Magnitude? magnitude = ParseMagnitude(root);
 
         XElement? headline = FirstDescendant(root, "Headline");
         var items = ImmutableArray.CreateBuilder<JmaTsunamiInformationItem>();
@@ -71,6 +78,9 @@ public static class JmaTsunamiXmlParser
             Serial = ParseOptionalInt(FirstValue(root, "Serial")),
             IssuedAt = issuedAt,
             ReceivedAt = receivedAt,
+            OriginTime = originTime,
+            Hypocenter = hypocenter,
+            Magnitude = magnitude,
             HeadlineText = FirstChildValue(headline, "Text"),
             Items = items.ToImmutable(),
             ForecastAreas = forecastAreas,
@@ -203,6 +213,58 @@ public static class JmaTsunamiXmlParser
             element.Attribute("condition")?.Value.Trim(),
             element.Attribute("unit")?.Value.Trim(),
             element.Attribute("type")?.Value.Trim());
+    }
+
+    private static Hypocenter? ParseHypocenter(XElement root)
+    {
+        XElement? area = FirstDescendant(root, "Hypocenter")?
+            .Descendants().FirstOrDefault(item => item.Name.LocalName == "Area");
+        if (area is null)
+        {
+            return null;
+        }
+
+        GeoCoordinate? coordinate = null;
+        int? depthKm = null;
+        string? coordinateText = FirstChildValue(area, "Coordinate");
+        Match match = coordinateText is null ? Match.Empty : CoordinatePattern.Match(coordinateText);
+        if (match.Success &&
+            double.TryParse(match.Groups["latitude"].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double latitude) &&
+            double.TryParse(match.Groups["longitude"].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double longitude))
+        {
+            coordinate = new GeoCoordinate(latitude, longitude);
+            if (int.TryParse(match.Groups["depth"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int depthMeters))
+            {
+                depthKm = Math.Abs((int)Math.Round(depthMeters / 1000d));
+            }
+        }
+
+        return new Hypocenter(
+            FirstChildValue(area, "Name"),
+            FirstChildValue(area, "Code"),
+            coordinate,
+            depthKm);
+    }
+
+    private static Magnitude? ParseMagnitude(XElement root)
+    {
+        XElement? element = FirstDescendant(root, "Magnitude");
+        if (element is null)
+        {
+            return null;
+        }
+
+        double? value = double.TryParse(
+            element.Value.Trim(),
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out double parsed) && double.IsFinite(parsed)
+                ? parsed
+                : null;
+        return new Magnitude(
+            value,
+            element.Attribute("type")?.Value.Trim(),
+            element.Attribute("condition")?.Value.Trim());
     }
 
     private static XDocument LoadDocument(string xml)

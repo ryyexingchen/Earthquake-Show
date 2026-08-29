@@ -19,6 +19,10 @@ public sealed class JmaTsunamiXmlParserTests
 
         Assert.Equal("20160901071000", report.EventId);
         Assert.Equal(ReportContext.Training, report.Context);
+        Assert.Equal(new DateTimeOffset(2016, 9, 1, 7, 10, 0, TimeSpan.FromHours(9)), report.OriginTime);
+        Assert.Equal("和歌山県南方沖", report.Hypocenter?.Name);
+        Assert.Equal(10, report.Hypocenter?.DepthKm);
+        Assert.Null(report.Magnitude?.Value);
         Assert.NotEmpty(report.ForecastAreas);
         JmaTsunamiForecastArea area = Assert.Single(
             report.ForecastAreas,

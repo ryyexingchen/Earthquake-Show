@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "datasetVersion": "format_j.txt",
+  "codeType": "HistoricalTsunamiBulletinFixedWidth",
+  "retrievedDate": "2026-08-29",
+  "sourceUrl": "https://www.data.jma.go.jp/eqev/data/bulletin/data/tsunami/format_j.txt",
+  "companionStationListUrl": "https://www.data.jma.go.jp/eqev/data/bulletin/data/tsunami/stat_j.txt",
+  "encoding": "JMA fixed-width records; source documentation labels each record as 96 bytes",
+  "timeZone": "Asia/Tokyo",
+  "blankValue": null,
+  "numericCodePolicy": "Treat all station and forecast-area codes as strings; preserve leading zeroes.",
+  "heightUnit": "m unless the field explicitly says cm",
+  "recordTypes": [
+    {
+      "code": "T",
+      "name": "津波情報レコード",
+      "lengthBytes": 96,
+      "purpose": "Event-level cause, maximum forecast, maximum observation, magnitude and damage summary.",
+      "keyFields": [
+        { "columns": "02", "name": "cause", "values": { "E": "地震", "V": "火山", "O": "その他" } },
+        { "columns": "03-10", "name": "eventDate", "type": "yyyymmdd" },
+        { "columns": "11", "name": "maximumForecastGrade", "ref": "reportGrade" },
+        { "columns": "12-13", "name": "forecastAreaCount", "type": "integer" },
+        { "columns": "14-16", "name": "maximumForecastHeightMeters", "type": "decimalWithPlusSuffix" },
+        { "columns": "17-22", "name": "firstForecastIssuedAt", "type": "dayHourMinute" },
+        { "columns": "23-28", "name": "forecastCancelledAt", "type": "dayHourMinute" },
+        { "columns": "30-34", "name": "firstArrivalStationCode", "type": "stationCode" },
+        { "columns": "35-40", "name": "firstArrivalAt", "type": "dayHourMinute" },
+        { "columns": "41-45", "name": "maximumObservedStationCode", "type": "stationCode" },
+        { "columns": "46-49", "name": "maximumObservedHeightCm", "type": "integer" },
+        { "columns": "52-61", "name": "momentAndTsunamiMagnitudes", "type": "decimal" },
+        { "columns": "68-79", "name": "速報震源", "type": "hypocenterSummary" },
+        { "columns": "95", "name": "tsunamiDamageFlag", "type": "damageGrade" },
+        { "columns": "96", "name": "minorSeaLevelChangeFlag", "values": { "1": "あり" } }
+      ]
+    },
+    {
+      "code": "A",
+      "name": "震源レコード",
+      "lengthBytes": 96,
+      "purpose": "Origin time, hypocenter, magnitudes, source quality and tsunami scale.",
+      "keyFields": [
+        { "columns": "02-17", "name": "originTime", "type": "yyyyMMddHHmmss.ss" },
+        { "columns": "22-49", "name": "hypocenter", "type": "latitudeLongitudeDepth" },
+        { "columns": "53-58", "name": "magnitudes", "type": "decimalAndType" },
+        { "columns": "62", "name": "maximumIntensity", "type": "jmaIntensityCode" },
+        { "columns": "64", "name": "iidaTsunamiScale", "type": "tsunamiScale" },
+        { "columns": "65-92", "name": "epicenterRegion", "type": "regionCodeAndName" },
+        { "columns": "96", "name": "sourceRecordFlag", "values": { "K": "気象庁月報震源", "U": "USGS", "I": "ISC", "O": "その他" } }
+      ]
+    },
+    {
+      "code": "F",
+      "name": "津波予報レコード",
+      "lengthBytes": 96,
+      "purpose": "One forecast-area summary plus up to three historical updates.",
+      "keyFields": [
+        { "columns": "02-04", "name": "forecastAreaCode", "type": "forecastAreaCode" },
+        { "columns": "05", "name": "maximumForecastGrade", "ref": "reportGrade" },
+        { "columns": "06-17", "name": "forecastIssuedAndCancelledAt", "type": "dayHourMinute" },
+        { "columns": "18", "name": "initialForecastGrade", "ref": "reportGrade" },
+        { "columns": "19-27", "name": "initialArrivalAndHeight", "type": "timeAndDecimalWithPlusSuffix" },
+        { "columns": "28", "name": "instrumentObservationFlag", "type": "instrumentObservationFlag" },
+        { "columns": "29-48", "name": "areaFirstAndMaximumObservation", "type": "stationCodeAndTimeAndHeightCm" },
+        { "columns": "50", "name": "fieldSurveyFlag", "type": "binaryFlag" },
+        { "columns": "51", "name": "forecastUpdateCount", "type": "integer" },
+        { "columns": "52-93", "name": "forecastUpdates", "type": "repeatableUpdateBlocks", "maxItems": 3 }
+      ]
+    },
+    {
+      "code": "I",
+      "name": "器械観測レコード",
+      "lengthBytes": 96,
+      "purpose": "Instrument observation at a tidal point, including first wave and maximum heights.",
+      "keyFields": [
+        { "columns": "02-06", "name": "stationCode", "type": "stationCode" },
+        { "columns": "07-09", "name": "forecastAreaCode", "type": "forecastAreaCode" },
+        { "columns": "10", "name": "forecastGrade", "ref": "reportGrade" },
+        { "columns": "11", "name": "sensor", "ref": "sensor" },
+        { "columns": "20-44", "name": "firstWave", "type": "timesPolarityAndHeightCm" },
+        { "columns": "45", "name": "firstWaveOverflowFlag", "type": "overflowFlag" },
+        { "columns": "46-63", "name": "maximumHeight", "type": "timeElapsedHeightCmAndPeriod" },
+        { "columns": "64-81", "name": "maximumWaveHeight", "type": "timeElapsedHeightCmAndPeriod" },
+        { "columns": "63", "name": "maximumHeightOverflowFlag", "type": "overflowFlag" },
+        { "columns": "81", "name": "maximumWaveHeightOverflowFlag", "type": "overflowFlag" }
+      ]
+    },
+    {
+      "code": "S",
+      "name": "現地調査レコード",
+      "lengthBytes": 96,
+      "purpose": "Field-survey observation, distinct from instrument readings.",
+      "keyFields": [
+        { "columns": "02-31", "name": "stationName", "type": "text" },
+        { "columns": "32-44", "name": "coordinate", "type": "latitudeLongitudeDegreesMinutes" },
+        { "columns": "45-47", "name": "forecastAreaCode", "type": "forecastAreaCode" },
+        { "columns": "48", "name": "forecastGrade", "ref": "reportGrade" },
+        { "columns": "63", "name": "confidence", "ref": "surveyConfidence" },
+        { "columns": "64", "name": "observationType", "ref": "surveyType" },
+        { "columns": "65-73", "name": "observedAtAndHeightMeters", "type": "timeAndDecimal" }
+      ]
+    },
+    {
+      "code": "C",
+      "name": "コメントレコード",
+      "lengthBytes": 96,
+      "purpose": "Named earthquake, reference or other comment.",
+      "keyFields": [
+        { "columns": "02", "name": "commentType", "ref": "commentType" },
+        { "columns": "03-96", "name": "comment", "type": "text" }
+      ]
+    },
+    {
+      "code": "E",
+      "name": "終了レコード",
+      "lengthBytes": 96,
+      "purpose": "Terminates one historical event." 
+    }
+  ],
+  "enums": {
+    "reportGrade": { "0": "津波なし", "1": "津波注意", "2": "津波", "3": "大津波", "4": "津波おそれ", "5": "弱い津波", "9": "津波警報・注意報なし" },
+    "sensor": { "H": "巨大津波観測計", "G": "GPS波浪計", "B": "海底津波計" },
+    "firstWavePolarity": { "U": "押し", "D": "引き" },
+    "instrumentObservationFlag": { "0": "予報区内に潮位観測点なし", "1": "潮位観測点あり・津波未観測", "2": "潮位観測点あり・津波観測", "3": "不明" },
+    "surveyConfidence": { "A": "大", "B": "中", "C": "小", "D": "極小" },
+    "surveyType": { "T": "痕跡高", "R": "遡上高", "A": "目視・最大波高", "H": "目視・最大の高さ" },
+    "commentType": { "N": "命名地震", "R": "参考文献", "O": "その他" },
+    "sourceAgency": { "J": "JMA", "U": "USGS", "P": "PTWC" },
+    "overflowFlag": { "E": "計測範囲外" },
+    "tsunamiScale": { "1": "波高50cm以下", "2": "波高1m前後", "3": "波高2m前後", "4": "波高4-6m程度", "5": "波高10-20m程度", "6": "波高30m以上" }
+  },
+  "implementationNotes": [
+    "This is a historical fixed-width database format, not the live VTSE XML schema.",
+    "Empty fields are omitted in the source and must remain nullable in a parser.",
+    "A height with a trailing '+' means 'or higher'; keep the qualifier separately from the numeric value.",
+    "The station list contains historical tidal-point codes and does not define the PointTsunami offshore publication mapping."
+  ]
+}

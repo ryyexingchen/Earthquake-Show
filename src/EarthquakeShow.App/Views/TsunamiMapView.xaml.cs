@@ -46,7 +46,8 @@ public partial class TsunamiMapView : UserControl
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(TsunamiPageViewModel.ForecastAreaLevels)
-            or nameof(TsunamiPageViewModel.HasMapGeometry))
+            or nameof(TsunamiPageViewModel.HasMapGeometry)
+            or nameof(TsunamiPageViewModel.ObservationStations))
         {
             RequestRender();
         }
@@ -120,6 +121,31 @@ public partial class TsunamiMapView : UserControl
                 Opacity = level == TsunamiLevel.Unknown ? 0.6 : 0.95,
                 SnapsToDevicePixels = true,
             });
+        }
+
+        foreach (TsunamiObservationStationDisplay station in viewModel.ObservationStations)
+        {
+            if (station.Latitude is not double latitude || station.Longitude is not double longitude ||
+                !double.IsFinite(latitude) || !double.IsFinite(longitude))
+            {
+                continue;
+            }
+
+            Point point = projection.Project(new GeoCoordinate(latitude, longitude));
+            Color color = GetLevelColor(station.Level);
+            Ellipse marker = new()
+            {
+                Width = 11,
+                Height = 11,
+                Fill = new SolidColorBrush(color),
+                Stroke = Brushes.White,
+                StrokeThickness = 1.5,
+                ToolTip = station.Name + "（" + station.Code + "）\n" +
+                    station.ObservationStatusText + " · " + station.HeightText,
+            };
+            Canvas.SetLeft(marker, point.X - marker.Width / 2);
+            Canvas.SetTop(marker, point.Y - marker.Height / 2);
+            MapCanvas.Children.Add(marker);
         }
     }
 

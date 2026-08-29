@@ -23,6 +23,12 @@ public sealed record JmaTsunamiReport
 
     public required DateTimeOffset ReceivedAt { get; init; }
 
+    public DateTimeOffset? OriginTime { get; init; }
+
+    public Hypocenter? Hypocenter { get; init; }
+
+    public Magnitude? Magnitude { get; init; }
+
     public string? HeadlineText { get; init; }
 
     public ImmutableArray<JmaTsunamiInformationItem> Items { get; init; } = [];

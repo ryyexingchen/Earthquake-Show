@@ -11,6 +11,36 @@ namespace EarthquakeShow.Infrastructure.Tests;
 public sealed class SqliteTsunamiReportRepositoryTests
 {
     [Fact]
+    public async Task SaveStationCatalogAsync_PersistsStationsAndPublicationMappings()
+    {
+        using var database = new TemporaryDatabase();
+        var repository = new SqliteTsunamiReportRepository(database.Path);
+        JmaTsunamiStationCatalog catalog = JmaTsunamiStationCatalog.LoadJson("""
+            {
+              "sourceVersion": "test",
+              "stations": [{ "stationCode": "10050", "name": "釧路沖１００ｋｍＡ", "latitude": 42.0, "longitude": 144.0 }],
+              "offshorePublicationMappings": [{ "publicationCode": "00410", "name": "釧路沖１００ｋｍ", "stationCodes": ["10050"] }]
+            }
+            """);
+
+        await repository.SaveStationCatalogAsync(catalog);
+
+        await using var connection = new SqliteConnection($"Data Source={database.Path}");
+        await connection.OpenAsync();
+        await using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT p.publication_code, m.station_code, s.name
+            FROM tsunami_offshore_publication p
+            JOIN tsunami_offshore_station_map m ON m.publication_code = p.publication_code
+            JOIN tsunami_station_catalog s ON s.station_code = m.station_code;
+            """;
+        await using SqliteDataReader reader = await command.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+        Assert.Equal("00410", reader.GetString(0));
+        Assert.Equal("10050", reader.GetString(1));
+        Assert.Equal("釧路沖１００ｋｍＡ", reader.GetString(2));
+    }
+    [Fact]
     public async Task SaveAndReload_OfficialReports_PreservesStructuredFieldsAndRawXml()
     {
         using var database = new TemporaryDatabase();

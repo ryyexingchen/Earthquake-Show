@@ -94,6 +94,12 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
+
+        <Style x:Key="TsunamiTableHeaderStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
     </UserControl.Resources>
 
     <Grid Background="{StaticResource BackgroundBrush}">
@@ -243,6 +249,39 @@
                                FontSize="11"
                                Text="{Binding SelectedReportHeadlineText}"
                                TextWrapping="Wrap" />
+
+                    <Border Margin="0,16,0,0"
+                            Padding="14"
+                            Background="#EEF5F6"
+                            BorderBrush="#A5BEC3"
+                            BorderThickness="1"
+                            CornerRadius="6">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="引发海啸的震源" />
+                                <TextBlock Margin="0,4,0,0" FontSize="16" FontWeight="SemiBold" Text="{Binding EarthquakeSourceText}" />
+                                <TextBlock Margin="0,4,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="11" Text="{Binding EarthquakeOriginTimeText}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="22,0,0,0">
+                                <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="震级" />
+                                <TextBlock Margin="0,4,0,0" FontSize="16" FontWeight="SemiBold" Text="{Binding EarthquakeMagnitudeText}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Margin="22,0,0,0">
+                                <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="深度" />
+                                <TextBlock Margin="0,4,0,0" FontSize="16" FontWeight="SemiBold" Text="{Binding EarthquakeDepthText}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="3" Margin="22,0,0,0">
+                                <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="关联事件" />
+                                <TextBlock Margin="0,4,0,0" FontSize="12" Text="{Binding SelectedReport.EventId}" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
 
                     <Border Margin="0,18,0,0"
                             Padding="14"
@@ -465,7 +504,8 @@
                                 Visibility="{Binding HasForecastAreas, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <TextBlock Style="{StaticResource PaneTitleTextStyle}"
                                    FontSize="15"
-                                   Text="预报区" />
+                                   Text="预报 / 警报区域" />
+                        <TextBlock Margin="0,4,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="11" Text="显示 JMA 发布的分区、等级、预计到达和最大预计高度" TextWrapping="Wrap" />
                         <ItemsControl Margin="0,8,0,0"
                                       ItemsSource="{Binding ForecastAreas}">
                             <ItemsControl.ItemTemplate>
@@ -515,7 +555,24 @@
                                 Visibility="{Binding HasObservationStations, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <TextBlock Style="{StaticResource PaneTitleTextStyle}"
                                    FontSize="15"
-                                   Text="沿岸观测" />
+                                   Text="实际观测" />
+                        <TextBlock Margin="0,4,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="11" Text="{Binding ObservationSummaryText}" />
+                        <Border Margin="0,8,0,0" Padding="10" Background="{StaticResource SurfaceSubtleBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="5">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120" />
+                                    <ColumnDefinition Width="180" />
+                                    <ColumnDefinition Width="140" />
+                                    <ColumnDefinition Width="120" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource TsunamiTableHeaderStyle}" Text="都府道县 / 区域" />
+                                <TextBlock Grid.Column="1" Style="{StaticResource TsunamiTableHeaderStyle}" Text="观测点" />
+                                <TextBlock Grid.Column="2" Style="{StaticResource TsunamiTableHeaderStyle}" Text="首波 / 高潮" />
+                                <TextBlock Grid.Column="3" Style="{StaticResource TsunamiTableHeaderStyle}" Text="实时高度" />
+                                <TextBlock Grid.Column="4" Style="{StaticResource TsunamiTableHeaderStyle}" Text="观测状态" />
+                            </Grid>
+                        </Border>
                         <ItemsControl Margin="0,8,0,0"
                                       ItemsSource="{Binding ObservationStations}">
                             <ItemsControl.ItemTemplate>
@@ -528,38 +585,43 @@
                                             CornerRadius="5">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120" />
+                                                <ColumnDefinition Width="180" />
+                                                <ColumnDefinition Width="140" />
+                                                <ColumnDefinition Width="120" />
                                                 <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <StackPanel>
-                                                <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
-                                                <StackPanel Margin="0,3,0,0" Orientation="Horizontal">
-                                                    <TextBlock Foreground="{StaticResource MutedTextBrush}"
-                                                               FontSize="10"
-                                                               Text="{Binding AreaName}" />
-                                                    <TextBlock Margin="8,0,0,0"
-                                                               Foreground="{StaticResource MutedTextBrush}"
-                                                               FontSize="10"
-                                                               Text="{Binding Code}" />
-                                                </StackPanel>
-                                                <StackPanel Margin="0,4,0,0" Orientation="Horizontal">
-                                                    <TextBlock Foreground="{StaticResource MutedTextBrush}"
-                                                               FontSize="11"
-                                                               Text="初报" />
-                                                    <TextBlock Margin="8,0,0,0"
-                                                               Foreground="{StaticResource MutedTextBrush}"
-                                                               FontSize="11"
-                                                               Text="{Binding InitialText}" />
-                                                </StackPanel>
+                                                <TextBlock FontWeight="SemiBold" Text="{Binding AreaName}" TextWrapping="Wrap" />
+                                                <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="区域" />
                                             </StackPanel>
-                                            <StackPanel Grid.Column="1" HorizontalAlignment="Right">
-                                                <TextBlock Foreground="{StaticResource MutedTextBrush}"
-                                                           FontSize="11"
-                                                           Text="{Binding ArrivalText}" />
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock FontWeight="SemiBold" Text="{Binding Name}" TextWrapping="Wrap" />
+                                                <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding Code}" />
                                                 <TextBlock Margin="0,3,0,0"
                                                            Foreground="{StaticResource MutedTextBrush}"
-                                                           FontSize="11"
-                                                           Text="{Binding HeightText}" />
+                                                           FontSize="10"
+                                                           Text="{Binding PublicationText}"
+                                                           TextWrapping="Wrap"
+                                                           Visibility="{Binding IsCatalogMatched, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Foreground="{StaticResource MutedTextBrush}" FontSize="11" Text="{Binding ArrivalText}" TextWrapping="Wrap" />
+                                                <TextBlock Margin="0,3,0,0"
+                                                           Foreground="{StaticResource MutedTextBrush}"
+                                                           FontSize="10"
+                                                           Text="{Binding HighTideText, StringFormat=高潮 {0}}"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="3">
+                                                <TextBlock FontWeight="SemiBold" Text="{Binding HeightText}" TextWrapping="Wrap" />
+                                                <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding ObservationStatusText}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="4" Orientation="Horizontal">
+                                                <Border Style="{StaticResource TsunamiLevelBadgeStyle}" VerticalAlignment="Top">
+                                                    <TextBlock Style="{StaticResource TsunamiLevelTextStyle}" Text="{Binding ObservationStatusText}" />
+                                                </Border>
+                                                <TextBlock Margin="10,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding InitialText}" TextWrapping="Wrap" />
                                             </StackPanel>
                                         </Grid>
                                     </Border>

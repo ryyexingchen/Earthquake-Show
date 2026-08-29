@@ -28,6 +28,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
     private readonly SqliteTsunamiReportRepository _tsunamiRepository;
     private readonly IReadOnlyList<EarthquakeReport> _seedReports;
     private readonly JmaStationCoordinateCatalog _stationCatalog;
+    private readonly JmaTsunamiStationCatalog _tsunamiStationCatalog;
     private readonly JmaIntensityRegionCatalog? _regionCatalog;
     private readonly HttpClient? _httpClient;
     private readonly IRealtimeTsunamiSource? _tsunamiSource;
@@ -65,6 +66,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         Settings = new(settingsLoad, ApplyWebSocketSettingsAsync, ImportLocalXmlAsync);
         JmaStationCoordinateCatalog stationCatalog = FixedJmaXmlDataLoader.LoadStationCatalog();
         _stationCatalog = stationCatalog;
+        _tsunamiStationCatalog = FixedJmaXmlDataLoader.LoadTsunamiStationCatalog();
         _seedReports = FixedJmaXmlDataLoader.LoadReports(stationCatalog);
         JmaIntensityRegionCatalog? regionCatalog = LoadRegionCatalog();
         _regionCatalog = regionCatalog;
@@ -108,7 +110,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         _tsunamiRepository = new SqliteTsunamiReportRepository(
             cachePath ?? GetDefaultCachePath(),
             _tsunamiSource);
-        TsunamiPage = new TsunamiPageViewModel(_tsunamiRepository);
+        TsunamiPage = new TsunamiPageViewModel(_tsunamiRepository, _tsunamiStationCatalog);
         EarthquakePage = new EarthquakePageViewModel(
             _repository);
         EventList = new EarthquakeEventListViewModel(EarthquakePage);
@@ -246,6 +248,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
             Settings.SetLatestImport(
                 await _repository.GetLatestLocalXmlImportAsync(token));
         await _tsunamiRepository.InitializeAsync(token);
+        await _tsunamiRepository.SaveStationCatalogAsync(_tsunamiStationCatalog, token);
         UpdateTsunamiSourceStatuses();
         await TsunamiPage.LoadAsync(token);
         EarthquakePage.SetSourceState(
