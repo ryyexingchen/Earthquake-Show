@@ -31,6 +31,41 @@ internal static class FixedJmaXmlDataLoader
         }
     }
 
+    public static ImmutableArray<JmaTsunamiReport> LoadTsunamiReports()
+    {
+        string assetsRoot = Path.Combine(AppContext.BaseDirectory, "Assets", "Data", "Tsunami");
+        var fixtures = new[]
+        {
+            ("32-39_12_02_250206_VTSE41.xml", "VTSE41"),
+            ("32-39_12_03_250206_VTSE51.xml", "VTSE51"),
+            ("32-39_12_05_250206_VTSE52.xml", "VTSE52"),
+        };
+
+        try
+        {
+            var reports = ImmutableArray.CreateBuilder<JmaTsunamiReport>(fixtures.Length);
+            foreach ((string fileName, string reportCode) in fixtures)
+            {
+                string path = Path.Combine(assetsRoot, fileName);
+                string xml = File.ReadAllText(path);
+                reports.Add(JmaTsunamiXmlParser.Parse(
+                    xml,
+                    new JmaTsunamiXmlParseOptions(
+                        reportCode,
+                        new SourceReference("sample-jma-tsunami", fileName))));
+            }
+
+            return reports.ToImmutable();
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or FormatException or JsonException)
+        {
+            throw new InvalidOperationException(
+                "固定海啸 JMAXML 样例加载失败，请确认应用资源已正确复制。",
+                exception);
+        }
+    }
+
     internal static JmaStationCoordinateCatalog LoadStationCatalog(string assetsRoot)
     {
         string stationPath = Path.Combine(assetsRoot, "JmaStations.csv");

@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using EarthquakeShow.App.ViewModels;
 using EarthquakeShow.Core.Models;
 
@@ -11,12 +12,22 @@ namespace EarthquakeShow.App.Views;
 
 public partial class TsunamiMapView : UserControl
 {
+    internal const double LineSimplificationPixels = 0.65;
+    internal const double DenseLineSimplificationPixels = 1.0;
+    internal const int DenseLinePointThreshold = 10000;
+
     private static readonly Color InactiveCoastColor = Color.FromRgb(103, 135, 145);
+    private readonly DispatcherTimer _renderThrottleTimer;
     private bool _renderPending;
 
     public TsunamiMapView()
     {
         InitializeComponent();
+        _renderThrottleTimer = new DispatcherTimer(DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromMilliseconds(32),
+        };
+        _renderThrottleTimer.Tick += OnRenderThrottleTimerTick;
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
@@ -35,6 +46,8 @@ public partial class TsunamiMapView : UserControl
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        _renderThrottleTimer.Stop();
+        _renderPending = false;
         if (ViewModel is not null)
         {
             ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
@@ -83,17 +96,24 @@ public partial class TsunamiMapView : UserControl
 
     private void RequestRender()
     {
-        if (_renderPending)
+        _renderPending = true;
+        if (!_renderThrottleTimer.IsEnabled)
         {
+            _renderThrottleTimer.Start();
+        }
+    }
+
+    private void OnRenderThrottleTimerTick(object? sender, EventArgs e)
+    {
+        _renderThrottleTimer.Stop();
+        if (!_renderPending || !IsLoaded)
+        {
+            _renderPending = false;
             return;
         }
 
-        _renderPending = true;
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            _renderPending = false;
-            RenderMap();
-        }));
+        _renderPending = false;
+        RenderMap();
     }
 
     private void RenderMap()
@@ -113,7 +133,11 @@ public partial class TsunamiMapView : UserControl
         MapZoomTransform.ScaleX = viewModel.MapZoomLevel;
         MapZoomTransform.ScaleY = viewModel.MapZoomLevel;
         UpdateSelectedStationPan(viewModel, projection);
-        foreach (IGrouping<string, TsunamiMapLine> group in viewModel.MapLines.GroupBy(
+        ImmutableArray<TsunamiMapLine> mapLines = viewModel.MapLines;
+        int pointCount = mapLines.Sum(line => line.Coordinates.Length);
+        double minimumPixelDistance = GetLineSimplificationPixels(pointCount) /
+            Math.Max(1, viewModel.MapZoomLevel);
+        foreach (IGrouping<string, TsunamiMapLine> group in mapLines.GroupBy(
                      line => line.Code,
                      StringComparer.Ordinal))
         {
@@ -132,23 +156,39 @@ public partial class TsunamiMapView : UserControl
                         continue;
                     }
 
-                    context.BeginFigure(projection.Project(line.Coordinates[0]), false, false);
-                    foreach (GeoCoordinate coordinate in line.Coordinates.Skip(1))
+                    Point firstPoint = projection.Project(line.Coordinates[0]);
+                    context.BeginFigure(firstPoint, false, false);
+                    Point previousPoint = firstPoint;
+                    for (int index = 1; index < line.Coordinates.Length; index++)
                     {
-                        context.LineTo(projection.Project(coordinate), true, false);
+                        Point projectedPoint = projection.Project(line.Coordinates[index]);
+                        if (ShouldKeepLinePoint(
+                            previousPoint,
+                            projectedPoint,
+                            index == line.Coordinates.Length - 1,
+                            minimumPixelDistance))
+                        {
+                            context.LineTo(projectedPoint, true, false);
+                            previousPoint = projectedPoint;
+                        }
                     }
                 }
             }
 
             geometry.Freeze();
             Color color = GetLevelColor(level);
+            double strokeThickness = (level == TsunamiLevel.Unknown ? 0.7 : 3) /
+                Math.Max(1, viewModel.MapZoomLevel);
             MapCanvas.Children.Add(new Path
             {
                 Data = geometry,
                 Stroke = new SolidColorBrush(level == TsunamiLevel.Unknown
                     ? InactiveCoastColor
                     : color),
-                StrokeThickness = level == TsunamiLevel.Unknown ? 0.7 : 3,
+                StrokeThickness = strokeThickness,
+                StrokeLineJoin = PenLineJoin.Round,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
                 Opacity = level == TsunamiLevel.Unknown ? 0.6 : 0.95,
                 SnapsToDevicePixels = true,
             });
@@ -224,6 +264,28 @@ public partial class TsunamiMapView : UserControl
         return new(
             center.X - (center.X + (projected.X - center.X) * zoomLevel),
             center.Y - (center.Y + (projected.Y - center.Y) * zoomLevel));
+    }
+
+    internal static double GetLineSimplificationPixels(int pointCount) =>
+        pointCount >= DenseLinePointThreshold
+            ? DenseLineSimplificationPixels
+            : LineSimplificationPixels;
+
+    internal static bool ShouldKeepLinePoint(
+        Point previous,
+        Point current,
+        bool isLastPoint,
+        double minimumPixelDistance)
+    {
+        if (isLastPoint || !double.IsFinite(minimumPixelDistance) || minimumPixelDistance <= 0)
+        {
+            return true;
+        }
+
+        double deltaX = current.X - previous.X;
+        double deltaY = current.Y - previous.Y;
+        return deltaX * deltaX + deltaY * deltaY >=
+            minimumPixelDistance * minimumPixelDistance;
     }
 
     private static Color GetLevelColor(TsunamiLevel level) => level switch

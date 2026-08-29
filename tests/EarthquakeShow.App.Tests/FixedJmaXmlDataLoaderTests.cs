@@ -1,4 +1,6 @@
+using System.Collections.Immutable;
 using EarthquakeShow.App.Services;
+using EarthquakeShow.Core.Models;
 using EarthquakeShow.Core.Services;
 using Xunit;
 
@@ -6,6 +8,17 @@ namespace EarthquakeShow.App.Tests;
 
 public sealed class FixedJmaXmlDataLoaderTests
 {
+    [Fact]
+    public void LoadTsunamiReports_LoadsBundledVtseSampleSet()
+    {
+        ImmutableArray<JmaTsunamiReport> reports = FixedJmaXmlDataLoader.LoadTsunamiReports();
+
+        Assert.Equal(["VTSE41", "VTSE51", "VTSE52"], reports.Select(report => report.ReportCode));
+        Assert.All(reports, report => Assert.Equal("sample-jma-tsunami", report.Source.SourceId));
+        Assert.NotEmpty(reports[0].ForecastAreas);
+        Assert.NotEmpty(reports[2].ObservationStations);
+    }
+
     [Fact]
     public void LoadStationCatalog_FixedCsvMissing_LoadsFormalResourceIndependently()
     {

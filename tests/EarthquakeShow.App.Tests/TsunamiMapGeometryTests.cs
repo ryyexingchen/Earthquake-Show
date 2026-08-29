@@ -96,6 +96,24 @@ public sealed class TsunamiMapGeometryTests
     }
 
     [Fact]
+    public void LineSimplification_KeepsEndpointsAndDropsSubpixelPoints()
+    {
+        Assert.False(TsunamiMapView.ShouldKeepLinePoint(
+            new Point(0, 0),
+            new Point(0.2, 0.1),
+            isLastPoint: false,
+            minimumPixelDistance: 0.65));
+        Assert.True(TsunamiMapView.ShouldKeepLinePoint(
+            new Point(0, 0),
+            new Point(0.2, 0.1),
+            isLastPoint: true,
+            minimumPixelDistance: 0.65));
+        Assert.Equal(
+            TsunamiMapView.DenseLineSimplificationPixels,
+            TsunamiMapView.GetLineSimplificationPixels(TsunamiMapView.DenseLinePointThreshold));
+    }
+
+    [Fact]
     public void PackagedTsunamiLodResources_IncreaseGeometryDetail()
     {
         string mapDirectory = Path.Combine(

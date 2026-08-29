@@ -27,6 +27,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
     private readonly SqliteEarthquakeEventRepository _repository;
     private readonly SqliteTsunamiReportRepository _tsunamiRepository;
     private readonly IReadOnlyList<EarthquakeReport> _seedReports;
+    private readonly IReadOnlyList<JmaTsunamiReport> _seedTsunamiReports;
     private readonly JmaStationCoordinateCatalog _stationCatalog;
     private readonly JmaTsunamiStationCatalog _tsunamiStationCatalog;
     private readonly JmaIntensityRegionCatalog? _regionCatalog;
@@ -67,6 +68,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         JmaStationCoordinateCatalog stationCatalog = FixedJmaXmlDataLoader.LoadStationCatalog();
         _stationCatalog = stationCatalog;
         _tsunamiStationCatalog = FixedJmaXmlDataLoader.LoadTsunamiStationCatalog();
+        _seedTsunamiReports = FixedJmaXmlDataLoader.LoadTsunamiReports();
         _seedReports = FixedJmaXmlDataLoader.LoadReports(stationCatalog);
         JmaIntensityRegionCatalog? regionCatalog = LoadRegionCatalog();
         _regionCatalog = regionCatalog;
@@ -248,6 +250,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
             Settings.SetLatestImport(
                 await _repository.GetLatestLocalXmlImportAsync(token));
         await _tsunamiRepository.InitializeAsync(token);
+        await _tsunamiRepository.SaveReportsAsync(_seedTsunamiReports, token);
         await _tsunamiRepository.SaveStationCatalogAsync(_tsunamiStationCatalog, token);
         UpdateTsunamiSourceStatuses();
         await TsunamiPage.LoadAsync(token);
