@@ -379,6 +379,40 @@ public sealed class TsunamiPageViewModelTests
     }
 
     [Fact]
+    public async Task ObservationAndForecastSectionsRemainIndependent()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
+        JmaTsunamiReport report = CreateReport("observation-only", issuedAt) with
+        {
+            ForecastAreas = [],
+            ObservationStations =
+            [
+                new JmaTsunamiObservationStation(
+                    "北海道",
+                    "JP01",
+                    "釧路",
+                    "ST01",
+                    null,
+                    issuedAt.AddMinutes(4),
+                    "到達",
+                    "観測",
+                    issuedAt.AddMinutes(9),
+                    null,
+                    new JmaTsunamiHeight(0.3, null, null, "m", "高さ")),
+            ],
+        };
+        using var viewModel = new TsunamiPageViewModel(
+            new StubTsunamiReportRepository([report]));
+
+        await viewModel.LoadAsync();
+
+        Assert.False(viewModel.HasForecastAreas);
+        Assert.True(viewModel.HasObservationStations);
+        Assert.Contains("仅收到海啸观测", viewModel.ObservationSummaryText);
+        Assert.Single(viewModel.ObservationStations);
+    }
+
+    [Fact]
     public void MapZoom_UsesThreeDetailLevelsAndOneStepIncrement()
     {
         using var viewModel = new TsunamiPageViewModel(new StubTsunamiReportRepository([]));
