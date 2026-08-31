@@ -19,6 +19,19 @@ public partial class TsunamiPageView : UserControl
         }
     }
 
+    private void OnReportSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (TsunamiReportListBox.SelectedItem is not EarthquakeShow.Core.Models.JmaTsunamiReport report ||
+            DataContext is not ViewModels.TsunamiPageViewModel viewModel)
+        {
+            return;
+        }
+
+        viewModel.SelectedReport = report;
+    }
+
     private void OnCopyRawXmlClick(object sender, RoutedEventArgs e)
     {
         if (DataContext is not ViewModels.TsunamiPageViewModel viewModel ||

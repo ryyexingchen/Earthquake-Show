@@ -71,6 +71,29 @@ public sealed class TsunamiPageViewModelTests
     }
 
     [Fact]
+    public async Task Refresh_PreservesSelectedReportIdentity()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
+        JmaTsunamiReport selected = CreateReport("selected", issuedAt);
+        JmaTsunamiReport other = CreateReport("other", issuedAt.AddMinutes(1));
+        var repository = new StubTsunamiReportRepository([selected, other])
+        {
+            ReportsAfterRefresh = [other, selected],
+        };
+        using var viewModel = new TsunamiPageViewModel(repository);
+
+        await viewModel.LoadAsync();
+        Assert.True(viewModel.SelectReport(
+            selected.EventId,
+            selected.Source.SourceId,
+            selected.Source.SourceMessageId));
+
+        await viewModel.RefreshAsync();
+
+        Assert.Equal(selected.Source.SourceMessageId, viewModel.SelectedReport?.Source.SourceMessageId);
+    }
+
+    [Fact]
     public async Task SelectedReport_ProjectsDetailsAndTsunamiLevel()
     {
         DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
