@@ -5,14 +5,16 @@
     <Border Background="#D9EEF3"
             BorderBrush="#8EAAB3"
             BorderThickness="1"
-            CornerRadius="6">
-        <Grid>
-            <Canvas x:Name="MapCanvas"
-                    Background="#D9EEF3"
-                    ClipToBounds="True"
-                    RenderTransformOrigin="0.5,0.5"
-                    SizeChanged="OnMapSizeChanged"
-                    MouseWheel="OnMapMouseWheel">
+            CornerRadius="6"
+            ClipToBounds="True">
+        <Grid x:Name="MapCanvas"
+              Background="#D9EEF3"
+              ClipToBounds="True"
+              SizeChanged="OnMapSizeChanged"
+              MouseWheel="OnMapMouseWheel">
+            <Canvas x:Name="MapContentCanvas"
+                    Background="Transparent"
+                    RenderTransformOrigin="0.5,0.5">
                 <Canvas.RenderTransform>
                     <TransformGroup>
                         <ScaleTransform x:Name="MapZoomTransform" ScaleX="1" ScaleY="1" />

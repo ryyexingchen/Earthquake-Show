@@ -723,10 +723,10 @@
                                                 <ColumnDefinition Width="52" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
-                                            <StackPanel>
+                                            <StackPanel VerticalAlignment="Center">
                                                 <TextBlock FontWeight="SemiBold" Text="{Binding AreaName}" TextWrapping="Wrap" />
                                             </StackPanel>
-                                            <StackPanel Grid.Column="1">
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                 <TextBlock FontWeight="SemiBold" Text="{Binding Name}" TextWrapping="Wrap" />
                                                 <TextBlock Margin="0,2,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding Code}" />
                                                 <TextBlock Margin="0,3,0,0"
@@ -736,12 +736,12 @@
                                                            TextWrapping="Wrap"
                                                            Visibility="{Binding IsCatalogMatched, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                             </StackPanel>
-                                            <TextBlock Grid.Column="2" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding ArrivalText}" TextWrapping="Wrap" />
-                                            <TextBlock Grid.Column="3" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding HighTideText}" TextWrapping="Wrap" />
-                                            <StackPanel Grid.Column="4">
+                                            <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding ArrivalText}" TextWrapping="Wrap" />
+                                            <TextBlock Grid.Column="3" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding HighTideText}" TextWrapping="Wrap" />
+                                            <StackPanel Grid.Column="4" VerticalAlignment="Center">
                                                 <TextBlock FontWeight="SemiBold" FontSize="10" Text="{Binding HeightText}" TextWrapping="Wrap" />
                                             </StackPanel>
-                                            <StackPanel Grid.Column="5">
+                                            <StackPanel Grid.Column="5" VerticalAlignment="Center">
                                                 <Border Style="{StaticResource TsunamiLevelBadgeStyle}" VerticalAlignment="Top">
                                                     <TextBlock Style="{StaticResource TsunamiLevelTextStyle}" Text="{Binding ObservationStatusText}" />
                                                 </Border>

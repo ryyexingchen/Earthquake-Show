@@ -51,7 +51,7 @@ public sealed class TsunamiPageViewModelTests
 
         await viewModel.LoadAsync();
 
-        Assert.Equal("M8超巨大地震", viewModel.EarthquakeMagnitudeText);
+        Assert.Equal("Ｍ８を超える巨大地震", viewModel.EarthquakeMagnitudeText);
     }
 
     [Fact]
@@ -395,6 +395,57 @@ public sealed class TsunamiPageViewModelTests
         Assert.Equal(42.1, viewModel.ObservationStations[0].Latitude);
         Assert.Equal("00410", viewModel.ObservationStations[0].PublicationCode);
         Assert.True(viewModel.ObservationStations[0].IsCatalogMatched);
+    }
+
+    [Fact]
+    public async Task OffshoreStation_UsesOffshoreLabelWhenReportAreaIsMissing()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
+        JmaTsunamiReport report = CreateReport("offshore-area", issuedAt) with
+        {
+            ObservationStations =
+            [
+                new JmaTsunamiObservationStation(
+                    "",
+                    "",
+                    "近海站点",
+                    "10050",
+                    null,
+                    null,
+                    null,
+                    "観測",
+                    null,
+                    null,
+                    new JmaTsunamiHeight(0.4, null, null, "m", "高さ")),
+                new JmaTsunamiObservationStation(
+                    "",
+                    "",
+                    "沿岸站点",
+                    "COASTAL",
+                    null,
+                    null,
+                    null,
+                    "観測",
+                    null,
+                    null,
+                    new JmaTsunamiHeight(0.3, null, null, "m", "高さ")),
+            ],
+        };
+        var repository = new CatalogStubTsunamiReportRepository(
+            [report],
+            JmaTsunamiStationCatalog.Create(
+                "offshore-test",
+                [
+                    new JmaTsunamiStationCatalogEntry("10050", "近海站点", null, 42.1, 144.2, null),
+                    new JmaTsunamiStationCatalogEntry("COASTAL", "沿岸站点", null, 35.0, 139.0, null),
+                ],
+                [new JmaTsunamiPublicationCatalogEntry("00410", "釧路沖１００ｋｍ", null, ["10050"])]));
+        using var viewModel = new TsunamiPageViewModel(repository);
+
+        await viewModel.LoadAsync();
+
+        Assert.Equal("沖合", viewModel.ObservationStations.Single(item => item.Code == "10050").AreaName);
+        Assert.Equal(string.Empty, viewModel.ObservationStations.Single(item => item.Code == "COASTAL").AreaName);
     }
 
     [Fact]

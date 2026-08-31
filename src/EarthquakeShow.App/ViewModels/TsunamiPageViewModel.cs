@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json;
 using EarthquakeShow.Core.Abstractions;
 using EarthquakeShow.Core.Models;
@@ -398,7 +397,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
                 ? $"M {value:0.0}"
                 : string.IsNullOrWhiteSpace(magnitude?.Description)
                     ? "M 未知"
-                    : FormatMagnitudeDescription(magnitude.Description!);
+                    : magnitude.Description!;
         }
     }
 
@@ -814,8 +813,11 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         {
             level = TsunamiLevel.MinorChange;
         }
+        string areaName = publication is not null && string.IsNullOrWhiteSpace(station.AreaName)
+            ? "沖合"
+            : station.AreaName;
         return new(
-            station.AreaName,
+            areaName,
             catalogEntry?.Name ?? station.Name,
             station.Code,
             FormatArrival(station.FirstArrivalTime, station.FirstArrivalCondition),
@@ -915,15 +917,6 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
     private static string FormatOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? "未提供" : value!;
-
-    private static string FormatMagnitudeDescription(string description)
-    {
-        string normalized = description.Normalize(NormalizationForm.FormKC)
-            .Replace("を超える", "超", StringComparison.Ordinal)
-            .Replace(" ", string.Empty, StringComparison.Ordinal)
-            .Replace("　", string.Empty, StringComparison.Ordinal);
-        return normalized;
-    }
 
     private static string GetStatusText(ReportStatus? status) => status switch
     {

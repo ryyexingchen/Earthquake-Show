@@ -268,15 +268,15 @@
                                             <ColumnDefinition Width="78" />
                                             <ColumnDefinition Width="62" />
                                         </Grid.ColumnDefinitions>
-                                        <Border Style="{StaticResource TsunamiLevelBadgeStyle}" HorizontalAlignment="Left">
+                                        <Border Style="{StaticResource TsunamiLevelBadgeStyle}" HorizontalAlignment="Left" VerticalAlignment="Center">
                                             <TextBlock Style="{StaticResource TsunamiLevelTextStyle}" Text="{Binding LevelText}" />
                                         </Border>
-                                        <StackPanel Grid.Column="1" Margin="6,0,4,0">
+                                        <StackPanel Grid.Column="1" Margin="6,0,4,0" VerticalAlignment="Center">
                                             <TextBlock FontWeight="SemiBold" Text="{Binding Name}" TextWrapping="Wrap" />
                                             <TextBlock Margin="0,2,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding Code}" />
                                         </StackPanel>
-                                        <TextBlock Grid.Column="2" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding ArrivalText}" TextWrapping="Wrap" />
-                                        <TextBlock Grid.Column="3" FontSize="10" FontWeight="SemiBold" Text="{Binding HeightText}" TextWrapping="Wrap" />
+                                        <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding ArrivalText}" TextWrapping="Wrap" />
+                                        <TextBlock Grid.Column="3" VerticalAlignment="Center" FontSize="10" FontWeight="SemiBold" Text="{Binding HeightText}" TextWrapping="Wrap" />
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -354,17 +354,18 @@
                                                 <ColumnDefinition Width="52" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock FontWeight="SemiBold" Text="{Binding AreaName}" TextWrapping="Wrap" />
-                                            <StackPanel Grid.Column="1">
+                                            <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding AreaName}" TextWrapping="Wrap" />
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                 <TextBlock FontWeight="SemiBold" Text="{Binding Name}" TextWrapping="Wrap" />
                                                 <TextBlock Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding Code}" />
                                                 <TextBlock Margin="0,2,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding PublicationText}" TextWrapping="Wrap" Visibility="{Binding IsCatalogMatched, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                             </StackPanel>
-                                            <TextBlock Grid.Column="2" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding ArrivalText}" TextWrapping="Wrap" />
-                                            <TextBlock Grid.Column="3" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding HighTideText}" TextWrapping="Wrap" />
+                                            <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding ArrivalText}" TextWrapping="Wrap" />
+                                            <TextBlock Grid.Column="3" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding HighTideText}" TextWrapping="Wrap" />
                                             <Border Grid.Column="4"
                                                     Padding="4,2"
                                                     HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center"
                                                     Style="{StaticResource TsunamiObservationHeightBadgeStyle}">
                                                 <TextBlock Style="{StaticResource TsunamiObservationHeightTextStyle}"
                                                            FontSize="10"
@@ -372,7 +373,7 @@
                                                            Text="{Binding MeasuredHeightDisplayText}"
                                                            TextWrapping="Wrap" />
                                             </Border>
-                                            <StackPanel Grid.Column="5">
+                                            <StackPanel Grid.Column="5" VerticalAlignment="Center">
                                                 <TextBlock FontSize="10" Text="{Binding StatusDisplayText}" TextWrapping="Wrap" />
                                                 <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding InitialText}" TextWrapping="Wrap" />
                                             </StackPanel>

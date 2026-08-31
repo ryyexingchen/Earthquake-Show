@@ -182,7 +182,7 @@ public partial class TsunamiMapView : UserControl
 
     private void RenderMap()
     {
-        MapCanvas.Children.Clear();
+        MapContentCanvas.Children.Clear();
         TsunamiPageViewModel? viewModel = ViewModel;
         UpdateLegend(viewModel);
         if (viewModel is null || !viewModel.HasMapGeometry ||
@@ -271,7 +271,7 @@ public partial class TsunamiMapView : UserControl
                 context.DrawGeometry(null, pen, geometry);
             }
         });
-        MapCanvas.Children.Add(coastHost);
+        MapContentCanvas.Children.Add(coastHost);
 
         foreach (TsunamiObservationStationDisplay station in viewModel.ObservationStations
                      .Where(item => item.HasMeasuredTsunami))
@@ -304,7 +304,7 @@ public partial class TsunamiMapView : UserControl
             marker.MouseLeftButtonUp += (_, _) => viewModel.SelectObservationStation(station.Code);
             Canvas.SetLeft(marker, point.X - marker.Width / 2);
             Canvas.SetTop(marker, point.Y - marker.Height / 2);
-            MapCanvas.Children.Add(marker);
+            MapContentCanvas.Children.Add(marker);
         }
     }
 
