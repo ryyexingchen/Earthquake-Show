@@ -1,11 +1,14 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace EarthquakeShow.App.Views;
 
 public partial class TsunamiPageView : UserControl
 {
+    private bool _reportSelectionRequested;
+
     public TsunamiPageView()
     {
         InitializeComponent();
@@ -23,13 +26,41 @@ public partial class TsunamiPageView : UserControl
         object sender,
         SelectionChangedEventArgs e)
     {
-        if (TsunamiReportListBox.SelectedItem is not EarthquakeShow.Core.Models.JmaTsunamiReport report ||
+        if (!_reportSelectionRequested)
+        {
+            return;
+        }
+
+        _reportSelectionRequested = false;
+        if (TsunamiReportListBox.SelectedItem is not ViewModels.TsunamiEventReportDisplay display ||
             DataContext is not ViewModels.TsunamiPageViewModel viewModel)
         {
             return;
         }
 
-        viewModel.SelectedReport = report;
+        viewModel.SelectedReport = display.Report;
+    }
+
+    private void OnReportPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        ArmReportSelectionRequest();
+    }
+
+    private void OnReportPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key is Key.Up or Key.Down or Key.Left or Key.Right or Key.Home or Key.End or
+            Key.PageUp or Key.PageDown or Key.Enter or Key.Space)
+        {
+            ArmReportSelectionRequest();
+        }
+    }
+
+    private void ArmReportSelectionRequest()
+    {
+        _reportSelectionRequested = true;
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Input,
+            new Action(() => _reportSelectionRequested = false));
     }
 
     private void OnCopyRawXmlClick(object sender, RoutedEventArgs e)

@@ -73,6 +73,20 @@ public sealed record TsunamiTimelineItemDisplay(
     public string Identity => $"{SourceId}\u001f{SourceMessageId}";
 }
 
+public sealed record TsunamiEventReportDisplay(
+    JmaTsunamiReport Report,
+    string ReportCode,
+    string StatusText,
+    string InfoKindText,
+    string IssuedAtText,
+    string EventId,
+    string EarthquakeSourceText,
+    string EarthquakeMagnitudeText,
+    string EarthquakeDepthText)
+{
+    public string Identity => $"{Report.Source.SourceId}\u001f{Report.Source.SourceMessageId}";
+}
+
 public sealed record TsunamiReportDifferenceDisplay(
     string FieldText,
     string PreviousText,
@@ -146,7 +160,10 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged();
             OnPropertyChanged(nameof(Reports));
             OnPropertyChanged(nameof(EventReports));
+            OnPropertyChanged(nameof(EventReportDisplays));
             OnPropertyChanged(nameof(SelectedEventReport));
+            OnPropertyChanged(nameof(SelectedEventReportDisplay));
+            OnPropertyChanged(nameof(SelectedEventReportIdentity));
             OnPropertyChanged(nameof(HasReports));
             OnPropertyChanged(nameof(HasSelectedReport));
             OnPropertyChanged(nameof(SelectedReport));
@@ -215,11 +232,22 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         .ThenBy(report => report.EventId, StringComparer.Ordinal)
         .ToImmutableArray();
 
+    public ImmutableArray<TsunamiEventReportDisplay> EventReportDisplays => EventReports
+        .Select(CreateEventReportDisplay)
+        .ToImmutableArray();
+
     /// <summary>返回当前事件在聚合列表中的代表报文，仅用于列表高亮。</summary>
     public JmaTsunamiReport? SelectedEventReport => State.SelectedReport is null
         ? null
         : EventReports.FirstOrDefault(report =>
             string.Equals(report.EventId, State.SelectedReport.EventId, StringComparison.Ordinal));
+
+    public TsunamiEventReportDisplay? SelectedEventReportDisplay => SelectedEventReport is null
+        ? null
+        : EventReportDisplays.FirstOrDefault(item =>
+            string.Equals(item.Report.EventId, SelectedEventReport.EventId, StringComparison.Ordinal));
+
+    public string? SelectedEventReportIdentity => SelectedEventReportDisplay?.Identity;
 
     public ImmutableArray<TsunamiMapLine> MapLines => CurrentMapGeometry.Lines;
 
@@ -372,38 +400,15 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
     public string EarthquakeSourceText
     {
-        get
-        {
-            Hypocenter? hypocenter = State.SelectedReport?.Hypocenter;
-            if (hypocenter is null)
-            {
-                return "未提供";
-            }
-
-            return IsUnknownText(hypocenter.Name)
-                ? string.IsNullOrWhiteSpace(hypocenter.Description)
-                    ? hypocenter.Name ?? "未提供"
-                    : hypocenter.Description!
-                : hypocenter.Name ?? "未提供";
-        }
+        get => FormatEarthquakeSource(State.SelectedReport?.Hypocenter);
     }
 
     public string EarthquakeMagnitudeText
     {
-        get
-        {
-            Magnitude? magnitude = State.SelectedReport?.Magnitude;
-            return magnitude?.Value is double value
-                ? $"M {value:0.0}"
-                : string.IsNullOrWhiteSpace(magnitude?.Description)
-                    ? "M 未知"
-                    : magnitude.Description!;
-        }
+        get => FormatEarthquakeMagnitude(State.SelectedReport?.Magnitude);
     }
 
-    public string EarthquakeDepthText => State.SelectedReport?.Hypocenter?.DepthKm is int depth
-        ? $"{depth} km"
-        : "未提供";
+    public string EarthquakeDepthText => FormatEarthquakeDepth(State.SelectedReport?.Hypocenter);
 
     public string EarthquakeOriginTimeText => FormatTimestamp(State.SelectedReport?.OriginTime);
 
@@ -625,6 +630,42 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             ? "未提供"
             : TimeZoneInfo.ConvertTime(timestamp.Value, JapanTimeZone)
                 .ToString("yyyy-MM-dd HH:mm:ss 'JST'", CultureInfo.InvariantCulture);
+
+    private static TsunamiEventReportDisplay CreateEventReportDisplay(JmaTsunamiReport report) => new(
+        report,
+        report.ReportCode,
+        GetStatusText(report.Status),
+        string.IsNullOrWhiteSpace(report.InfoKind) ? "海啸报文" : report.InfoKind!,
+        FormatTimestamp(report.IssuedAt),
+        report.EventId,
+        FormatEarthquakeSource(report.Hypocenter),
+        FormatEarthquakeMagnitude(report.Magnitude),
+        FormatEarthquakeDepth(report.Hypocenter));
+
+    private static string FormatEarthquakeSource(Hypocenter? hypocenter)
+    {
+        if (hypocenter is null)
+        {
+            return "未提供";
+        }
+
+        return IsUnknownText(hypocenter.Name)
+            ? string.IsNullOrWhiteSpace(hypocenter.Description)
+                ? hypocenter.Name ?? "未提供"
+                : hypocenter.Description!
+            : hypocenter.Name ?? "未提供";
+    }
+
+    private static string FormatEarthquakeMagnitude(Magnitude? magnitude) =>
+        magnitude?.Value is double value
+            ? $"M {value:0.0}"
+            : string.IsNullOrWhiteSpace(magnitude?.Description)
+                ? "M 未知"
+                : magnitude.Description!;
+
+    private static string FormatEarthquakeDepth(Hypocenter? hypocenter) => hypocenter?.DepthKm is int depth
+        ? $"{depth} km"
+        : "未提供";
 
     private static string FormatForecastHeight(TsunamiLevel level, JmaTsunamiHeight? height) =>
         level == TsunamiLevel.Advisory && height?.Meters is null &&

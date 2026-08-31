@@ -193,10 +193,13 @@
                 <Grid>
                     <ListBox AutomationProperties.Name="海啸报文列表"
                              x:Name="TsunamiReportListBox"
-                             ItemsSource="{Binding EventReports}"
+                             ItemsSource="{Binding EventReportDisplays}"
                              ItemContainerStyle="{StaticResource TsunamiListBoxItemStyle}"
+                             PreviewMouseLeftButtonDown="OnReportPreviewMouseLeftButtonDown"
+                             PreviewKeyDown="OnReportPreviewKeyDown"
                              SelectionChanged="OnReportSelectionChanged"
-                             SelectedItem="{Binding SelectedEventReport, Mode=OneWay}"
+                             SelectedValue="{Binding SelectedEventReportIdentity, Mode=OneWay}"
+                             SelectedValuePath="Identity"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              ScrollViewer.VerticalScrollBarVisibility="Auto"
                              Visibility="{Binding HasReports, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -214,16 +217,29 @@
                                         <TextBlock Grid.Column="1"
                                                    Foreground="{StaticResource MutedTextBrush}"
                                                    FontSize="11"
-                                                   Text="{Binding Status}" />
+                                                   Text="{Binding StatusText}" />
                                     </Grid>
                                     <TextBlock Margin="0,5,0,0"
                                                Foreground="{StaticResource TextBrush}"
                                                FontSize="12"
-                                               Text="{Binding InfoKind, TargetNullValue=海啸报文}" />
+                                               Text="{Binding InfoKindText}" />
+                                    <TextBlock Margin="0,5,0,0"
+                                               Foreground="{StaticResource TextBrush}"
+                                               FontSize="11"
+                                               Text="{Binding EarthquakeSourceText}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Margin="0,3,0,0"
+                                               Foreground="{StaticResource MutedTextBrush}"
+                                               FontSize="10"
+                                               Text="{Binding EarthquakeMagnitudeText}" />
+                                    <TextBlock Margin="0,2,0,0"
+                                               Foreground="{StaticResource MutedTextBrush}"
+                                               FontSize="10"
+                                               Text="{Binding EarthquakeDepthText}" />
                                     <TextBlock Margin="0,4,0,0"
                                                Foreground="{StaticResource MutedTextBrush}"
                                                FontSize="11"
-                                               Text="{Binding IssuedAt, StringFormat={}{0:yyyy-MM-dd HH:mm:ss zzz}}" />
+                                               Text="{Binding IssuedAtText}" />
                                     <TextBlock Margin="0,3,0,0"
                                                Foreground="{StaticResource MutedTextBrush}"
                                                FontSize="10"

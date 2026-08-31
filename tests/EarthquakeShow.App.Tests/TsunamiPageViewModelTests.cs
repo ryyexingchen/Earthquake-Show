@@ -85,6 +85,28 @@ public sealed class TsunamiPageViewModelTests
     }
 
     [Fact]
+    public async Task EventReportDisplays_IncludeFormattedHypocenterDetails()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 10, 0, 0, TimeSpan.FromHours(9));
+        JmaTsunamiReport report = CreateReport("event-display", issuedAt) with
+        {
+            Hypocenter = new Hypocenter("不明", null, null, 42, "遠地地震のため震源不明"),
+            Magnitude = new Magnitude(null, "Mj", "不明", "Ｍ８を超える巨大地震"),
+        };
+        using var viewModel = new TsunamiPageViewModel(
+            new StubTsunamiReportRepository([report]));
+
+        await viewModel.LoadAsync();
+
+        TsunamiEventReportDisplay display = Assert.Single(viewModel.EventReportDisplays);
+        Assert.Equal(display.Identity, viewModel.SelectedEventReportIdentity);
+        Assert.Equal("遠地地震のため震源不明", display.EarthquakeSourceText);
+        Assert.Equal("Ｍ８を超える巨大地震", display.EarthquakeMagnitudeText);
+        Assert.Equal("42 km", display.EarthquakeDepthText);
+        Assert.Equal("2026-08-24 10:00:00 JST", display.IssuedAtText);
+    }
+
+    [Fact]
     public async Task SelectedReport_InheritsUnchangedAreasAndUpdatesRepeatedCodes()
     {
         DateTimeOffset issuedAt = new(2026, 8, 24, 10, 0, 0, TimeSpan.FromHours(9));
@@ -225,6 +247,29 @@ public sealed class TsunamiPageViewModelTests
         await viewModel.RefreshAsync();
 
         Assert.Equal(selected.Source.SourceMessageId, viewModel.SelectedReport?.Source.SourceMessageId);
+    }
+
+    [Fact]
+    public async Task Refresh_FallsBackToLatestOnlyWhenSelectedReportIsMissing()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
+        JmaTsunamiReport selected = CreateReport("selected-missing", issuedAt);
+        JmaTsunamiReport latest = CreateReport("latest", issuedAt.AddMinutes(1));
+        var repository = new StubTsunamiReportRepository([selected, latest])
+        {
+            ReportsAfterRefresh = [latest],
+        };
+        using var viewModel = new TsunamiPageViewModel(repository);
+
+        await viewModel.LoadAsync();
+        Assert.True(viewModel.SelectReport(
+            selected.EventId,
+            selected.Source.SourceId,
+            selected.Source.SourceMessageId));
+
+        await viewModel.RefreshAsync();
+
+        Assert.Equal(latest.Source.SourceMessageId, viewModel.SelectedReport?.Source.SourceMessageId);
     }
 
     [Fact]

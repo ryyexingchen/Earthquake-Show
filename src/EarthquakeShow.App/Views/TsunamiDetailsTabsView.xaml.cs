@@ -1,9 +1,13 @@
 using System.Windows;
+using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace EarthquakeShow.App.Views;
 
 public partial class TsunamiDetailsTabsView : System.Windows.Controls.UserControl
 {
+    private bool _timelineSelectionRequested;
+
     public TsunamiDetailsTabsView()
     {
         InitializeComponent();
@@ -38,6 +42,12 @@ public partial class TsunamiDetailsTabsView : System.Windows.Controls.UserContro
 
     private void OnTimelineSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
+        if (!_timelineSelectionRequested)
+        {
+            return;
+        }
+
+        _timelineSelectionRequested = false;
         if (TsunamiTimelineListBox.SelectedItem is not ViewModels.TsunamiTimelineItemDisplay item ||
             DataContext is not ViewModels.TsunamiPageViewModel viewModel)
         {
@@ -45,5 +55,27 @@ public partial class TsunamiDetailsTabsView : System.Windows.Controls.UserContro
         }
 
         viewModel.SelectReport(item.EventId, item.SourceId, item.SourceMessageId);
+    }
+
+    private void OnTimelinePreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        ArmTimelineSelectionRequest();
+    }
+
+    private void OnTimelinePreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key is Key.Up or Key.Down or Key.Left or Key.Right or Key.Home or Key.End or
+            Key.PageUp or Key.PageDown or Key.Enter or Key.Space)
+        {
+            ArmTimelineSelectionRequest();
+        }
+    }
+
+    private void ArmTimelineSelectionRequest()
+    {
+        _timelineSelectionRequested = true;
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Input,
+            new Action(() => _timelineSelectionRequested = false));
     }
 }

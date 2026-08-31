@@ -395,6 +395,8 @@
                         <ListBox Margin="0,8,0,0"
                                  x:Name="TsunamiTimelineListBox"
                                  ItemsSource="{Binding TimelineReports}"
+                                 PreviewMouseLeftButtonDown="OnTimelinePreviewMouseLeftButtonDown"
+                                 PreviewKeyDown="OnTimelinePreviewKeyDown"
                                  SelectionChanged="OnTimelineSelectionChanged"
                                  SelectedValue="{Binding SelectedTimelineIdentity, Mode=OneWay}"
                                  SelectedValuePath="Identity"
