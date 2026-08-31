@@ -34,6 +34,14 @@ public sealed record TsunamiObservationStationDisplay(
     bool IsCatalogMatched)
 {
     public bool HasMeasuredTsunami => ObservationStatusText is "观测到海啸" or "微弱";
+
+    public string StatusDisplayText => ObservationStatusText is "观测到海啸" or "欠测" or "观测中" or "微弱"
+        ? string.Empty
+        : ObservationStatusText;
+
+    public string MeasuredHeightDisplayText => ObservationStatusText is "欠测" or "观测中" or "微弱"
+        ? ObservationStatusText
+        : HeightText;
 }
 
 public sealed record TsunamiEstimationAreaDisplay(
@@ -87,6 +95,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
     private TsunamiPageState _state = new();
     private string? _selectedObservationStationCode;
     private string _rawXmlCopyStatus = string.Empty;
+    private ImmutableArray<JmaTsunamiReport> _allReports = [];
     private bool _isDisposed;
     private double _mapZoomLevel = 1;
     private CancellationTokenSource? _mapDetailLoadCancellation;
@@ -127,6 +136,8 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             }
             OnPropertyChanged();
             OnPropertyChanged(nameof(Reports));
+            OnPropertyChanged(nameof(EventReports));
+            OnPropertyChanged(nameof(SelectedEventReport));
             OnPropertyChanged(nameof(HasReports));
             OnPropertyChanged(nameof(HasSelectedReport));
             OnPropertyChanged(nameof(SelectedReport));
@@ -177,6 +188,24 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
     public ImmutableArray<JmaTsunamiReport> Reports => State.Reports;
 
+    public ImmutableArray<JmaTsunamiReport> EventReports => State.Reports
+        .GroupBy(report => report.EventId, StringComparer.Ordinal)
+        .Select(group => group
+            .OrderByDescending(report => report.IssuedAt)
+            .ThenByDescending(report => report.ReceivedAt)
+            .ThenByDescending(report => report.Source.SourceMessageId, StringComparer.Ordinal)
+            .First())
+        .OrderByDescending(report => report.IssuedAt)
+        .ThenByDescending(report => report.ReceivedAt)
+        .ThenBy(report => report.EventId, StringComparer.Ordinal)
+        .ToImmutableArray();
+
+    /// <summary>返回当前事件在聚合列表中的代表报文，仅用于列表高亮。</summary>
+    public JmaTsunamiReport? SelectedEventReport => State.SelectedReport is null
+        ? null
+        : EventReports.FirstOrDefault(report =>
+            string.Equals(report.EventId, State.SelectedReport.EventId, StringComparison.Ordinal));
+
     public ImmutableArray<TsunamiMapLine> MapLines => CurrentMapGeometry.Lines;
 
     public MapGeometryBounds MapBounds => _overviewMapGeometry.Bounds;
@@ -216,7 +245,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         $"{GetMapDetailText(MapDetailLevel)} · {MapZoomLevel:0.0}×" +
         (_isLoadingMapDetail ? " · 加载中" : string.Empty);
 
-    public bool HasReports => !State.Reports.IsDefaultOrEmpty;
+    public bool HasReports => !EventReports.IsDefaultOrEmpty;
 
     public bool HasSelectedReport => State.SelectedReport is not null;
 
@@ -238,7 +267,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public string ResultCountText => $"{State.Reports.Length} 条";
+    public string ResultCountText => $"{EventReports.Length} 个事件";
 
     public bool IsLoading =>
         State.LoadState == TsunamiPageLoadState.Loading && State.Reports.IsDefaultOrEmpty;
@@ -738,6 +767,11 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             return "微弱";
         }
 
+        if (text.Contains("観測中", StringComparison.Ordinal) || text.Contains("观测中", StringComparison.Ordinal))
+        {
+            return "观测中";
+        }
+
         if (station.MaximumHeight?.Meters is double meters && double.IsFinite(meters))
         {
             return meters > 0 ? "观测到海啸" : "未观测到海啸";
@@ -989,7 +1023,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(eventId);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceId);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceMessageId);
-        JmaTsunamiReport? report = State.Reports.FirstOrDefault(item =>
+        JmaTsunamiReport? report = _allReports.FirstOrDefault(item =>
             string.Equals(item.EventId, eventId, StringComparison.Ordinal) &&
             string.Equals(item.Source.SourceId, sourceId, StringComparison.Ordinal) &&
             string.Equals(item.Source.SourceMessageId, sourceMessageId, StringComparison.Ordinal));
@@ -1051,6 +1085,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             .ThenBy(report => report.Source.SourceId, StringComparer.Ordinal)
             .ThenBy(report => report.Source.SourceMessageId, StringComparer.Ordinal)
             .ToImmutableArray();
+        _allReports = ordered;
         JmaTsunamiReport? selected = FindSelectedReport(ordered) ?? ordered.FirstOrDefault();
         ImmutableArray<SourceStatus> statuses = _repository.SourceStatuses;
         State = State with

@@ -28,6 +28,18 @@
                     <Setter Property="Background" Value="#7B3FA1" />
                     <Setter Property="BorderBrush" Value="#55266F" />
                 </DataTrigger>
+                <DataTrigger Binding="{Binding ObservationStatusText}" Value="欠测">
+                    <Setter Property="Background" Value="#202020" />
+                    <Setter Property="BorderBrush" Value="#000000" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding ObservationStatusText}" Value="观测中">
+                    <Setter Property="Background" Value="#202020" />
+                    <Setter Property="BorderBrush" Value="#000000" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding ObservationStatusText}" Value="微弱">
+                    <Setter Property="Background" Value="#B9DCF2" />
+                    <Setter Property="BorderBrush" Value="#6AA9CB" />
+                </DataTrigger>
             </Style.Triggers>
         </Style>
         <Style x:Key="TsunamiLevelTextStyle" TargetType="TextBlock">
@@ -39,6 +51,12 @@
                     <Setter Property="Foreground" Value="White" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Level}" Value="MajorWarning">
+                    <Setter Property="Foreground" Value="White" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding ObservationStatusText}" Value="欠测">
+                    <Setter Property="Foreground" Value="White" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding ObservationStatusText}" Value="观测中">
                     <Setter Property="Foreground" Value="White" />
                 </DataTrigger>
             </Style.Triggers>
@@ -254,8 +272,8 @@
                             </StackPanel>
                             <StackPanel Grid.Column="1" Margin="14,0,0,0">
                                 <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="状态 / 高度" />
-                                <TextBlock Margin="0,4,0,0" FontSize="13" FontWeight="SemiBold" Text="{Binding SelectedObservationStation.ObservationStatusText}" TextWrapping="Wrap" />
-                                <TextBlock Margin="0,3,0,0" FontSize="12" Text="{Binding SelectedObservationStation.HeightText}" />
+                                <TextBlock Margin="0,4,0,0" FontSize="13" FontWeight="SemiBold" Text="{Binding SelectedObservationStation.StatusDisplayText}" TextWrapping="Wrap" />
+                                <TextBlock Margin="0,3,0,0" FontSize="12" Text="{Binding SelectedObservationStation.MeasuredHeightDisplayText}" />
                                 <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding SelectedObservationStation.ArrivalText}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Grid>
@@ -314,11 +332,11 @@
                                                 <TextBlock Style="{StaticResource TsunamiLevelTextStyle}"
                                                            FontSize="10"
                                                            FontWeight="SemiBold"
-                                                           Text="{Binding HeightText}"
+                                                           Text="{Binding MeasuredHeightDisplayText}"
                                                            TextWrapping="Wrap" />
                                             </Border>
                                             <StackPanel Grid.Column="4">
-                                                <TextBlock FontSize="10" Text="{Binding ObservationStatusText}" TextWrapping="Wrap" />
+                                                <TextBlock FontSize="10" Text="{Binding StatusDisplayText}" TextWrapping="Wrap" />
                                                 <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding InitialText}" TextWrapping="Wrap" />
                                             </StackPanel>
                                         </Grid>

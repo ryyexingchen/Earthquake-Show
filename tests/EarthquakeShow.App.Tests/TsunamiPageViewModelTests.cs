@@ -39,6 +39,36 @@ public sealed class TsunamiPageViewModelTests
     }
 
     [Fact]
+    public async Task EventReports_GroupsSameEventByLatestReportAndKeepsFullTimeline()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 10, 0, 0, TimeSpan.FromHours(9));
+        JmaTsunamiReport first = CreateReport("event-first", issuedAt);
+        JmaTsunamiReport correction = CreateReport("event-correction", issuedAt.AddMinutes(5)) with
+        {
+            Status = ReportStatus.Correction,
+        };
+        JmaTsunamiReport otherEvent = CreateReport("other-event", issuedAt.AddMinutes(1)) with
+        {
+            EventId = "event-2",
+        };
+        using var viewModel = new TsunamiPageViewModel(
+            new StubTsunamiReportRepository([first, correction, otherEvent]));
+
+        await viewModel.LoadAsync();
+
+        Assert.Equal(2, viewModel.EventReports.Length);
+        Assert.Equal("event-correction", viewModel.EventReports[0].Source.SourceMessageId);
+        Assert.Equal("event-correction", viewModel.SelectedReport?.Source.SourceMessageId);
+        Assert.True(viewModel.SelectReport(
+            first.EventId,
+            first.Source.SourceId,
+            first.Source.SourceMessageId));
+        Assert.Equal("event-first", viewModel.SelectedReport?.Source.SourceMessageId);
+        Assert.Equal("event-correction", viewModel.SelectedEventReport?.Source.SourceMessageId);
+        Assert.Equal(2, viewModel.TimelineReports.Length);
+    }
+
+    [Fact]
     public async Task LoadFailure_SetsErrorState()
     {
         var repository = new StubTsunamiReportRepository([], new InvalidDataException("测试数据损坏"));
@@ -376,6 +406,34 @@ public sealed class TsunamiPageViewModelTests
         Assert.Single(viewModel.ObservationStations);
         Assert.Equal("WEAK", viewModel.ObservationStations[0].Code);
         Assert.True(viewModel.ObservationStations[0].HasMeasuredTsunami);
+        Assert.Equal(string.Empty, viewModel.ObservationStations[0].StatusDisplayText);
+        Assert.Equal("微弱", viewModel.ObservationStations[0].MeasuredHeightDisplayText);
+    }
+
+    [Fact]
+    public async Task ObservationStation_StatusesMoveToMeasuredHeightDisplay()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
+        JmaTsunamiReport report = CreateReport("observation-status-display", issuedAt) with
+        {
+            ObservationStations =
+            [
+                new JmaTsunamiObservationStation("区域", "欠测", "欠测站", "MISSING", null, null, null, "欠測", null, null, new JmaTsunamiHeight(null, "欠測", null, null, null)),
+                new JmaTsunamiObservationStation("区域", "观测中", "观测中站", "PENDING", null, null, null, "観測中", null, null, new JmaTsunamiHeight(null, "観測中", null, null, null)),
+                new JmaTsunamiObservationStation("区域", "实测", "实测站", "MEASURED", null, null, null, "観測", null, null, new JmaTsunamiHeight(1.8, null, null, "m", "高さ")),
+            ],
+        };
+        using var viewModel = new TsunamiPageViewModel(
+            new StubTsunamiReportRepository([report]));
+
+        await viewModel.LoadAsync();
+
+        Assert.Equal(
+            ["欠测", "观测中", "1.8 m"],
+            viewModel.ObservationStations.Select(item => item.MeasuredHeightDisplayText));
+        Assert.Equal(
+            [string.Empty, string.Empty, string.Empty],
+            viewModel.ObservationStations.Select(item => item.StatusDisplayText));
     }
 
     [Fact]

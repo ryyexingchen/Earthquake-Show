@@ -193,10 +193,10 @@
                 <Grid>
                     <ListBox AutomationProperties.Name="海啸报文列表"
                              x:Name="TsunamiReportListBox"
-                             ItemsSource="{Binding Reports}"
+                             ItemsSource="{Binding EventReports}"
                              ItemContainerStyle="{StaticResource TsunamiListBoxItemStyle}"
                              SelectionChanged="OnReportSelectionChanged"
-                             SelectedItem="{Binding SelectedReport, Mode=OneWay}"
+                             SelectedItem="{Binding SelectedEventReport, Mode=OneWay}"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              ScrollViewer.VerticalScrollBarVisibility="Auto"
                              Visibility="{Binding HasReports, Converter={StaticResource BooleanToVisibilityConverter}}">
