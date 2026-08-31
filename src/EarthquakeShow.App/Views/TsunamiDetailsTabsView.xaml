@@ -159,48 +159,6 @@
                     </Border>
 
                     <StackPanel Margin="0,16,0,0"
-                                Visibility="{Binding HasForecastAreas, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock Style="{StaticResource PaneTitleTextStyle}" FontSize="15" Text="海啸警报 / 预报" />
-                        <Grid Margin="0,8,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="68" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="78" />
-                                <ColumnDefinition Width="62" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Style="{StaticResource TsunamiTableHeaderStyle}" Text="等级" />
-                            <TextBlock Grid.Column="1" Style="{StaticResource TsunamiTableHeaderStyle}" Text="预报区" />
-                            <TextBlock Grid.Column="2" Style="{StaticResource TsunamiTableHeaderStyle}" Text="预计首波" />
-                            <TextBlock Grid.Column="3" Style="{StaticResource TsunamiTableHeaderStyle}" Text="最大高度" />
-                        </Grid>
-                        <ItemsControl Margin="0,4,0,0" ItemsSource="{Binding ForecastAreas}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Padding="0,6" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="68" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="78" />
-                                                <ColumnDefinition Width="62" />
-                                            </Grid.ColumnDefinitions>
-                                            <Border Style="{StaticResource TsunamiLevelBadgeStyle}" HorizontalAlignment="Left">
-                                                <TextBlock Style="{StaticResource TsunamiLevelTextStyle}" Text="{Binding LevelText}" />
-                                            </Border>
-                                            <StackPanel Grid.Column="1" Margin="6,0,4,0">
-                                                <TextBlock FontWeight="SemiBold" Text="{Binding Name}" TextWrapping="Wrap" />
-                                                <TextBlock Margin="0,2,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding Code}" />
-                                            </StackPanel>
-                                            <TextBlock Grid.Column="2" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding ArrivalText}" TextWrapping="Wrap" />
-                                            <TextBlock Grid.Column="3" FontSize="10" FontWeight="SemiBold" Text="{Binding HeightText}" TextWrapping="Wrap" />
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-
-                    <StackPanel Margin="0,16,0,0"
                                 Visibility="{Binding HasEstimationAreas, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <TextBlock Style="{StaticResource PaneTitleTextStyle}" FontSize="15" Text="近海推定" />
                         <ItemsControl Margin="0,6,0,0" ItemsSource="{Binding EstimationAreas}">
@@ -224,6 +182,52 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+
+        <TabItem Header="警报 / 预报">
+            <ScrollViewer Padding="18,16" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <StackPanel Visibility="{Binding HasForecastAreas, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock Style="{StaticResource PaneTitleTextStyle}" FontSize="15" Text="海啸警报 / 预报" />
+                    <TextBlock Margin="0,4,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="11" Text="JMA 发布的分区等级和预计值" TextWrapping="Wrap" />
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="68" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="78" />
+                            <ColumnDefinition Width="62" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource TsunamiTableHeaderStyle}" Text="等级" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource TsunamiTableHeaderStyle}" Text="预报区" />
+                        <TextBlock Grid.Column="2" Style="{StaticResource TsunamiTableHeaderStyle}" Text="预计首波" />
+                        <TextBlock Grid.Column="3" Style="{StaticResource TsunamiTableHeaderStyle}" Text="最大高度" />
+                    </Grid>
+                    <ItemsControl Margin="0,4,0,0" ItemsSource="{Binding ForecastAreas}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="0,6" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="68" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="78" />
+                                            <ColumnDefinition Width="62" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource TsunamiLevelBadgeStyle}" HorizontalAlignment="Left">
+                                            <TextBlock Style="{StaticResource TsunamiLevelTextStyle}" Text="{Binding LevelText}" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Margin="6,0,4,0">
+                                            <TextBlock FontWeight="SemiBold" Text="{Binding Name}" TextWrapping="Wrap" />
+                                            <TextBlock Margin="0,2,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding Code}" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding ArrivalText}" TextWrapping="Wrap" />
+                                        <TextBlock Grid.Column="3" FontSize="10" FontWeight="SemiBold" Text="{Binding HeightText}" TextWrapping="Wrap" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
             </ScrollViewer>
         </TabItem>
@@ -303,11 +307,18 @@
                                                 <TextBlock Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding ArrivalText}" TextWrapping="Wrap" />
                                                 <TextBlock Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding HighTideText, StringFormat=高潮 {0}}" TextWrapping="Wrap" />
                                             </StackPanel>
-                                            <TextBlock Grid.Column="3" FontSize="10" FontWeight="SemiBold" Text="{Binding HeightText}" TextWrapping="Wrap" />
+                                            <Border Grid.Column="3"
+                                                    Padding="4,2"
+                                                    HorizontalAlignment="Left"
+                                                    Style="{StaticResource TsunamiLevelBadgeStyle}">
+                                                <TextBlock Style="{StaticResource TsunamiLevelTextStyle}"
+                                                           FontSize="10"
+                                                           FontWeight="SemiBold"
+                                                           Text="{Binding HeightText}"
+                                                           TextWrapping="Wrap" />
+                                            </Border>
                                             <StackPanel Grid.Column="4">
-                                                <Border Style="{StaticResource TsunamiLevelBadgeStyle}" HorizontalAlignment="Left">
-                                                    <TextBlock Style="{StaticResource TsunamiLevelTextStyle}" Text="{Binding ObservationStatusText}" TextWrapping="Wrap" />
-                                                </Border>
+                                                <TextBlock FontSize="10" Text="{Binding ObservationStatusText}" TextWrapping="Wrap" />
                                                 <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding InitialText}" TextWrapping="Wrap" />
                                             </StackPanel>
                                         </Grid>

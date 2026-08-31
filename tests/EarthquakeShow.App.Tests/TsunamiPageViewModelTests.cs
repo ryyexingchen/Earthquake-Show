@@ -413,6 +413,44 @@ public sealed class TsunamiPageViewModelTests
     }
 
     [Fact]
+    public async Task ObservationStation_UsesMeasuredHeightLevelForDisplayColor()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
+        JmaTsunamiReport report = CreateReport("observation-levels", issuedAt) with
+        {
+            ObservationStations =
+            [
+                CreateObservationStation("MINOR", 0.1),
+                CreateObservationStation("ADVISORY", 0.5),
+                CreateObservationStation("WARNING", 1.8),
+                CreateObservationStation("MAJOR", 3.1),
+            ],
+        };
+        using var viewModel = new TsunamiPageViewModel(
+            new StubTsunamiReportRepository([report]));
+
+        await viewModel.LoadAsync();
+
+        Assert.Equal(
+            [TsunamiLevel.MinorChange, TsunamiLevel.Advisory, TsunamiLevel.Warning, TsunamiLevel.MajorWarning],
+            viewModel.ObservationStations.Select(item => item.Level));
+
+        static JmaTsunamiObservationStation CreateObservationStation(string code, double meters) =>
+            new(
+                "区域",
+                code,
+                code,
+                code,
+                null,
+                null,
+                null,
+                "観測",
+                null,
+                null,
+                new JmaTsunamiHeight(meters, null, null, "m", "高さ"));
+    }
+
+    [Fact]
     public void MapZoom_UsesThreeDetailLevelsAndOneStepIncrement()
     {
         using var viewModel = new TsunamiPageViewModel(new StubTsunamiReportRepository([]));

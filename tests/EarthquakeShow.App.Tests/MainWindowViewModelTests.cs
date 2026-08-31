@@ -261,7 +261,7 @@ public sealed class MainWindowViewModelTests
                 TabControl tsunamiDetailsTabs = Assert.IsType<TabControl>(
                     tsunamiDetailsTabsView.FindName("TsunamiDetailsTabs"));
                 Assert.Equal(
-                    ["摘要", "观测点", "时间线", "原始数据"],
+                    ["摘要", "警报 / 预报", "观测点", "时间线", "原始数据"],
                     tsunamiDetailsTabs.Items.OfType<TabItem>().Select(item => item.Header));
                 var window = new MainWindow(cachePath, enableNetwork: false);
                 var detailsView = new EarthquakeDetailsView
