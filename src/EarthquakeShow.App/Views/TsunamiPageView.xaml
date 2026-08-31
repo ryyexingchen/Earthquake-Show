@@ -276,10 +276,14 @@
                                       Visibility="{Binding HasMapGeometry, Converter={StaticResource BooleanToVisibilityConverter}}" />
             </Border>
 
+            <views:TsunamiDetailsTabsView Grid.Column="2"
+                                          DataContext="{Binding}" />
+
             <ScrollViewer Grid.Column="2"
                           Padding="24,20"
                           HorizontalScrollBarVisibility="Disabled"
-                          VerticalScrollBarVisibility="Auto">
+                          VerticalScrollBarVisibility="Auto"
+                          Visibility="Collapsed">
                 <StackPanel>
                     <StackPanel MaxWidth="1120"
                                 HorizontalAlignment="Stretch"

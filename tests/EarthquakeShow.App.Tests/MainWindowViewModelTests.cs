@@ -254,6 +254,15 @@ public sealed class MainWindowViewModelTests
             {
                 var app = new App();
                 app.InitializeComponent();
+                var tsunamiDetailsTabsView = new TsunamiDetailsTabsView();
+                tsunamiDetailsTabsView.Measure(new Size(420, 720));
+                tsunamiDetailsTabsView.Arrange(new Rect(0, 0, 420, 720));
+                tsunamiDetailsTabsView.UpdateLayout();
+                TabControl tsunamiDetailsTabs = Assert.IsType<TabControl>(
+                    tsunamiDetailsTabsView.FindName("TsunamiDetailsTabs"));
+                Assert.Equal(
+                    ["摘要", "观测点", "时间线", "原始数据"],
+                    tsunamiDetailsTabs.Items.OfType<TabItem>().Select(item => item.Header));
                 var window = new MainWindow(cachePath, enableNetwork: false);
                 var detailsView = new EarthquakeDetailsView
                 {
