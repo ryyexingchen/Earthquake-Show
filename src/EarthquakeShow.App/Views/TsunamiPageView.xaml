@@ -690,15 +690,17 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="58" />
                                         <ColumnDefinition Width="94" />
-                                        <ColumnDefinition Width="70" />
+                                        <ColumnDefinition Width="62" />
+                                        <ColumnDefinition Width="62" />
                                         <ColumnDefinition Width="52" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Style="{StaticResource TsunamiTableHeaderStyle}" Text="区域" />
                                     <TextBlock Grid.Column="1" Style="{StaticResource TsunamiTableHeaderStyle}" Text="观测点" />
-                                    <TextBlock Grid.Column="2" Style="{StaticResource TsunamiTableHeaderStyle}" Text="首波 / 高潮" />
-                                    <TextBlock Grid.Column="3" Style="{StaticResource TsunamiTableHeaderStyle}" Text="实测高度" />
-                                    <TextBlock Grid.Column="4" Style="{StaticResource TsunamiTableHeaderStyle}" Text="状态" />
+                                    <TextBlock Grid.Column="2" Style="{StaticResource TsunamiTableHeaderStyle}" Text="首波" />
+                                    <TextBlock Grid.Column="3" Style="{StaticResource TsunamiTableHeaderStyle}" Text="高潮" />
+                                    <TextBlock Grid.Column="4" Style="{StaticResource TsunamiTableHeaderStyle}" Text="实测高度" />
+                                    <TextBlock Grid.Column="5" Style="{StaticResource TsunamiTableHeaderStyle}" Text="状态" />
                                 </Grid>
                                 <ListBox Margin="0,6,0,0"
                                  AutomationProperties.Name="海啸观测点列表"
@@ -716,7 +718,8 @@
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="58" />
                                                 <ColumnDefinition Width="94" />
-                                                <ColumnDefinition Width="70" />
+                                                <ColumnDefinition Width="62" />
+                                                <ColumnDefinition Width="62" />
                                                 <ColumnDefinition Width="52" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
@@ -733,18 +736,12 @@
                                                            TextWrapping="Wrap"
                                                            Visibility="{Binding IsCatalogMatched, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                             </StackPanel>
-                                            <StackPanel Grid.Column="2">
-                                                <TextBlock Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding ArrivalText}" TextWrapping="Wrap" />
-                                                <TextBlock Margin="0,3,0,0"
-                                                           Foreground="{StaticResource MutedTextBrush}"
-                                                           FontSize="10"
-                                                           Text="{Binding HighTideText, StringFormat=高潮 {0}}"
-                                                           TextWrapping="Wrap" />
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="3">
+                                            <TextBlock Grid.Column="2" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding ArrivalText}" TextWrapping="Wrap" />
+                                            <TextBlock Grid.Column="3" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding HighTideText}" TextWrapping="Wrap" />
+                                            <StackPanel Grid.Column="4">
                                                 <TextBlock FontWeight="SemiBold" FontSize="10" Text="{Binding HeightText}" TextWrapping="Wrap" />
                                             </StackPanel>
-                                            <StackPanel Grid.Column="4">
+                                            <StackPanel Grid.Column="5">
                                                 <Border Style="{StaticResource TsunamiLevelBadgeStyle}" VerticalAlignment="Top">
                                                     <TextBlock Style="{StaticResource TsunamiLevelTextStyle}" Text="{Binding ObservationStatusText}" />
                                                 </Border>

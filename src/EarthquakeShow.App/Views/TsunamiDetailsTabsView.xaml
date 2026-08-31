@@ -110,10 +110,6 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
-        <Style TargetType="TabItem">
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="VerticalContentAlignment" Value="Stretch" />
-        </Style>
     </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
@@ -123,7 +119,7 @@
         <TabControl x:Name="TsunamiDetailsTabs"
                     HorizontalContentAlignment="Stretch"
                     VerticalContentAlignment="Stretch">
-        <TabItem Header="摘要">
+        <TabItem Header="摘要" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
             <ScrollViewer Padding="18,16"
                           HorizontalScrollBarVisibility="Disabled"
                           VerticalScrollBarVisibility="Auto">
@@ -141,25 +137,6 @@
                                FontSize="11"
                                Text="{Binding SelectedReportHeadlineText}"
                                TextWrapping="Wrap" />
-
-                    <StackPanel Margin="0,12,0,0"
-                                Visibility="{Binding HasFixedAdditionalTexts, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock Style="{StaticResource PaneTitleTextStyle}"
-                                   FontSize="14"
-                                   Text="固定附加文" />
-                        <ItemsControl Margin="0,5,0,0"
-                                      ItemsSource="{Binding FixedAdditionalTexts}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Margin="0,0,0,5"
-                                               Foreground="{StaticResource MutedTextBrush}"
-                                               FontSize="11"
-                                               Text="{Binding}"
-                                               TextWrapping="Wrap" />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
 
                     <Border Margin="0,16,0,0"
                             Padding="12"
@@ -240,11 +217,30 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </StackPanel>
+
+                    <StackPanel Margin="0,16,0,0"
+                                Visibility="{Binding HasFixedAdditionalTexts, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Style="{StaticResource PaneTitleTextStyle}"
+                                   FontSize="14"
+                                   Text="固定附加文" />
+                        <ItemsControl Margin="0,5,0,0"
+                                      ItemsSource="{Binding FixedAdditionalTexts}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Margin="0,0,0,5"
+                                               Foreground="{StaticResource MutedTextBrush}"
+                                               FontSize="11"
+                                               Text="{Binding}"
+                                               TextWrapping="Wrap" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
                 </StackPanel>
             </ScrollViewer>
         </TabItem>
 
-        <TabItem Header="警报 / 预报">
+        <TabItem Header="警报 / 预报" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
             <ScrollViewer Padding="18,16" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                 <StackPanel Visibility="{Binding HasForecastAreas, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <TextBlock Style="{StaticResource PaneTitleTextStyle}" FontSize="15" Text="海啸警报 / 预报" />
@@ -290,7 +286,7 @@
             </ScrollViewer>
         </TabItem>
 
-        <TabItem Header="观测点">
+        <TabItem Header="观测点" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
             <ScrollViewer Padding="18,16" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <Border Padding="12"
@@ -327,15 +323,17 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="58" />
                                 <ColumnDefinition Width="94" />
-                                <ColumnDefinition Width="70" />
+                                <ColumnDefinition Width="62" />
+                                <ColumnDefinition Width="62" />
                                 <ColumnDefinition Width="52" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Style="{StaticResource TsunamiTableHeaderStyle}" Text="区域" />
                             <TextBlock Grid.Column="1" Style="{StaticResource TsunamiTableHeaderStyle}" Text="观测点" />
-                            <TextBlock Grid.Column="2" Style="{StaticResource TsunamiTableHeaderStyle}" Text="首波 / 高潮" />
-                            <TextBlock Grid.Column="3" Style="{StaticResource TsunamiTableHeaderStyle}" Text="实测高度" />
-                            <TextBlock Grid.Column="4" Style="{StaticResource TsunamiTableHeaderStyle}" Text="状态" />
+                            <TextBlock Grid.Column="2" Style="{StaticResource TsunamiTableHeaderStyle}" Text="首波" />
+                            <TextBlock Grid.Column="3" Style="{StaticResource TsunamiTableHeaderStyle}" Text="高潮" />
+                            <TextBlock Grid.Column="4" Style="{StaticResource TsunamiTableHeaderStyle}" Text="实测高度" />
+                            <TextBlock Grid.Column="5" Style="{StaticResource TsunamiTableHeaderStyle}" Text="状态" />
                         </Grid>
                         <ListBox Margin="0,6,0,0"
                                  AutomationProperties.Name="海啸观测点表格"
@@ -351,7 +349,8 @@
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="58" />
                                                 <ColumnDefinition Width="94" />
-                                                <ColumnDefinition Width="70" />
+                                                <ColumnDefinition Width="62" />
+                                                <ColumnDefinition Width="62" />
                                                 <ColumnDefinition Width="52" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
@@ -361,11 +360,9 @@
                                                 <TextBlock Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding Code}" />
                                                 <TextBlock Margin="0,2,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding PublicationText}" TextWrapping="Wrap" Visibility="{Binding IsCatalogMatched, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                             </StackPanel>
-                                            <StackPanel Grid.Column="2">
-                                                <TextBlock Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding ArrivalText}" TextWrapping="Wrap" />
-                                                <TextBlock Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding HighTideText, StringFormat=高潮 {0}}" TextWrapping="Wrap" />
-                                            </StackPanel>
-                                            <Border Grid.Column="3"
+                                            <TextBlock Grid.Column="2" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding ArrivalText}" TextWrapping="Wrap" />
+                                            <TextBlock Grid.Column="3" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding HighTideText}" TextWrapping="Wrap" />
+                                            <Border Grid.Column="4"
                                                     Padding="4,2"
                                                     HorizontalAlignment="Left"
                                                     Style="{StaticResource TsunamiObservationHeightBadgeStyle}">
@@ -375,7 +372,7 @@
                                                            Text="{Binding MeasuredHeightDisplayText}"
                                                            TextWrapping="Wrap" />
                                             </Border>
-                                            <StackPanel Grid.Column="4">
+                                            <StackPanel Grid.Column="5">
                                                 <TextBlock FontSize="10" Text="{Binding StatusDisplayText}" TextWrapping="Wrap" />
                                                 <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding InitialText}" TextWrapping="Wrap" />
                                             </StackPanel>
@@ -389,7 +386,7 @@
             </ScrollViewer>
         </TabItem>
 
-        <TabItem Header="时间线">
+        <TabItem Header="时间线" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
             <ScrollViewer Padding="18,16" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <StackPanel Visibility="{Binding HasTimelineReports, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -466,7 +463,7 @@
             </ScrollViewer>
         </TabItem>
 
-        <TabItem Header="原始数据">
+        <TabItem Header="原始数据" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
             <Grid Margin="14" Visibility="{Binding HasRawXml, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />

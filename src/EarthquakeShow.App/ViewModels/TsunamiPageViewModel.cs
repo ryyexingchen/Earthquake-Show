@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using EarthquakeShow.Core.Abstractions;
 using EarthquakeShow.Core.Models;
@@ -388,9 +389,18 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public string EarthquakeMagnitudeText => State.SelectedReport?.Magnitude?.Value is double value
-        ? $"M {value:0.0}"
-        : "M 未知";
+    public string EarthquakeMagnitudeText
+    {
+        get
+        {
+            Magnitude? magnitude = State.SelectedReport?.Magnitude;
+            return magnitude?.Value is double value
+                ? $"M {value:0.0}"
+                : string.IsNullOrWhiteSpace(magnitude?.Description)
+                    ? "M 未知"
+                    : FormatMagnitudeDescription(magnitude.Description!);
+        }
+    }
 
     public string EarthquakeDepthText => State.SelectedReport?.Hypocenter?.DepthKm is int depth
         ? $"{depth} km"
@@ -530,7 +540,10 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
                 .ThenBy(report => report.ReceivedAt)
                 .ThenBy(report => report.Source.SourceMessageId, StringComparer.Ordinal)
                 .Select(report => CreateTimelineItemDisplay(
-                    report))
+                    report,
+                    report.Status == ReportStatus.Cancelled
+                        ? report
+                        : BuildCumulativeReport(report)))
                 .ToImmutableArray();
 
     public bool HasTimelineReports => !TimelineReports.IsDefaultOrEmpty;
@@ -874,10 +887,11 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
                     item.Areas.Select(area => $"{area.Name}（{area.Code}）")));
 
     private static TsunamiTimelineItemDisplay CreateTimelineItemDisplay(
-        JmaTsunamiReport report)
+        JmaTsunamiReport report,
+        JmaTsunamiReport effectiveReport)
     {
         bool isCancellation = report.Status == ReportStatus.Cancelled;
-        TsunamiLevel level = isCancellation ? TsunamiLevel.Unknown : GetReportLevel(report);
+        TsunamiLevel level = isCancellation ? TsunamiLevel.Unknown : GetReportLevel(effectiveReport);
         return new(
             report.EventId,
             report.Source.SourceId,
@@ -901,6 +915,15 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
     private static string FormatOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? "未提供" : value!;
+
+    private static string FormatMagnitudeDescription(string description)
+    {
+        string normalized = description.Normalize(NormalizationForm.FormKC)
+            .Replace("を超える", "超", StringComparison.Ordinal)
+            .Replace(" ", string.Empty, StringComparison.Ordinal)
+            .Replace("　", string.Empty, StringComparison.Ordinal);
+        return normalized;
+    }
 
     private static string GetStatusText(ReportStatus? status) => status switch
     {

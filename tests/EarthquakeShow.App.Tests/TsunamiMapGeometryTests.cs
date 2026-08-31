@@ -114,6 +114,34 @@ public sealed class TsunamiMapGeometryTests
     }
 
     [Fact]
+    public void WheelPreviewScale_IsStableForFiniteZoomDelta()
+    {
+        Assert.Equal(1.25, TsunamiMapView.GetWheelPreviewScale(1, 2), precision: 6);
+        Assert.Equal(1, TsunamiMapView.GetWheelPreviewScale(double.NaN, 2));
+    }
+
+    [Fact]
+    public void GeometryJump_IsolatedWhenProjectedSegmentIsTooLong()
+    {
+        Assert.True(TsunamiMapView.IsGeometryJump(new Point(0, 0), new Point(501, 0)));
+        Assert.False(TsunamiMapView.IsGeometryJump(new Point(0, 0), new Point(499, 0)));
+    }
+
+    [Theory]
+    [InlineData(TsunamiLevel.MinorChange, 1)]
+    [InlineData(TsunamiLevel.Advisory, 2)]
+    [InlineData(TsunamiLevel.Warning, 3)]
+    [InlineData(TsunamiLevel.MajorWarning, 4)]
+    public void LegendLevels_AreContinuousUpToHighestLevel(TsunamiLevel highest, int count)
+    {
+        TsunamiLevel[] result = TsunamiMapView.BuildLegendLevels([highest]);
+
+        Assert.Equal(count, result.Length);
+        Assert.Equal("海啸预报", TsunamiMapView.GetTsunamiLegendText(result[0]));
+        Assert.Equal("大海啸警报", TsunamiMapView.GetTsunamiLegendText(TsunamiLevel.MajorWarning));
+    }
+
+    [Fact]
     public void PackagedTsunamiLodResources_IncreaseGeometryDetail()
     {
         string mapDirectory = Path.Combine(

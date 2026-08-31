@@ -889,15 +889,17 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, IT
         public double? Value { get; set; }
         public string? Type { get; set; }
         public string? Condition { get; set; }
+        public string? Description { get; set; }
 
         public static MagnitudeDto? FromDomain(Magnitude? value) => value is null ? null : new()
         {
             Value = value.Value,
             Type = value.Type,
             Condition = value.Condition,
+            Description = value.Description,
         };
 
-        public Magnitude ToDomain() => new(Value, Type, Condition);
+        public Magnitude ToDomain() => new(Value, Type, Condition, Description);
     }
 
     private sealed class TsunamiInformationItemDto

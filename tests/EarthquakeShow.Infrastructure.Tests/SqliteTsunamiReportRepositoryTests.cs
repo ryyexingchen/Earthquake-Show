@@ -62,6 +62,7 @@ public sealed class SqliteTsunamiReportRepositoryTests
         JmaTsunamiReport vtse41 = Assert.Single(loaded, report => report.ReportCode == "VTSE41");
         Assert.Equal("20160901071000", vtse41.EventId);
         Assert.Equal(ReportContext.Training, vtse41.Context);
+        Assert.Equal("Ｍ８を超える巨大地震", vtse41.Magnitude?.Description);
         JmaTsunamiForecastArea vtse41Area = Assert.Single(
             vtse41.ForecastAreas,
             area => area.Code == "300");

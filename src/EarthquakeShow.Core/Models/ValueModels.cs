@@ -25,7 +25,11 @@ public readonly record struct GeoCoordinate
 
 public sealed record Magnitude
 {
-    public Magnitude(double? value, string? type = null, string? condition = null)
+    public Magnitude(
+        double? value,
+        string? type = null,
+        string? condition = null,
+        string? description = null)
     {
         if (value is double numericValue && !double.IsFinite(numericValue))
         {
@@ -35,6 +39,7 @@ public sealed record Magnitude
         Value = value;
         Type = type;
         Condition = condition;
+        Description = description;
     }
 
     public double? Value { get; }
@@ -42,6 +47,8 @@ public sealed record Magnitude
     public string? Type { get; }
 
     public string? Condition { get; }
+
+    public string? Description { get; }
 }
 
 public sealed record Hypocenter

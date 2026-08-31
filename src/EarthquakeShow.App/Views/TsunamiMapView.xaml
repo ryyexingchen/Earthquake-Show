@@ -60,7 +60,8 @@
                     <TextBlock FontSize="16" Text="⌂" />
                 </Button>
             </StackPanel>
-            <Border Margin="10"
+            <Border x:Name="LegendPanel"
+                    Margin="10"
                     Padding="8,6"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Bottom"
@@ -68,13 +69,10 @@
                     BorderBrush="#9EB8BF"
                     BorderThickness="1"
                     CornerRadius="4">
-                <WrapPanel>
-                    <TextBlock Margin="0,0,10,0" FontWeight="SemiBold" Text="等级" />
-                    <TextBlock Margin="0,0,8,0" Foreground="#2C89C4" Text="● 预报 &lt;0.2m" />
-                    <TextBlock Margin="0,0,8,0" Foreground="#9A7600" Text="● 注意报 0.2–1m" />
-                    <TextBlock Margin="0,0,8,0" Foreground="#C5302B" Text="● 警报 1–3m" />
-                    <TextBlock Foreground="#75359D" Text="● 大警报 &gt;3m" />
-                </WrapPanel>
+                <StackPanel>
+                    <TextBlock FontWeight="SemiBold" Text="等级" />
+                    <StackPanel x:Name="LegendItemsPanel" Margin="0,3,0,0" />
+                </StackPanel>
             </Border>
         </Grid>
     </Border>

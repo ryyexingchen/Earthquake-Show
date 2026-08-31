@@ -39,6 +39,22 @@ public sealed class TsunamiPageViewModelTests
     }
 
     [Fact]
+    public async Task EarthquakeMagnitudeText_UsesDescriptionWhenNumericMagnitudeIsUnknown()
+    {
+        JmaTsunamiReport report = CreateReport(
+            "magnitude-description",
+            new DateTimeOffset(2026, 8, 24, 10, 0, 0, TimeSpan.FromHours(9))) with
+        {
+            Magnitude = new Magnitude(null, "Mj", "不明", "Ｍ８を超える巨大地震"),
+        };
+        using var viewModel = new TsunamiPageViewModel(new StubTsunamiReportRepository([report]));
+
+        await viewModel.LoadAsync();
+
+        Assert.Equal("M8超巨大地震", viewModel.EarthquakeMagnitudeText);
+    }
+
+    [Fact]
     public async Task EventReports_GroupsSameEventByLatestReportAndKeepsFullTimeline()
     {
         DateTimeOffset issuedAt = new(2026, 8, 24, 10, 0, 0, TimeSpan.FromHours(9));
@@ -117,6 +133,43 @@ public sealed class TsunamiPageViewModelTests
         Assert.Equal("increment-2", viewModel.SelectedReport?.Source.SourceMessageId);
         viewModel.GoNextReport();
         Assert.Equal("increment-3", viewModel.SelectedReport?.Source.SourceMessageId);
+    }
+
+    [Fact]
+    public async Task Timeline_InvestigationReportInheritsPreviousHighestAlert()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 10, 0, 0, TimeSpan.FromHours(9));
+        JmaTsunamiReport first = CreateReport("timeline-alert-1", issuedAt) with
+        {
+            ForecastAreas =
+            [
+                new JmaTsunamiForecastArea("A地区", "A", "津波注意報", "34", null, null, null, null, null, []),
+            ],
+        };
+        JmaTsunamiReport second = CreateReport("timeline-alert-2", issuedAt.AddMinutes(5)) with
+        {
+            ForecastAreas =
+            [
+                new JmaTsunamiForecastArea("A地区", "A", "大津波警報", "36", null, null, null, null, null, []),
+            ],
+        };
+        JmaTsunamiReport third = CreateReport("timeline-alert-3", issuedAt.AddMinutes(10)) with
+        {
+            Items =
+            [
+                new JmaTsunamiInformationItem("津波 調査中", null, null, null, []),
+            ],
+        };
+        using var viewModel = new TsunamiPageViewModel(
+            new StubTsunamiReportRepository([first, second, third]));
+
+        await viewModel.LoadAsync();
+        Assert.True(viewModel.SelectReport(
+            third.EventId,
+            third.Source.SourceId,
+            third.Source.SourceMessageId));
+
+        Assert.Equal("大津波警報", viewModel.TimelineReports[^1].LevelText);
     }
 
     [Fact]

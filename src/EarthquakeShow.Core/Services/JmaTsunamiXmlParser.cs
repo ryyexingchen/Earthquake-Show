@@ -284,7 +284,8 @@ public static class JmaTsunamiXmlParser
         return new Magnitude(
             value,
             element.Attribute("type")?.Value.Trim(),
-            element.Attribute("condition")?.Value.Trim());
+            element.Attribute("condition")?.Value.Trim(),
+            element.Attribute("description")?.Value.Trim());
     }
 
     private static XDocument LoadDocument(string xml)

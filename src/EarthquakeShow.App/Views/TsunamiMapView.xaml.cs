@@ -18,7 +18,11 @@ public partial class TsunamiMapView : UserControl
 
     private static readonly Color InactiveCoastColor = Color.FromRgb(103, 135, 145);
     private readonly DispatcherTimer _renderThrottleTimer;
+    private readonly DispatcherTimer _wheelZoomTimer;
     private bool _renderPending;
+    private bool _isWheelZooming;
+    private double _wheelBaseZoomLevel;
+    private Point _wheelAnchor;
 
     public TsunamiMapView()
     {
@@ -28,6 +32,11 @@ public partial class TsunamiMapView : UserControl
             Interval = TimeSpan.FromMilliseconds(32),
         };
         _renderThrottleTimer.Tick += OnRenderThrottleTimerTick;
+        _wheelZoomTimer = new DispatcherTimer(DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromMilliseconds(120),
+        };
+        _wheelZoomTimer.Tick += OnWheelZoomTimerTick;
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
@@ -47,6 +56,9 @@ public partial class TsunamiMapView : UserControl
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
         _renderThrottleTimer.Stop();
+        _wheelZoomTimer.Stop();
+        _isWheelZooming = false;
+        ResetWheelZoomTransform();
         _renderPending = false;
         if (ViewModel is not null)
         {
@@ -63,6 +75,14 @@ public partial class TsunamiMapView : UserControl
             return;
         }
 
+        Point inputAnchor = e.GetPosition(MapCanvas);
+        if (!_isWheelZooming)
+        {
+            _isWheelZooming = true;
+            _wheelBaseZoomLevel = ViewModel.MapZoomLevel;
+            _wheelAnchor = inputAnchor;
+        }
+
         if (e.Delta > 0)
         {
             ViewModel.ZoomMapIn();
@@ -71,6 +91,14 @@ public partial class TsunamiMapView : UserControl
         {
             ViewModel.ZoomMapOut();
         }
+
+        MapZoomTransform.CenterX = _wheelAnchor.X;
+        MapZoomTransform.CenterY = _wheelAnchor.Y;
+        double previewScale = GetWheelPreviewScale(_wheelBaseZoomLevel, ViewModel.MapZoomLevel);
+        MapZoomTransform.ScaleX = previewScale;
+        MapZoomTransform.ScaleY = previewScale;
+        _wheelZoomTimer.Stop();
+        _wheelZoomTimer.Start();
 
         e.Handled = true;
     }
@@ -112,14 +140,51 @@ public partial class TsunamiMapView : UserControl
             return;
         }
 
+        if (_isWheelZooming)
+        {
+            return;
+        }
+
         _renderPending = false;
         RenderMap();
+    }
+
+    private void OnWheelZoomTimerTick(object? sender, EventArgs e)
+    {
+        _wheelZoomTimer.Stop();
+        if (!_isWheelZooming)
+        {
+            return;
+        }
+
+        _isWheelZooming = false;
+        ResetWheelZoomTransform();
+        RequestRender();
+    }
+
+    private void ResetWheelZoomTransform()
+    {
+        MapZoomTransform.CenterX = 0;
+        MapZoomTransform.CenterY = 0;
+        MapZoomTransform.ScaleX = 1;
+        MapZoomTransform.ScaleY = 1;
+    }
+
+    internal static double GetWheelPreviewScale(double baseZoomLevel, double currentZoomLevel)
+    {
+        if (!double.IsFinite(baseZoomLevel) || !double.IsFinite(currentZoomLevel))
+        {
+            return 1;
+        }
+
+        return Math.Pow(1.25, currentZoomLevel - baseZoomLevel);
     }
 
     private void RenderMap()
     {
         MapCanvas.Children.Clear();
         TsunamiPageViewModel? viewModel = ViewModel;
+        UpdateLegend(viewModel);
         if (viewModel is null || !viewModel.HasMapGeometry ||
             MapCanvas.ActualWidth < 10 || MapCanvas.ActualHeight < 10)
         {
@@ -137,62 +202,76 @@ public partial class TsunamiMapView : UserControl
         int pointCount = mapLines.Sum(line => line.Coordinates.Length);
         double minimumPixelDistance = GetLineSimplificationPixels(pointCount) /
             Math.Max(1, viewModel.MapZoomLevel);
-        foreach (IGrouping<string, TsunamiMapLine> group in mapLines.GroupBy(
-                     line => line.Code,
-                     StringComparer.Ordinal))
+        var coastHost = new MapDrawingHost(MapCanvas.ActualWidth, MapCanvas.ActualHeight, context =>
         {
-            TsunamiLevel level = viewModel.ForecastAreaLevels.TryGetValue(
-                group.Key,
-                out TsunamiLevel mappedLevel)
-                ? mappedLevel
-                : TsunamiLevel.Unknown;
-            StreamGeometry geometry = new();
-            using (StreamGeometryContext context = geometry.Open())
+            foreach (IGrouping<string, TsunamiMapLine> group in mapLines.GroupBy(
+                         line => line.Code,
+                         StringComparer.Ordinal))
             {
-                foreach (TsunamiMapLine line in group)
+                TsunamiLevel level = viewModel.ForecastAreaLevels.TryGetValue(
+                    group.Key,
+                    out TsunamiLevel mappedLevel)
+                    ? mappedLevel
+                    : TsunamiLevel.Unknown;
+                StreamGeometry geometry = new();
+                using (StreamGeometryContext geometryContext = geometry.Open())
                 {
-                    if (line.Coordinates.Length < 2)
+                    foreach (TsunamiMapLine line in group)
                     {
-                        continue;
-                    }
-
-                    Point firstPoint = projection.Project(line.Coordinates[0]);
-                    context.BeginFigure(firstPoint, false, false);
-                    Point previousPoint = firstPoint;
-                    for (int index = 1; index < line.Coordinates.Length; index++)
-                    {
-                        Point projectedPoint = projection.Project(line.Coordinates[index]);
-                        if (ShouldKeepLinePoint(
-                            previousPoint,
-                            projectedPoint,
-                            index == line.Coordinates.Length - 1,
-                            minimumPixelDistance))
+                        if (line.Coordinates.Length < 2)
                         {
-                            context.LineTo(projectedPoint, true, false);
-                            previousPoint = projectedPoint;
+                            continue;
+                        }
+
+                        Point firstPoint = projection.Project(line.Coordinates[0]);
+                        geometryContext.BeginFigure(firstPoint, false, false);
+                        Point previousPoint = firstPoint;
+                        for (int index = 1; index < line.Coordinates.Length; index++)
+                        {
+                            Point projectedPoint = projection.Project(line.Coordinates[index]);
+                            if (IsGeometryJump(previousPoint, projectedPoint))
+                            {
+                                geometryContext.BeginFigure(projectedPoint, false, false);
+                                previousPoint = projectedPoint;
+                                continue;
+                            }
+
+                            if (ShouldKeepLinePoint(
+                                previousPoint,
+                                projectedPoint,
+                                index == line.Coordinates.Length - 1,
+                                minimumPixelDistance))
+                            {
+                                geometryContext.LineTo(projectedPoint, true, false);
+                                previousPoint = projectedPoint;
+                            }
                         }
                     }
                 }
-            }
 
-            geometry.Freeze();
-            Color color = GetLevelColor(level);
-            double strokeThickness = (level == TsunamiLevel.Unknown ? 0.7 : 3) /
-                Math.Max(1, viewModel.MapZoomLevel);
-            MapCanvas.Children.Add(new Path
-            {
-                Data = geometry,
-                Stroke = new SolidColorBrush(level == TsunamiLevel.Unknown
+                geometry.Freeze();
+                Color color = GetLevelColor(level);
+                double strokeThickness = (level == TsunamiLevel.Unknown ? 0.7 : 3) /
+                    Math.Max(1, viewModel.MapZoomLevel);
+                Color strokeColor = level == TsunamiLevel.Unknown
                     ? InactiveCoastColor
-                    : color),
-                StrokeThickness = strokeThickness,
-                StrokeLineJoin = PenLineJoin.Round,
-                StrokeStartLineCap = PenLineCap.Round,
-                StrokeEndLineCap = PenLineCap.Round,
-                Opacity = level == TsunamiLevel.Unknown ? 0.6 : 0.95,
-                SnapsToDevicePixels = true,
-            });
-        }
+                    : color;
+                var brush = new SolidColorBrush(strokeColor)
+                {
+                    Opacity = level == TsunamiLevel.Unknown ? 0.6 : 0.95,
+                };
+                brush.Freeze();
+                var pen = new Pen(brush, strokeThickness)
+                {
+                    LineJoin = PenLineJoin.Round,
+                    StartLineCap = PenLineCap.Round,
+                    EndLineCap = PenLineCap.Round,
+                };
+                pen.Freeze();
+                context.DrawGeometry(null, pen, geometry);
+            }
+        });
+        MapCanvas.Children.Add(coastHost);
 
         foreach (TsunamiObservationStationDisplay station in viewModel.ObservationStations
                      .Where(item => item.HasMeasuredTsunami))
@@ -288,6 +367,88 @@ public partial class TsunamiMapView : UserControl
             minimumPixelDistance * minimumPixelDistance;
     }
 
+    internal static bool IsGeometryJump(Point previous, Point current)
+    {
+        if (!double.IsFinite(previous.X) || !double.IsFinite(previous.Y) ||
+            !double.IsFinite(current.X) || !double.IsFinite(current.Y))
+        {
+            return true;
+        }
+
+        const double maxSegmentPixels = 500;
+        double deltaX = current.X - previous.X;
+        double deltaY = current.Y - previous.Y;
+        return deltaX * deltaX + deltaY * deltaY > maxSegmentPixels * maxSegmentPixels;
+    }
+
+    private void UpdateLegend(TsunamiPageViewModel? viewModel)
+    {
+        LegendItemsPanel.Children.Clear();
+        if (viewModel is null)
+        {
+            LegendPanel.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        TsunamiLevel[] levels = BuildLegendLevels(
+            viewModel.ForecastAreaLevels.Values
+                .Concat(viewModel.ObservationStations
+                    .Where(station => station.HasMeasuredTsunami)
+                    .Select(station => station.Level)));
+        LegendPanel.Visibility = levels.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+        for (int index = 0; index < levels.Length; index++)
+        {
+            TsunamiLevel level = levels[index];
+            var row = new StackPanel
+            {
+                Margin = index == 0 ? default : new Thickness(0, 2, 0, 0),
+                Orientation = Orientation.Horizontal,
+            };
+            row.Children.Add(new Border
+            {
+                Width = 12,
+                Height = 10,
+                Background = new SolidColorBrush(GetLevelColor(level)),
+                CornerRadius = new CornerRadius(2),
+            });
+            row.Children.Add(new TextBlock
+            {
+                Margin = new Thickness(5, 0, 0, 0),
+                FontSize = 10,
+                Text = GetTsunamiLegendText(level),
+            });
+            LegendItemsPanel.Children.Add(row);
+        }
+    }
+
+    internal static TsunamiLevel[] BuildLegendLevels(IEnumerable<TsunamiLevel> levels)
+    {
+        TsunamiLevel maximum = levels
+            .Where(level => level is TsunamiLevel.MinorChange or TsunamiLevel.Advisory or
+                TsunamiLevel.Warning or TsunamiLevel.MajorWarning)
+            .DefaultIfEmpty(TsunamiLevel.Unknown)
+            .Max();
+        if (maximum == TsunamiLevel.Unknown)
+        {
+            return [];
+        }
+
+        return Enumerable.Range(
+                (int)TsunamiLevel.MinorChange,
+                (int)maximum - (int)TsunamiLevel.MinorChange + 1)
+            .Select(value => (TsunamiLevel)value)
+            .ToArray();
+    }
+
+    internal static string GetTsunamiLegendText(TsunamiLevel level) => level switch
+    {
+        TsunamiLevel.MinorChange => "海啸预报",
+        TsunamiLevel.Advisory => "海啸注意报",
+        TsunamiLevel.Warning => "海啸警报",
+        TsunamiLevel.MajorWarning => "大海啸警报",
+        _ => string.Empty,
+    };
+
     private static Color GetLevelColor(TsunamiLevel level) => level switch
     {
         TsunamiLevel.MinorChange => Color.FromRgb(44, 137, 196),
@@ -297,6 +458,27 @@ public partial class TsunamiMapView : UserControl
         TsunamiLevel.NoConcern => Color.FromRgb(145, 157, 162),
         _ => InactiveCoastColor,
     };
+
+    private sealed class MapDrawingHost : FrameworkElement
+    {
+        private readonly DrawingVisual _visual = new();
+
+        public MapDrawingHost(double width, double height, Action<DrawingContext> draw)
+        {
+            Width = width;
+            Height = height;
+            IsHitTestVisible = false;
+            using DrawingContext context = _visual.RenderOpen();
+            draw(context);
+            AddVisualChild(_visual);
+        }
+
+        protected override int VisualChildrenCount => 1;
+
+        protected override Visual GetVisualChild(int index) => index == 0
+            ? _visual
+            : throw new ArgumentOutOfRangeException(nameof(index));
+    }
 
     private sealed class MapProjection
     {

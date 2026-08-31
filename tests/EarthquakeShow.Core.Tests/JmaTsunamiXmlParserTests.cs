@@ -23,6 +23,7 @@ public sealed class JmaTsunamiXmlParserTests
         Assert.Equal("和歌山県南方沖", report.Hypocenter?.Name);
         Assert.Equal(10, report.Hypocenter?.DepthKm);
         Assert.Null(report.Magnitude?.Value);
+        Assert.Equal("Ｍ８を超える巨大地震", report.Magnitude?.Description);
         Assert.NotEmpty(report.ForecastAreas);
         JmaTsunamiForecastArea area = Assert.Single(
             report.ForecastAreas,

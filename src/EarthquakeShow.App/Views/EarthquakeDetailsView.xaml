@@ -118,16 +118,12 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
-        <Style TargetType="TabItem">
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="VerticalContentAlignment" Value="Stretch" />
-        </Style>
     </UserControl.Resources>
 
     <TabControl x:Name="DetailsTabs"
                 HorizontalContentAlignment="Stretch"
                 VerticalContentAlignment="Stretch">
-        <TabItem Header="摘要">
+        <TabItem Header="摘要" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
             <Grid>
                 <StackPanel MaxWidth="300"
                             HorizontalAlignment="Center"
@@ -520,7 +516,7 @@
             </Grid>
         </TabItem>
 
-        <TabItem Header="时间线">
+        <TabItem Header="时间线" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -751,7 +747,7 @@
             </Grid>
         </TabItem>
 
-        <TabItem Header="原始数据">
+        <TabItem Header="原始数据" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
             <Grid Margin="12">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
