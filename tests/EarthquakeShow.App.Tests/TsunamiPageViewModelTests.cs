@@ -255,6 +255,58 @@ public sealed class TsunamiPageViewModelTests
     }
 
     [Fact]
+    public async Task SelectedReport_UsesJapanTimeAndUnknownHypocenterDescription()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 0, 0, 0, TimeSpan.Zero);
+        JmaTsunamiReport report = CreateReport("display-format", issuedAt) with
+        {
+            OriginTime = issuedAt,
+            Hypocenter = new Hypocenter("不明", null, null, null, "遠地地震のため震源不明"),
+        };
+        using var viewModel = new TsunamiPageViewModel(
+            new StubTsunamiReportRepository([report]));
+
+        await viewModel.LoadAsync();
+
+        Assert.Equal("遠地地震のため震源不明", viewModel.EarthquakeSourceText);
+        Assert.Equal("2026-08-24 09:00:00 JST", viewModel.EarthquakeOriginTimeText);
+        Assert.Equal("2026-08-24 09:00:00 JST", viewModel.SelectedReportIssuedAtText);
+    }
+
+    [Fact]
+    public async Task ForecastAdvisoryWithoutHeight_ShowsPlaceholder()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
+        JmaTsunamiReport report = CreateReport("advisory-no-height", issuedAt) with
+        {
+            ForecastAreas =
+            [
+                new JmaTsunamiForecastArea(
+                    "北海道",
+                    "191",
+                    "津波注意報",
+                    "34",
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    []),
+            ],
+            FixedAdditionalTexts = ["沿岸では津波に注意してください。"],
+        };
+        using var viewModel = new TsunamiPageViewModel(
+            new StubTsunamiReportRepository([report]));
+
+        await viewModel.LoadAsync();
+
+        Assert.Equal("——", Assert.Single(viewModel.ForecastAreas).HeightText);
+        Assert.Single(viewModel.FixedAdditionalTexts);
+        Assert.Equal("沿岸では津波に注意してください。", viewModel.FixedAdditionalTexts[0]);
+        Assert.True(viewModel.HasFixedAdditionalTexts);
+    }
+
+    [Fact]
     public async Task Load_UsesPersistedCatalogForExactStationCodeMapping()
     {
         DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));

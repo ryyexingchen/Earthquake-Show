@@ -28,6 +28,25 @@
                     <Setter Property="Background" Value="#7B3FA1" />
                     <Setter Property="BorderBrush" Value="#55266F" />
                 </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="TsunamiLevelTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#354148" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Level}" Value="Warning">
+                    <Setter Property="Foreground" Value="White" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Level}" Value="MajorWarning">
+                    <Setter Property="Foreground" Value="White" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="TsunamiObservationHeightBadgeStyle"
+               TargetType="Border"
+               BasedOn="{StaticResource TsunamiLevelBadgeStyle}">
+            <Style.Triggers>
                 <DataTrigger Binding="{Binding ObservationStatusText}" Value="欠测">
                     <Setter Property="Background" Value="#202020" />
                     <Setter Property="BorderBrush" Value="#000000" />
@@ -42,17 +61,10 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
-        <Style x:Key="TsunamiLevelTextStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#354148" />
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="FontWeight" Value="SemiBold" />
+        <Style x:Key="TsunamiObservationHeightTextStyle"
+               TargetType="TextBlock"
+               BasedOn="{StaticResource TsunamiLevelTextStyle}">
             <Style.Triggers>
-                <DataTrigger Binding="{Binding Level}" Value="Warning">
-                    <Setter Property="Foreground" Value="White" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Level}" Value="MajorWarning">
-                    <Setter Property="Foreground" Value="White" />
-                </DataTrigger>
                 <DataTrigger Binding="{Binding ObservationStatusText}" Value="欠测">
                     <Setter Property="Foreground" Value="White" />
                 </DataTrigger>
@@ -98,6 +110,10 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+        <Style TargetType="TabItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+        </Style>
     </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
@@ -125,6 +141,25 @@
                                FontSize="11"
                                Text="{Binding SelectedReportHeadlineText}"
                                TextWrapping="Wrap" />
+
+                    <StackPanel Margin="0,12,0,0"
+                                Visibility="{Binding HasFixedAdditionalTexts, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Style="{StaticResource PaneTitleTextStyle}"
+                                   FontSize="14"
+                                   Text="固定附加文" />
+                        <ItemsControl Margin="0,5,0,0"
+                                      ItemsSource="{Binding FixedAdditionalTexts}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Margin="0,0,0,5"
+                                               Foreground="{StaticResource MutedTextBrush}"
+                                               FontSize="11"
+                                               Text="{Binding}"
+                                               TextWrapping="Wrap" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
 
                     <Border Margin="0,16,0,0"
                             Padding="12"
@@ -333,8 +368,8 @@
                                             <Border Grid.Column="3"
                                                     Padding="4,2"
                                                     HorizontalAlignment="Left"
-                                                    Style="{StaticResource TsunamiLevelBadgeStyle}">
-                                                <TextBlock Style="{StaticResource TsunamiLevelTextStyle}"
+                                                    Style="{StaticResource TsunamiObservationHeightBadgeStyle}">
+                                                <TextBlock Style="{StaticResource TsunamiObservationHeightTextStyle}"
                                                            FontSize="10"
                                                            FontWeight="SemiBold"
                                                            Text="{Binding MeasuredHeightDisplayText}"

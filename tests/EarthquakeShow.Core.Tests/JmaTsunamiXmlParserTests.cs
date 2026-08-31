@@ -76,6 +76,36 @@ public sealed class JmaTsunamiXmlParserTests
         Assert.Equal(1.8, station.MaximumHeight!.Meters);
         Assert.NotEmpty(report.EstimationAreas);
         Assert.Contains(report.EstimationAreas, item => item.FirstArrivalTime is not null);
+        Assert.Contains(
+            "沖合での観測値であり、沿岸では津波はさらに高くなります。",
+            report.FixedAdditionalTexts);
+    }
+
+    [Fact]
+    public void Parse_HypocenterUnknown_UsesDescriptionFallback()
+    {
+        const string xml = """
+            <Report xmlns="http://xml.kishou.go.jp/jmaxml1/">
+              <Control><DateTime>2026-08-24T00:00:00Z</DateTime><Status>通常</Status></Control>
+              <Head xmlns="http://xml.kishou.go.jp/jmaxml1/informationBasis1/">
+                <ReportDateTime>2026-08-24T09:00:00+09:00</ReportDateTime><EventID>unknown-source</EventID>
+                <InfoType>発表</InfoType><InfoKind>津波警報・注意報・予報</InfoKind>
+                <Headline><Text>津波情報</Text></Headline>
+              </Head>
+              <Body xmlns="http://xml.kishou.go.jp/jmaxml1/body/tsunami1/">
+                <Earthquake><Hypocenter><Area><Name>不明</Name><Description>遠地地震のため震源不明</Description></Area></Hypocenter></Earthquake>
+              </Body>
+            </Report>
+            """;
+
+        JmaTsunamiReport report = JmaTsunamiXmlParser.Parse(
+            xml,
+            new JmaTsunamiXmlParseOptions(
+                "VTSE41",
+                new SourceReference("jma-xml-tsunami", "unknown-source")));
+
+        Assert.Equal("不明", report.Hypocenter?.Name);
+        Assert.Equal("遠地地震のため震源不明", report.Hypocenter?.Description);
     }
 
     [Fact]

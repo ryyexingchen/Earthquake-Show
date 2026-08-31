@@ -31,6 +31,8 @@ public sealed record JmaTsunamiReport
 
     public string? HeadlineText { get; init; }
 
+    public ImmutableArray<string> FixedAdditionalTexts { get; init; } = [];
+
     public ImmutableArray<JmaTsunamiInformationItem> Items { get; init; } = [];
 
     public ImmutableArray<JmaTsunamiForecastArea> ForecastAreas { get; init; } = [];

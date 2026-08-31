@@ -50,7 +50,8 @@ public sealed record Hypocenter
         string? name,
         string? code,
         GeoCoordinate? coordinate,
-        int? depthKm)
+        int? depthKm,
+        string? description = null)
     {
         if (depthKm < 0)
         {
@@ -61,6 +62,7 @@ public sealed record Hypocenter
         Code = code;
         Coordinate = coordinate;
         DepthKm = depthKm;
+        Description = description;
     }
 
     public string? Name { get; }
@@ -70,4 +72,6 @@ public sealed record Hypocenter
     public GeoCoordinate? Coordinate { get; }
 
     public int? DepthKm { get; }
+
+    public string? Description { get; }
 }

@@ -69,6 +69,9 @@ public sealed class SqliteTsunamiReportRepositoryTests
         Assert.NotNull(vtse41Area.MaximumHeight);
         Assert.Null(vtse41Area.MaximumHeight!.Meters);
         Assert.Equal("巨大", vtse41Area.MaximumHeight.Description);
+        Assert.Contains(
+            vtse41.FixedAdditionalTexts,
+            text => text.Contains("東日本大震災クラスの津波が来襲します。", StringComparison.Ordinal));
         Assert.Contains("<Report", vtse41.Source.SourcePayload);
 
         JmaTsunamiReport vtse51 = Assert.Single(loaded, report => report.ReportCode == "VTSE51");

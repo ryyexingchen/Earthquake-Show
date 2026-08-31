@@ -118,6 +118,10 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
+        <Style TargetType="TabItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+        </Style>
     </UserControl.Resources>
 
     <TabControl x:Name="DetailsTabs"

@@ -1249,6 +1249,7 @@ public sealed class SqliteEarthquakeEventRepository :
         public string? Code { get; set; }
         public GeoCoordinateDto? Coordinate { get; set; }
         public int? DepthKm { get; set; }
+        public string? Description { get; set; }
 
         public static HypocenterDto? FromDomain(Hypocenter? value) => value is null ? null : new()
         {
@@ -1258,9 +1259,10 @@ public sealed class SqliteEarthquakeEventRepository :
                 ? GeoCoordinateDto.FromDomain(coordinate)
                 : null,
             DepthKm = value.DepthKm,
+            Description = value.Description,
         };
 
-        public Hypocenter ToDomain() => new(Name, Code, Coordinate?.ToDomain(), DepthKm);
+        public Hypocenter ToDomain() => new(Name, Code, Coordinate?.ToDomain(), DepthKm, Description);
     }
 
     private sealed class MagnitudeDto

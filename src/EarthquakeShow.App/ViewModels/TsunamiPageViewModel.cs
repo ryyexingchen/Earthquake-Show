@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -94,6 +95,8 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
     private readonly ITsunamiReportRepository _repository;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private readonly TsunamiMapGeometry _overviewMapGeometry;
+    private static readonly TimeZoneInfo JapanTimeZone =
+        TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time");
     private TsunamiMapGeometry? _mediumMapGeometry;
     private TsunamiMapGeometry? _detailedMapGeometry;
     private readonly JmaTsunamiStationCatalog _fallbackStationCatalog;
@@ -158,6 +161,8 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(SelectedReportInfoKindText));
             OnPropertyChanged(nameof(SelectedReportIssuedAtText));
             OnPropertyChanged(nameof(SelectedReportReceivedAtText));
+            OnPropertyChanged(nameof(FixedAdditionalTexts));
+            OnPropertyChanged(nameof(HasFixedAdditionalTexts));
             OnPropertyChanged(nameof(SelectedTimelineIdentity));
             OnPropertyChanged(nameof(SelectedReportHeadlineText));
             OnPropertyChanged(nameof(SelectedReportIdentityText));
@@ -325,6 +330,11 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
     public string SelectedReportReceivedAtText => FormatTimestamp(State.SelectedReport?.ReceivedAt);
 
+    public ImmutableArray<string> FixedAdditionalTexts =>
+        GetEffectiveSelectedReport()?.FixedAdditionalTexts ?? [];
+
+    public bool HasFixedAdditionalTexts => !FixedAdditionalTexts.IsDefaultOrEmpty;
+
     public string? SelectedTimelineIdentity => State.SelectedReport is null
         ? null
         : $"{State.SelectedReport.Source.SourceId}\u001f{State.SelectedReport.Source.SourceMessageId}";
@@ -360,7 +370,23 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
     public string SelectedReportLevelText => GetReportLevelTextForDisplay(GetEffectiveSelectedReport());
 
-    public string EarthquakeSourceText => State.SelectedReport?.Hypocenter?.Name ?? "未提供";
+    public string EarthquakeSourceText
+    {
+        get
+        {
+            Hypocenter? hypocenter = State.SelectedReport?.Hypocenter;
+            if (hypocenter is null)
+            {
+                return "未提供";
+            }
+
+            return IsUnknownText(hypocenter.Name)
+                ? string.IsNullOrWhiteSpace(hypocenter.Description)
+                    ? hypocenter.Name ?? "未提供"
+                    : hypocenter.Description!
+                : hypocenter.Name ?? "未提供";
+        }
+    }
 
     public string EarthquakeMagnitudeText => State.SelectedReport?.Magnitude?.Value is double value
         ? $"M {value:0.0}"
@@ -585,7 +611,18 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
     private static string FormatTimestamp(DateTimeOffset? timestamp) =>
         timestamp is null
             ? "未提供"
-            : timestamp.Value.ToString("yyyy-MM-dd HH:mm:ss zzz", System.Globalization.CultureInfo.InvariantCulture);
+            : TimeZoneInfo.ConvertTime(timestamp.Value, JapanTimeZone)
+                .ToString("yyyy-MM-dd HH:mm:ss 'JST'", CultureInfo.InvariantCulture);
+
+    private static string FormatForecastHeight(TsunamiLevel level, JmaTsunamiHeight? height) =>
+        level == TsunamiLevel.Advisory && height?.Meters is null &&
+        string.IsNullOrWhiteSpace(height?.Description)
+            ? "——"
+            : FormatHeight(height);
+
+    private static bool IsUnknownText(string? value) =>
+        string.IsNullOrWhiteSpace(value) ||
+        value is "不明" or "未知" or "Unknown" or "震源不明" or "震源未知";
 
     private TsunamiMapGeometry CurrentMapGeometry
     {
@@ -744,7 +781,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             level,
             GetLevelText(level, area.KindName),
             FormatArrival(area.FirstArrivalTime, area.FirstArrivalCondition),
-            FormatHeight(area.MaximumHeight));
+            FormatForecastHeight(level, area.MaximumHeight));
     }
 
     private TsunamiObservationStationDisplay CreateObservationStationDisplay(
@@ -940,6 +977,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         Dictionary<string, JmaTsunamiObservationStation> observationStations = new(StringComparer.Ordinal);
         Dictionary<string, JmaTsunamiEstimationArea> estimationAreas = new(StringComparer.Ordinal);
         Dictionary<string, JmaTsunamiInformationItem> informationItems = new(StringComparer.Ordinal);
+        List<string> fixedAdditionalTexts = [];
         JmaTsunamiReport[] eventReports = GetSelectedEventReports();
         foreach (JmaTsunamiReport report in eventReports)
         {
@@ -975,6 +1013,14 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
                 }
             }
 
+            foreach (string text in report.FixedAdditionalTexts)
+            {
+                if (!fixedAdditionalTexts.Contains(text, StringComparer.Ordinal))
+                {
+                    fixedAdditionalTexts.Add(text);
+                }
+            }
+
             if (IsSameReport(report, selected))
             {
                 break;
@@ -987,6 +1033,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             ObservationStations = observationStations.Values.ToImmutableArray(),
             EstimationAreas = estimationAreas.Values.ToImmutableArray(),
             Items = informationItems.Values.ToImmutableArray(),
+            FixedAdditionalTexts = fixedAdditionalTexts.ToImmutableArray(),
         };
     }
 

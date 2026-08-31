@@ -798,6 +798,7 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, IT
         public HypocenterDto? Hypocenter { get; set; }
         public MagnitudeDto? Magnitude { get; set; }
         public string? HeadlineText { get; set; }
+        public List<string> FixedAdditionalTexts { get; set; } = [];
         public List<TsunamiInformationItemDto> Items { get; set; } = [];
         public List<TsunamiForecastAreaDto> ForecastAreas { get; set; } = [];
         public List<TsunamiObservationStationDto> ObservationStations { get; set; } = [];
@@ -818,6 +819,7 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, IT
             Hypocenter = HypocenterDto.FromDomain(report.Hypocenter),
             Magnitude = MagnitudeDto.FromDomain(report.Magnitude),
             HeadlineText = report.HeadlineText,
+            FixedAdditionalTexts = report.FixedAdditionalTexts.ToList(),
             Items = report.Items.Select(TsunamiInformationItemDto.FromDomain).ToList(),
             ForecastAreas = report.ForecastAreas.Select(TsunamiForecastAreaDto.FromDomain).ToList(),
             ObservationStations = report.ObservationStations.Select(TsunamiObservationStationDto.FromDomain).ToList(),
@@ -839,6 +841,7 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, IT
             Hypocenter = Hypocenter?.ToDomain(),
             Magnitude = Magnitude?.ToDomain(),
             HeadlineText = HeadlineText,
+            FixedAdditionalTexts = FixedAdditionalTexts.ToImmutableArray(),
             Items = Items.Select(item => item.ToDomain()).ToImmutableArray(),
             ForecastAreas = ForecastAreas.Select(item => item.ToDomain()).ToImmutableArray(),
             ObservationStations = ObservationStations.Select(item => item.ToDomain()).ToImmutableArray(),
@@ -859,6 +862,7 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, IT
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
         public int? DepthKm { get; set; }
+        public string? Description { get; set; }
 
         public static HypocenterDto? FromDomain(Hypocenter? value) => value is null ? null : new()
         {
@@ -867,6 +871,7 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, IT
             Latitude = value.Coordinate?.Latitude,
             Longitude = value.Coordinate?.Longitude,
             DepthKm = value.DepthKm,
+            Description = value.Description,
         };
 
         public Hypocenter ToDomain() => new(
@@ -875,7 +880,8 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, IT
             Latitude is double latitude && Longitude is double longitude
                 ? new GeoCoordinate(latitude, longitude)
                 : null,
-            DepthKm);
+            DepthKm,
+            Description);
     }
 
     private sealed class MagnitudeDto

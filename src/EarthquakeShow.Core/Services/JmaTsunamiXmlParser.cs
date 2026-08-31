@@ -37,6 +37,17 @@ public static class JmaTsunamiXmlParser
         Magnitude? magnitude = ParseMagnitude(root);
 
         XElement? headline = FirstDescendant(root, "Headline");
+        ImmutableArray<string> fixedAdditionalTexts = root
+            .Descendants()
+            .Where(element => string.Equals(
+                element.Attribute("codeType")?.Value.Trim(),
+                "固定付加文",
+                StringComparison.Ordinal))
+            .Select(element => FirstChildValue(element, "Text"))
+            .Where(text => !string.IsNullOrWhiteSpace(text))
+            .Select(text => text!)
+            .Distinct(StringComparer.Ordinal)
+            .ToImmutableArray();
         var items = ImmutableArray.CreateBuilder<JmaTsunamiInformationItem>();
         foreach (XElement item in headline?.Descendants().Where(element =>
                      element.Name.LocalName == "Item") ?? [])
@@ -82,6 +93,7 @@ public static class JmaTsunamiXmlParser
             Hypocenter = hypocenter,
             Magnitude = magnitude,
             HeadlineText = FirstChildValue(headline, "Text"),
+            FixedAdditionalTexts = fixedAdditionalTexts,
             Items = items.ToImmutable(),
             ForecastAreas = forecastAreas,
             ObservationStations = observationStations,
@@ -239,11 +251,19 @@ public static class JmaTsunamiXmlParser
             }
         }
 
+        XElement? coordinateElement = area.Elements()
+            .FirstOrDefault(element => element.Name.LocalName == "Coordinate");
+        string? description = FirstChildValue(area, "Description") ??
+            FirstChildValue(area, "NameFromMark") ??
+            coordinateElement?.Attribute("description")?.Value.Trim() ??
+            area.Attribute("description")?.Value.Trim();
+
         return new Hypocenter(
             FirstChildValue(area, "Name"),
             FirstChildValue(area, "Code"),
             coordinate,
-            depthKm);
+            depthKm,
+            description);
     }
 
     private static Magnitude? ParseMagnitude(XElement root)
