@@ -57,6 +57,9 @@ public sealed record TsunamiInformationItemDisplay(
     string AreasText);
 
 public sealed record TsunamiTimelineItemDisplay(
+    string EventId,
+    string SourceId,
+    string SourceMessageId,
     string ReportCode,
     string StatusText,
     string ContextText,
@@ -64,7 +67,10 @@ public sealed record TsunamiTimelineItemDisplay(
     TsunamiLevel Level,
     string LevelText,
     string StructureText,
-    bool IsCancellation);
+    bool IsCancellation)
+{
+    public string Identity => $"{SourceId}\u001f{SourceMessageId}";
+}
 
 public sealed record TsunamiReportDifferenceDisplay(
     string FieldText,
@@ -152,11 +158,15 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(SelectedReportInfoKindText));
             OnPropertyChanged(nameof(SelectedReportIssuedAtText));
             OnPropertyChanged(nameof(SelectedReportReceivedAtText));
+            OnPropertyChanged(nameof(SelectedTimelineIdentity));
             OnPropertyChanged(nameof(SelectedReportHeadlineText));
             OnPropertyChanged(nameof(SelectedReportIdentityText));
             OnPropertyChanged(nameof(SelectedReportStructureText));
             OnPropertyChanged(nameof(SelectedReportLevel));
             OnPropertyChanged(nameof(SelectedReportLevelText));
+            OnPropertyChanged(nameof(CanGoPrevious));
+            OnPropertyChanged(nameof(CanGoNext));
+            OnPropertyChanged(nameof(CanReturnToLatest));
             OnPropertyChanged(nameof(EarthquakeSourceText));
             OnPropertyChanged(nameof(EarthquakeMagnitudeText));
             OnPropertyChanged(nameof(EarthquakeDepthText));
@@ -269,6 +279,19 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
     public string ResultCountText => $"{EventReports.Length} 个事件";
 
+    public bool CanGoPrevious => GetSelectedReportIndex() > 0;
+
+    public bool CanGoNext
+    {
+        get
+        {
+            int index = GetSelectedReportIndex();
+            return index >= 0 && index < GetSelectedEventReports().Length - 1;
+        }
+    }
+
+    public bool CanReturnToLatest => CanGoNext;
+
     public bool IsLoading =>
         State.LoadState == TsunamiPageLoadState.Loading && State.Reports.IsDefaultOrEmpty;
 
@@ -302,6 +325,10 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
     public string SelectedReportReceivedAtText => FormatTimestamp(State.SelectedReport?.ReceivedAt);
 
+    public string? SelectedTimelineIdentity => State.SelectedReport is null
+        ? null
+        : $"{State.SelectedReport.Source.SourceId}\u001f{State.SelectedReport.Source.SourceMessageId}";
+
     public string SelectedReportHeadlineText =>
         string.IsNullOrWhiteSpace(State.SelectedReport?.HeadlineText)
             ? "无标题"
@@ -322,16 +349,16 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
     {
         get
         {
-            JmaTsunamiReport? report = State.SelectedReport;
+            JmaTsunamiReport? report = GetEffectiveSelectedReport();
             return report is null
                 ? ""
                 : $"预报区 {report.ForecastAreas.Length} · 沿岸观测 {report.ObservationStations.Length} · 推定区域 {report.EstimationAreas.Length}";
         }
     }
 
-    public TsunamiLevel SelectedReportLevel => GetDisplayedReportLevel(State.SelectedReport);
+    public TsunamiLevel SelectedReportLevel => GetDisplayedReportLevel(GetEffectiveSelectedReport());
 
-    public string SelectedReportLevelText => GetReportLevelTextForDisplay(State.SelectedReport);
+    public string SelectedReportLevelText => GetReportLevelTextForDisplay(GetEffectiveSelectedReport());
 
     public string EarthquakeSourceText => State.SelectedReport?.Hypocenter?.Name ?? "未提供";
 
@@ -349,7 +376,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
     {
         get
         {
-            if (State.SelectedReport is null || !HasObservationStations)
+            if (GetEffectiveSelectedReport() is null || !HasObservationStations)
             {
                 return "当前报文没有沿岸观测记录";
             }
@@ -370,24 +397,24 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
     }
 
     public ImmutableArray<TsunamiForecastAreaDisplay> ForecastAreas =>
-        State.SelectedReport is null
+        GetEffectiveSelectedReport() is not JmaTsunamiReport report
             ? []
-            : State.SelectedReport.ForecastAreas
+            : report.ForecastAreas
                 .Select(CreateForecastAreaDisplay)
                 .ToImmutableArray();
 
     public ImmutableArray<TsunamiObservationStationDisplay> ObservationStations =>
-        State.SelectedReport is null
+        GetEffectiveSelectedReport() is not JmaTsunamiReport report
             ? []
-            : State.SelectedReport.ObservationStations
+            : report.ObservationStations
                 .Select(CreateObservationStationDisplay)
                 .Where(item => item.ObservationStatusText != "未观测到海啸")
                 .ToImmutableArray();
 
     public ImmutableArray<TsunamiEstimationAreaDisplay> EstimationAreas =>
-        State.SelectedReport is null
+        GetEffectiveSelectedReport() is not JmaTsunamiReport report
             ? []
-            : State.SelectedReport.EstimationAreas
+            : report.EstimationAreas
                 .Select(CreateEstimationAreaDisplay)
                 .ToImmutableArray();
 
@@ -443,9 +470,9 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
     public bool HasEstimationAreas => !EstimationAreas.IsDefaultOrEmpty;
 
     public ImmutableDictionary<string, TsunamiLevel> ForecastAreaLevels =>
-        State.SelectedReport is null
+        GetEffectiveSelectedReport() is not JmaTsunamiReport report
             ? ImmutableDictionary<string, TsunamiLevel>.Empty
-            : State.SelectedReport.ForecastAreas
+            : report.ForecastAreas
                 .Where(area => !string.IsNullOrWhiteSpace(area.Code))
                 .GroupBy(area => area.Code, StringComparer.Ordinal)
                 .ToImmutableDictionary(
@@ -457,9 +484,9 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
                     StringComparer.Ordinal);
 
     public ImmutableArray<TsunamiInformationItemDisplay> InformationItems =>
-        State.SelectedReport is null
+        GetEffectiveSelectedReport() is not JmaTsunamiReport report
             ? []
-            : State.SelectedReport.Items
+            : report.Items
                 .Select(CreateInformationItemDisplay)
                 .ToImmutableArray();
 
@@ -815,6 +842,9 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         bool isCancellation = report.Status == ReportStatus.Cancelled;
         TsunamiLevel level = isCancellation ? TsunamiLevel.Unknown : GetReportLevel(report);
         return new(
+            report.EventId,
+            report.Source.SourceId,
+            report.Source.SourceMessageId,
             report.ReportCode,
             isCancellation ? "解除" : GetStatusText(report.Status),
             GetContextText(report.Context),
@@ -869,6 +899,103 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             string.Equals(report.Source.SourceMessageId, current.Source.SourceMessageId, StringComparison.Ordinal));
         return currentIndex > 0 ? reports[currentIndex - 1] : null;
     }
+
+    private JmaTsunamiReport[] GetSelectedEventReports() => State.SelectedReport is null
+        ? []
+        : _allReports
+            .Where(report => string.Equals(
+                report.EventId,
+                State.SelectedReport.EventId,
+                StringComparison.Ordinal))
+            .OrderBy(report => report.IssuedAt)
+            .ThenBy(report => report.ReceivedAt)
+            .ThenBy(report => report.Source.SourceMessageId, StringComparer.Ordinal)
+            .ToArray();
+
+    private int GetSelectedReportIndex()
+    {
+        if (State.SelectedReport is null)
+        {
+            return -1;
+        }
+
+        JmaTsunamiReport[] reports = GetSelectedEventReports();
+        return Array.FindIndex(reports, report =>
+            string.Equals(report.Source.SourceId, State.SelectedReport.Source.SourceId, StringComparison.Ordinal) &&
+            string.Equals(report.Source.SourceMessageId, State.SelectedReport.Source.SourceMessageId, StringComparison.Ordinal));
+    }
+
+    private JmaTsunamiReport? GetEffectiveSelectedReport() => State.SelectedReport is null
+        ? null
+        : BuildCumulativeReport(State.SelectedReport);
+
+    private JmaTsunamiReport BuildCumulativeReport(JmaTsunamiReport selected)
+    {
+        if (selected.Status == ReportStatus.Cancelled)
+        {
+            return selected;
+        }
+
+        Dictionary<string, JmaTsunamiForecastArea> forecastAreas = new(StringComparer.Ordinal);
+        Dictionary<string, JmaTsunamiObservationStation> observationStations = new(StringComparer.Ordinal);
+        Dictionary<string, JmaTsunamiEstimationArea> estimationAreas = new(StringComparer.Ordinal);
+        Dictionary<string, JmaTsunamiInformationItem> informationItems = new(StringComparer.Ordinal);
+        JmaTsunamiReport[] eventReports = GetSelectedEventReports();
+        foreach (JmaTsunamiReport report in eventReports)
+        {
+            foreach (JmaTsunamiForecastArea area in report.ForecastAreas)
+            {
+                forecastAreas[GetStableCode(area.Code, area.Name)] = area;
+            }
+
+            foreach (JmaTsunamiObservationStation station in report.ObservationStations)
+            {
+                observationStations[GetStableCode(station.Code, station.Name)] = station;
+            }
+
+            foreach (JmaTsunamiEstimationArea area in report.EstimationAreas)
+            {
+                estimationAreas[GetStableCode(area.Code, area.Name)] = area;
+            }
+
+            foreach (JmaTsunamiInformationItem item in report.Items)
+            {
+                if (item.Areas.IsDefaultOrEmpty)
+                {
+                    informationItems[GetStableCode(item.KindCode ?? string.Empty, item.KindName ?? string.Empty)] = item;
+                    continue;
+                }
+
+                foreach (JmaTsunamiArea area in item.Areas)
+                {
+                    informationItems[GetStableCode(area.Code, area.Name)] = item with
+                    {
+                        Areas = [area],
+                    };
+                }
+            }
+
+            if (IsSameReport(report, selected))
+            {
+                break;
+            }
+        }
+
+        return selected with
+        {
+            ForecastAreas = forecastAreas.Values.ToImmutableArray(),
+            ObservationStations = observationStations.Values.ToImmutableArray(),
+            EstimationAreas = estimationAreas.Values.ToImmutableArray(),
+            Items = informationItems.Values.ToImmutableArray(),
+        };
+    }
+
+    private static bool IsSameReport(JmaTsunamiReport left, JmaTsunamiReport right) =>
+        string.Equals(left.Source.SourceId, right.Source.SourceId, StringComparison.Ordinal) &&
+        string.Equals(left.Source.SourceMessageId, right.Source.SourceMessageId, StringComparison.Ordinal);
+
+    private static string GetStableCode(string code, string name) =>
+        string.IsNullOrWhiteSpace(code) ? $"name:{name}" : code;
 
     private static TsunamiLevel GetReportLevel(JmaTsunamiReport? report)
     {
@@ -1036,10 +1163,42 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         return true;
     }
 
+    public void GoPreviousReport() => SelectRelativeReport(-1);
+
+    public void GoNextReport() => SelectRelativeReport(1);
+
+    public void ReturnToLatestReport()
+    {
+        ThrowIfDisposed();
+        JmaTsunamiReport[] reports = GetSelectedEventReports();
+        if (reports.Length == 0)
+        {
+            return;
+        }
+
+        JmaTsunamiReport latest = reports[^1];
+        SelectReport(latest.EventId, latest.Source.SourceId, latest.Source.SourceMessageId);
+    }
+
     public void ClearSelection()
     {
         ThrowIfDisposed();
         State = State with { SelectedReport = null };
+    }
+
+    private void SelectRelativeReport(int offset)
+    {
+        ThrowIfDisposed();
+        JmaTsunamiReport[] reports = GetSelectedEventReports();
+        int index = GetSelectedReportIndex();
+        int targetIndex = index < 0 ? -1 : index + offset;
+        if (targetIndex < 0 || targetIndex >= reports.Length)
+        {
+            return;
+        }
+
+        JmaTsunamiReport target = reports[targetIndex];
+        SelectReport(target.EventId, target.Source.SourceId, target.Source.SourceMessageId);
     }
 
     public bool SelectObservationStation(string stationCode)

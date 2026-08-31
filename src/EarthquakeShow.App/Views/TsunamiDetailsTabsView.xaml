@@ -99,9 +99,14 @@
             </Style.Triggers>
         </Style>
     </UserControl.Resources>
-    <TabControl x:Name="TsunamiDetailsTabs"
-                HorizontalContentAlignment="Stretch"
-                VerticalContentAlignment="Stretch">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <TabControl x:Name="TsunamiDetailsTabs"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch">
         <TabItem Header="摘要">
             <ScrollViewer Padding="18,16"
                           HorizontalScrollBarVisibility="Disabled"
@@ -354,8 +359,16 @@
                 <StackPanel>
                     <StackPanel Visibility="{Binding HasTimelineReports, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <TextBlock Style="{StaticResource PaneTitleTextStyle}" FontSize="15" Text="报文时间线" />
-                        <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding TimelineReports}">
-                            <ItemsControl.ItemTemplate>
+                        <ListBox Margin="0,8,0,0"
+                                 x:Name="TsunamiTimelineListBox"
+                                 ItemsSource="{Binding TimelineReports}"
+                                 SelectionChanged="OnTimelineSelectionChanged"
+                                 SelectedValue="{Binding SelectedTimelineIdentity, Mode=OneWay}"
+                                 SelectedValuePath="Identity"
+                                 ItemContainerStyle="{StaticResource TsunamiTableListBoxItemStyle}"
+                                 BorderThickness="0"
+                                 Background="Transparent">
+                            <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Border Margin="0,0,0,7" Padding="10" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="5">
                                         <Grid>
@@ -374,8 +387,8 @@
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
                     </StackPanel>
                     <StackPanel Margin="0,16,0,0" Visibility="{Binding HasSelectedReport, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <TextBlock Style="{StaticResource PaneTitleTextStyle}" FontSize="15" Text="与上一报差异" />
@@ -441,5 +454,34 @@
                          TextWrapping="NoWrap" />
             </Grid>
         </TabItem>
-    </TabControl>
+        </TabControl>
+        <Border Grid.Row="1"
+                Padding="10,8"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="0,1,0,0">
+            <StackPanel Orientation="Horizontal">
+                <Button AutomationProperties.Name="上一报"
+                        Click="OnPreviousReportClick"
+                        IsEnabled="{Binding CanGoPrevious}"
+                        Style="{StaticResource HeaderIconButtonStyle}"
+                        ToolTip="上一报">
+                    <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xE72B;" />
+                </Button>
+                <Button Margin="4,0,0,0"
+                        AutomationProperties.Name="下一报"
+                        Click="OnNextReportClick"
+                        IsEnabled="{Binding CanGoNext}"
+                        Style="{StaticResource HeaderIconButtonStyle}"
+                        ToolTip="下一报">
+                    <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xE72A;" />
+                </Button>
+                <Button Margin="6,0,0,0"
+                        Padding="10,5"
+                        AutomationProperties.Name="返回最新报文"
+                        Click="OnReturnToLatestClick"
+                        Content="返回最新"
+                        IsEnabled="{Binding CanReturnToLatest}" />
+            </StackPanel>
+        </Border>
+    </Grid>
 </UserControl>

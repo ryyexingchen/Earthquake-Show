@@ -69,6 +69,57 @@ public sealed class TsunamiPageViewModelTests
     }
 
     [Fact]
+    public async Task SelectedReport_InheritsUnchangedAreasAndUpdatesRepeatedCodes()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 10, 0, 0, TimeSpan.FromHours(9));
+        JmaTsunamiReport first = CreateReport("increment-1", issuedAt) with
+        {
+            Items =
+            [
+                new JmaTsunamiInformationItem("津波注意報", "34", null, null, [new JmaTsunamiArea("A地区", "A")]),
+            ],
+            ForecastAreas =
+            [
+                new JmaTsunamiForecastArea("A地区", "A", "津波注意報", "34", null, null, null, null, null, []),
+            ],
+        };
+        JmaTsunamiReport second = CreateReport("increment-2", issuedAt.AddMinutes(5)) with
+        {
+            ObservationStations =
+            [
+                new JmaTsunamiObservationStation("B地区", "B", "B点", "B", null, null, null, "観測", null, null, new JmaTsunamiHeight(0.4, null, null, "m", null)),
+            ],
+        };
+        JmaTsunamiReport third = CreateReport("increment-3", issuedAt.AddMinutes(10)) with
+        {
+            ForecastAreas =
+            [
+                new JmaTsunamiForecastArea("A地区", "A", "津波警報", "35", null, null, null, null, null, []),
+                new JmaTsunamiForecastArea("C地区", "C", "津波注意報", "34", null, null, null, null, null, []),
+            ],
+        };
+        using var viewModel = new TsunamiPageViewModel(
+            new StubTsunamiReportRepository([first, second, third]));
+
+        await viewModel.LoadAsync();
+        Assert.True(viewModel.SelectReport(second.EventId, second.Source.SourceId, second.Source.SourceMessageId));
+        Assert.Equal(["A"], viewModel.ForecastAreas.Select(area => area.Code));
+        Assert.Equal(["B"], viewModel.ObservationStations.Select(station => station.Code));
+        Assert.Equal("津波注意報", viewModel.ForecastAreas[0].LevelText);
+        Assert.Contains(viewModel.InformationItems, item => item.AreasText.Contains("A地区", StringComparison.Ordinal));
+
+        Assert.True(viewModel.SelectReport(third.EventId, third.Source.SourceId, third.Source.SourceMessageId));
+        Assert.Equal(["A", "C"], viewModel.ForecastAreas.Select(area => area.Code));
+        Assert.Equal("津波警報", viewModel.ForecastAreas[0].LevelText);
+        Assert.Equal(["B"], viewModel.ObservationStations.Select(station => station.Code));
+        Assert.False(viewModel.CanGoNext);
+        viewModel.GoPreviousReport();
+        Assert.Equal("increment-2", viewModel.SelectedReport?.Source.SourceMessageId);
+        viewModel.GoNextReport();
+        Assert.Equal("increment-3", viewModel.SelectedReport?.Source.SourceMessageId);
+    }
+
+    [Fact]
     public async Task LoadFailure_SetsErrorState()
     {
         var repository = new StubTsunamiReportRepository([], new InvalidDataException("测试数据损坏"));
