@@ -16,7 +16,7 @@ public partial class TsunamiMapView : UserControl
     internal const double LineSimplificationPixels = 0.65;
     internal const double DenseLineSimplificationPixels = 1.0;
     internal const int DenseLinePointThreshold = 10000;
-    internal const double ObservationLabelZoomThreshold = 8;
+    internal const double ObservationLabelZoomThreshold = 4;
 
     private static readonly Color InactiveCoastColor = Color.FromRgb(103, 135, 145);
     private readonly DispatcherTimer _renderThrottleTimer;
@@ -29,6 +29,8 @@ public partial class TsunamiMapView : UserControl
     private Point _lastPanPoint;
     private Vector _automaticPanOffset;
     private Vector _manualPanOffset;
+    private Vector _wheelPreviewTranslation;
+    private bool _centerSelectedStationPending = true;
 
     public TsunamiMapView()
     {
@@ -51,6 +53,7 @@ public partial class TsunamiMapView : UserControl
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        _centerSelectedStationPending = true;
         if (ViewModel is not null)
         {
             ViewModel.PropertyChanged += OnViewModelPropertyChanged;
@@ -68,6 +71,8 @@ public partial class TsunamiMapView : UserControl
         StopPanning();
         _automaticPanOffset = default;
         _manualPanOffset = default;
+        _wheelPreviewTranslation = default;
+        _centerSelectedStationPending = true;
         MapPanTransform.X = 0;
         MapPanTransform.Y = 0;
         _renderPending = false;
@@ -175,6 +180,7 @@ public partial class TsunamiMapView : UserControl
         MapWheelPreviewTransform.CenterY = 0;
         MapWheelPreviewTranslateTransform.X = previewTranslation.X;
         MapWheelPreviewTranslateTransform.Y = previewTranslation.Y;
+        _wheelPreviewTranslation = previewTranslation;
         MapWheelPreviewTransform.ScaleX = previewScale;
         MapWheelPreviewTransform.ScaleY = previewScale;
         _wheelZoomTimer.Stop();
@@ -209,6 +215,11 @@ public partial class TsunamiMapView : UserControl
             or nameof(TsunamiPageViewModel.SelectedObservationStation))
         {
             _manualPanOffset = default;
+        }
+
+        if (e.PropertyName == nameof(TsunamiPageViewModel.SelectedObservationStation))
+        {
+            _centerSelectedStationPending = true;
         }
 
         if (_isWheelZooming && e.PropertyName is
@@ -280,6 +291,23 @@ public partial class TsunamiMapView : UserControl
 
         _wheelZoomTimer.Stop();
         _isWheelZooming = false;
+        Vector committedTranslation = _wheelPreviewTranslation;
+        if (ViewModel is not null &&
+            double.IsFinite(_wheelBaseZoomLevel) &&
+            _wheelBaseZoomLevel >= 1 &&
+            double.IsFinite(ViewModel.MapZoomLevel))
+        {
+            committedTranslation = GetWheelPreviewTranslation(
+                _wheelAnchor,
+                new Vector(MapPanTransform.X, MapPanTransform.Y),
+                _wheelBaseZoomLevel,
+                ViewModel.MapZoomLevel / _wheelBaseZoomLevel,
+                MapCanvas.ActualWidth,
+                MapCanvas.ActualHeight);
+        }
+
+        _manualPanOffset += committedTranslation;
+        _wheelPreviewTranslation = default;
         RequestRender();
     }
 
@@ -492,6 +520,12 @@ public partial class TsunamiMapView : UserControl
             return;
         }
 
+        if (!_centerSelectedStationPending)
+        {
+            ApplyPanTransform();
+            return;
+        }
+
         Point projected = projection.Project(coordinate);
         Vector offset = GetStationCenteringOffset(
             projected,
@@ -499,6 +533,7 @@ public partial class TsunamiMapView : UserControl
             MapCanvas.ActualWidth,
             MapCanvas.ActualHeight);
         _automaticPanOffset = offset;
+        _centerSelectedStationPending = false;
         ApplyPanTransform();
     }
 
@@ -538,7 +573,7 @@ public partial class TsunamiMapView : UserControl
     }
 
     internal static bool ShouldShowObservationLabels(double zoomLevel) =>
-        double.IsFinite(zoomLevel) && zoomLevel >= ObservationLabelZoomThreshold;
+        double.IsFinite(zoomLevel) && zoomLevel > ObservationLabelZoomThreshold;
 
     internal static string GetObservationMarkerText(
         TsunamiObservationStationDisplay station) =>

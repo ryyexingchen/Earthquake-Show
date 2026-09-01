@@ -132,6 +132,16 @@ public sealed class TsunamiMapGeometryTests
                 previewScale: 0.5,
                 width: 400,
                 height: 300));
+
+        Vector committed = TsunamiMapView.GetWheelPreviewTranslation(
+            new Point(100, 80),
+            new Vector(0, 0),
+            baseZoomLevel: 3,
+            previewScale: 4d / 3,
+            width: 400,
+            height: 300);
+        Assert.Equal(100, committed.X, precision: 9);
+        Assert.Equal(70, committed.Y, precision: 9);
     }
 
     [Fact]
@@ -158,8 +168,8 @@ public sealed class TsunamiMapGeometryTests
     }
 
     [Theory]
-    [InlineData(7.99, false)]
-    [InlineData(8, true)]
+    [InlineData(4, false)]
+    [InlineData(4.01, true)]
     public void ObservationLabelsAppearOnlyAtHighZoom(double zoomLevel, bool expected)
     {
         Assert.Equal(expected, TsunamiMapView.ShouldShowObservationLabels(zoomLevel));
