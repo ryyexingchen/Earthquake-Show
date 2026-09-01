@@ -302,7 +302,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         }
         finally
         {
-            DisposeResources();
+            await DisposeResourcesAsync().ConfigureAwait(true);
         }
     }
 
@@ -321,7 +321,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         return true;
     }
 
-    private void DisposeResources()
+    private async Task DisposeResourcesAsync()
     {
         if (_resourcesDisposed)
         {
@@ -333,7 +333,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         Map.Dispose();
         EventList.Dispose();
         EarthquakePage.Dispose();
-        TsunamiPage.Dispose();
+        await TsunamiPage.DisposeAsync().ConfigureAwait(true);
         _tsunamiRepository.Dispose();
         _httpClient?.Dispose();
         _streamingSessionCancellation?.Dispose();
@@ -417,8 +417,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
             {
                 try
                 {
-                    await _tsunamiRepository.RefreshAsync(cancellationToken);
-                    await TsunamiPage.LoadAsync(cancellationToken);
+                    await TsunamiPage.RefreshAsync(cancellationToken);
                     UpdateTsunamiSourceStatuses();
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

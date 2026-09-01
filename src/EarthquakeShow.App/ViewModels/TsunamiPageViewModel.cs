@@ -110,7 +110,7 @@ public enum TsunamiMapDetailLevel
     Detailed,
 }
 
-public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
+public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable, IAsyncDisposable
 {
     public const double MinimumMapZoomLevel = 1.0;
     public const double MaximumMapZoomLevel = 12;
@@ -119,6 +119,8 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
     private readonly ITsunamiReportRepository _repository;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
+    private readonly CancellationTokenSource _operationCancellation = new();
+    private readonly object _operationSync = new();
     private readonly TsunamiMapGeometry _overviewMapGeometry;
     private static readonly TimeZoneInfo JapanTimeZone =
         TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time");
@@ -137,6 +139,9 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
     private Task? _mapDetailLoadTask;
     private long _mapDetailLoadGeneration;
     private bool _isLoadingMapDetail;
+    private int _activeOperationCount;
+    private TaskCompletionSource<bool>? _operationsIdle;
+    private bool _resourcesDisposed;
 
     public TsunamiPageViewModel(
         ITsunamiReportRepository repository,
@@ -357,7 +362,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
     public bool ShowError =>
         State.LoadState == TsunamiPageLoadState.Error && State.Reports.IsDefaultOrEmpty;
 
-    public bool CanRefresh => !State.IsRefreshing;
+    public bool CanRefresh => !State.IsRefreshing && Volatile.Read(ref _activeOperationCount) == 0;
 
     public bool ZoomMapIn()
     {
@@ -1226,9 +1231,22 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         return string.IsNullOrWhiteSpace(height.Description) ? "未提供" : height.Description!;
     }
 
-    public async ValueTask LoadAsync(CancellationToken cancellationToken = default)
+    public ValueTask LoadAsync(CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
+        BeginOperation();
+        return new ValueTask(ExecuteSerializedAsync(LoadCoreAsync, cancellationToken));
+    }
+
+    public ValueTask RefreshAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        BeginOperation();
+        return new ValueTask(ExecuteSerializedAsync(RefreshCoreAsync, cancellationToken));
+    }
+
+    private async Task LoadCoreAsync(CancellationToken cancellationToken)
+    {
         State = State with
         {
             LoadState = TsunamiPageLoadState.Loading,
@@ -1256,43 +1274,38 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public async ValueTask RefreshAsync(CancellationToken cancellationToken = default)
+    private async Task RefreshCoreAsync(CancellationToken cancellationToken)
     {
-        ThrowIfDisposed();
-        await _refreshGate.WaitAsync(cancellationToken);
+        State = State with
+        {
+            IsRefreshing = true,
+            ErrorMessage = null,
+        };
+
         try
+        {
+            await _repository.RefreshAsync(cancellationToken);
+            await LoadStationCatalogAsync(cancellationToken).ConfigureAwait(false);
+            ImmutableArray<JmaTsunamiReport> reports =
+                await _repository.ListReportsAsync(cancellationToken);
+            ApplyReports(reports);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
         {
             State = State with
             {
-                IsRefreshing = true,
-                ErrorMessage = null,
+                LoadState = TsunamiPageLoadState.Error,
+                ErrorMessage = exception.Message,
             };
-
-            try
-            {
-                await _repository.RefreshAsync(cancellationToken);
-                await LoadStationCatalogAsync(cancellationToken).ConfigureAwait(false);
-                ImmutableArray<JmaTsunamiReport> reports =
-                    await _repository.ListReportsAsync(cancellationToken);
-                ApplyReports(reports);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception exception)
-            {
-                State = State with
-                {
-                    LoadState = TsunamiPageLoadState.Error,
-                    ErrorMessage = exception.Message,
-                };
-            }
         }
+
         finally
         {
             State = State with { IsRefreshing = false };
-            _refreshGate.Release();
         }
     }
 
@@ -1469,16 +1482,123 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(SelectedForecastArea));
     }
 
+    public async ValueTask DisposeAsync()
+    {
+        Task? mapDetailTask = _mapDetailLoadTask;
+        if (!_isDisposed)
+        {
+            _isDisposed = true;
+            _mapDetailLoadCancellation?.Cancel();
+            _operationCancellation.Cancel();
+            OnPropertyChanged(nameof(CanRefresh));
+        }
+
+        await WaitForOperationsAsync().ConfigureAwait(true);
+        if (mapDetailTask is not null)
+        {
+            await mapDetailTask.ConfigureAwait(true);
+        }
+
+        DisposeResources();
+    }
+
     public void Dispose()
     {
-        if (_isDisposed)
+        if (_isDisposed && _resourcesDisposed)
         {
             return;
         }
 
         _isDisposed = true;
         _mapDetailLoadCancellation?.Cancel();
+        _operationCancellation.Cancel();
+        if (Volatile.Read(ref _activeOperationCount) == 0)
+        {
+            DisposeResources();
+        }
+    }
+
+    internal Task WaitForOperationsAsync()
+    {
+        lock (_operationSync)
+        {
+            return _activeOperationCount == 0
+                ? Task.CompletedTask
+                : _operationsIdle!.Task;
+        }
+    }
+
+    private void BeginOperation()
+    {
+        lock (_operationSync)
+        {
+            if (_activeOperationCount++ == 0)
+            {
+                _operationsIdle = new TaskCompletionSource<bool>(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+        }
+
+        OnPropertyChanged(nameof(CanRefresh));
+    }
+
+    private void EndOperation()
+    {
+        TaskCompletionSource<bool>? idle = null;
+        lock (_operationSync)
+        {
+            _activeOperationCount--;
+            if (_activeOperationCount == 0)
+            {
+                idle = _operationsIdle;
+                _operationsIdle = null;
+            }
+        }
+
+        OnPropertyChanged(nameof(CanRefresh));
+        idle?.TrySetResult(true);
+        if (_isDisposed && Volatile.Read(ref _activeOperationCount) == 0)
+        {
+            DisposeResources();
+        }
+    }
+
+    private async Task ExecuteSerializedAsync(
+        Func<CancellationToken, Task> operation,
+        CancellationToken cancellationToken)
+    {
+        using CancellationTokenSource linkedCancellation =
+            CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken,
+                _operationCancellation.Token);
+        bool entered = false;
+        try
+        {
+            await _refreshGate.WaitAsync(linkedCancellation.Token).ConfigureAwait(true);
+            entered = true;
+            await operation(linkedCancellation.Token).ConfigureAwait(true);
+        }
+        finally
+        {
+            if (entered)
+            {
+                _refreshGate.Release();
+            }
+
+            EndOperation();
+        }
+    }
+
+    private void DisposeResources()
+    {
+        if (_resourcesDisposed)
+        {
+            return;
+        }
+
+        _resourcesDisposed = true;
         _refreshGate.Dispose();
+        _operationCancellation.Dispose();
     }
 
     private void ApplyReports(ImmutableArray<JmaTsunamiReport> reports)

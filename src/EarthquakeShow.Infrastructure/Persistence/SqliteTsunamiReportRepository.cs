@@ -19,6 +19,7 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, IT
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly object _syncRoot = new();
+    private readonly SemaphoreSlim _initializeGate = new(1, 1);
     private readonly SemaphoreSlim _writeGate = new(1, 1);
     private readonly string _databasePath;
     private readonly ImmutableArray<IRealtimeTsunamiSource> _realtimeSources;
@@ -69,35 +70,43 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, IT
     {
         ThrowIfDisposed();
         cancellationToken.ThrowIfCancellationRequested();
-        if (_initialized)
+        await _initializeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            return;
-        }
+            if (_initialized)
+            {
+                return;
+            }
 
-        string? directory = Path.GetDirectoryName(_databasePath);
-        if (!string.IsNullOrEmpty(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
+            string? directory = Path.GetDirectoryName(_databasePath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
 
-        await using SqliteConnection connection = CreateConnection();
-        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
-        await EnsureSchemaAsync(connection, cancellationToken).ConfigureAwait(false);
+            await using SqliteConnection connection = CreateConnection();
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+            await EnsureSchemaAsync(connection, cancellationToken).ConfigureAwait(false);
 
-        ImmutableArray<SourceStatus> existing = await ReadSourceStatusesAsync(
-            connection,
-            cancellationToken).ConfigureAwait(false);
-        ImmutableArray<SourceStatus> statuses = BuildOfflineStatuses(existing);
-        if (!statuses.IsDefaultOrEmpty)
-        {
-            await SaveSourceStatusesToConnectionAsync(
+            ImmutableArray<SourceStatus> existing = await ReadSourceStatusesAsync(
                 connection,
-                statuses,
                 cancellationToken).ConfigureAwait(false);
-        }
+            ImmutableArray<SourceStatus> statuses = BuildOfflineStatuses(existing);
+            if (!statuses.IsDefaultOrEmpty)
+            {
+                await SaveSourceStatusesToConnectionAsync(
+                    connection,
+                    statuses,
+                    cancellationToken).ConfigureAwait(false);
+            }
 
-        SetSourceStatuses(statuses);
-        _initialized = true;
+            SetSourceStatuses(statuses);
+            _initialized = true;
+        }
+        finally
+        {
+            _initializeGate.Release();
+        }
     }
 
     public async Task SaveStationCatalogAsync(
@@ -478,6 +487,7 @@ public sealed class SqliteTsunamiReportRepository : ITsunamiReportRepository, IT
         }
 
         _disposed = true;
+        _initializeGate.Dispose();
         _writeGate.Dispose();
     }
 

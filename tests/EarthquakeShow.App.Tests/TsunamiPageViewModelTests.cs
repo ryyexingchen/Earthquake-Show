@@ -301,6 +301,36 @@ public sealed class TsunamiPageViewModelTests
     }
 
     [Fact]
+    public async Task Refresh_WaitsForInitialLoadAndDoesNotRestoreStaleReports()
+    {
+        JmaTsunamiReport oldReport = CreateReport(
+            "old-report",
+            new DateTimeOffset(2026, 8, 24, 10, 0, 0, TimeSpan.FromHours(9)));
+        JmaTsunamiReport newReport = CreateReport(
+            "new-report",
+            new DateTimeOffset(2026, 8, 24, 11, 0, 0, TimeSpan.FromHours(9)));
+        var repository = new BlockingTsunamiReportRepository(oldReport);
+        using var viewModel = new TsunamiPageViewModel(repository);
+
+        Task load = viewModel.LoadAsync().AsTask();
+        await repository.FirstReadStarted.Task;
+        Assert.False(viewModel.CanRefresh);
+
+        repository.ReportAfterRefresh = newReport;
+        Task refresh = viewModel.RefreshAsync().AsTask();
+        await Task.Yield();
+        bool refreshStartedBeforeInitialReadCompleted = repository.RefreshCalls > 0;
+
+        repository.ReleaseFirstRead();
+        await Task.WhenAll(load, refresh);
+
+        Assert.Equal("new-report", viewModel.State.SelectedReport?.Source.SourceMessageId);
+        Assert.Equal(1, repository.RefreshCalls);
+        Assert.False(refreshStartedBeforeInitialReadCompleted);
+        Assert.True(viewModel.CanRefresh);
+    }
+
+    [Fact]
     public async Task Refresh_FallsBackToLatestOnlyWhenSelectedReportIsMissing()
     {
         DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
@@ -1042,6 +1072,75 @@ public sealed class TsunamiPageViewModelTests
             IEnumerable<JmaTsunamiReport> reports,
             CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+    }
+
+    private sealed class BlockingTsunamiReportRepository : ITsunamiReportRepository
+    {
+        private readonly JmaTsunamiReport _initialReport;
+        private readonly TaskCompletionSource<bool> _firstReadStarted =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<bool> _releaseFirstRead =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private ImmutableArray<JmaTsunamiReport> _reports;
+        private int _listCalls;
+
+        public BlockingTsunamiReportRepository(JmaTsunamiReport initialReport)
+        {
+            _initialReport = initialReport;
+            _reports = [initialReport];
+            ReportAfterRefresh = initialReport;
+        }
+
+        public TaskCompletionSource<bool> FirstReadStarted => _firstReadStarted;
+
+        public JmaTsunamiReport ReportAfterRefresh { get; set; }
+
+        public int RefreshCalls { get; private set; }
+
+        public ImmutableArray<SourceStatus> SourceStatuses { get; } = [];
+
+        public Task InitializeAsync(CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public Task RefreshAsync(CancellationToken cancellationToken = default)
+        {
+            RefreshCalls++;
+            _reports = [ReportAfterRefresh];
+            return Task.CompletedTask;
+        }
+
+        public ValueTask<ImmutableArray<JmaTsunamiReport>> ListReportsAsync(
+            CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Increment(ref _listCalls) == 1)
+            {
+                return new ValueTask<ImmutableArray<JmaTsunamiReport>>(ReadFirstAsync());
+            }
+
+            return ValueTask.FromResult(_reports);
+        }
+
+        public ValueTask<ImmutableArray<JmaTsunamiReport>> ListReportsForEventAsync(
+            string eventId,
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(_reports);
+
+        public Task SaveReportsAsync(
+            IEnumerable<JmaTsunamiReport> reports,
+            CancellationToken cancellationToken = default)
+        {
+            _reports = reports.ToImmutableArray();
+            return Task.CompletedTask;
+        }
+
+        public void ReleaseFirstRead() => _releaseFirstRead.TrySetResult(true);
+
+        private async Task<ImmutableArray<JmaTsunamiReport>> ReadFirstAsync()
+        {
+            _firstReadStarted.TrySetResult(true);
+            await _releaseFirstRead.Task;
+            return [_initialReport];
+        }
     }
 
     private sealed class CatalogStubTsunamiReportRepository(
