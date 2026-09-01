@@ -29,7 +29,6 @@ public partial class TsunamiMapView : UserControl
     private Point _lastPanPoint;
     private Vector _automaticPanOffset;
     private Vector _manualPanOffset;
-    private Vector _wheelPreviewTranslation;
     private bool _centerSelectedStationPending = true;
     private string? _lastSelectedReportIdentity;
 
@@ -73,7 +72,6 @@ public partial class TsunamiMapView : UserControl
         StopPanning();
         _automaticPanOffset = default;
         _manualPanOffset = default;
-        _wheelPreviewTranslation = default;
         _centerSelectedStationPending = true;
         _lastSelectedReportIdentity = null;
         MapPanTransform.X = 0;
@@ -102,6 +100,7 @@ public partial class TsunamiMapView : UserControl
 
         _isPanning = true;
         _lastPanPoint = e.GetPosition(MapCanvas);
+        TraceMap("MouseDown", $"point={FormatPoint(_lastPanPoint)}");
         MapCanvas.CaptureMouse();
         Cursor = Cursors.SizeAll;
         e.Handled = true;
@@ -134,6 +133,7 @@ public partial class TsunamiMapView : UserControl
         }
 
         StopPanning();
+        TraceMap("MouseUp", $"pan={FormatVector(_manualPanOffset)}");
         e.Handled = true;
     }
 
@@ -142,6 +142,12 @@ public partial class TsunamiMapView : UserControl
     private void OnMapMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
     {
         if (ViewModel is null)
+        {
+            return;
+        }
+
+        if (MapCanvas.ActualWidth < 10 || MapCanvas.ActualHeight < 10 ||
+            !ViewModel.HasMapGeometry)
         {
             return;
         }
@@ -157,6 +163,15 @@ public partial class TsunamiMapView : UserControl
             startedWheelZoom = true;
         }
 
+        MapProjection before = MapProjection.Create(
+            ViewModel.MapBounds,
+            MapCanvas.ActualWidth,
+            MapCanvas.ActualHeight,
+            previousZoomLevel,
+            MapPanTransform.X,
+            MapPanTransform.Y);
+        GeoCoordinate anchorCoordinate = before.Unproject(inputAnchor);
+
         bool zoomChanged = e.Delta > 0
             ? ViewModel.ZoomMapIn()
             : e.Delta < 0 && ViewModel.ZoomMapOut();
@@ -171,21 +186,28 @@ public partial class TsunamiMapView : UserControl
             return;
         }
 
-        double previewScale = GetWheelPreviewScale(_wheelBaseZoomLevel, ViewModel.MapZoomLevel);
-        Vector previewTranslation = GetWheelPreviewTranslation(
-            _wheelAnchor,
-            new Vector(MapPanTransform.X, MapPanTransform.Y),
-            _wheelBaseZoomLevel,
-            previewScale,
+        MapProjection after = MapProjection.Create(
+            ViewModel.MapBounds,
             MapCanvas.ActualWidth,
-            MapCanvas.ActualHeight);
-        MapWheelPreviewTransform.CenterX = 0;
-        MapWheelPreviewTransform.CenterY = 0;
-        MapWheelPreviewTranslateTransform.X = previewTranslation.X;
-        MapWheelPreviewTranslateTransform.Y = previewTranslation.Y;
-        _wheelPreviewTranslation = previewTranslation;
-        MapWheelPreviewTransform.ScaleX = previewScale;
-        MapWheelPreviewTransform.ScaleY = previewScale;
+            MapCanvas.ActualHeight,
+            ViewModel.MapZoomLevel,
+            MapPanTransform.X,
+            MapPanTransform.Y);
+        Point projectedAnchor = after.Project(anchorCoordinate);
+        Vector panAdjustment = GetWheelPanAdjustment(inputAnchor, projectedAnchor);
+        _manualPanOffset += panAdjustment;
+        ApplyPanTransform();
+
+        double previewScale = GetWheelPreviewScale(_wheelBaseZoomLevel, ViewModel.MapZoomLevel);
+        MapZoomTransform.CenterX = _wheelAnchor.X;
+        MapZoomTransform.CenterY = _wheelAnchor.Y;
+        MapZoomTransform.ScaleX = previewScale;
+        MapZoomTransform.ScaleY = previewScale;
+        TraceMap(
+            "WheelPreview",
+            $"anchor={FormatPoint(_wheelAnchor)} projected={FormatPoint(projectedAnchor)} " +
+            $"adjust={FormatVector(panAdjustment)} previewScale={previewScale:0.###} " +
+            $"previewCenter={FormatPoint(new Point(MapZoomTransform.CenterX, MapZoomTransform.CenterY))}");
         _wheelZoomTimer.Stop();
         _wheelZoomTimer.Start();
 
@@ -304,34 +326,15 @@ public partial class TsunamiMapView : UserControl
 
         _wheelZoomTimer.Stop();
         _isWheelZooming = false;
-        Vector committedTranslation = _wheelPreviewTranslation;
-        if (ViewModel is not null &&
-            double.IsFinite(_wheelBaseZoomLevel) &&
-            _wheelBaseZoomLevel >= 1 &&
-            double.IsFinite(ViewModel.MapZoomLevel))
-        {
-            committedTranslation = GetWheelPreviewTranslation(
-                _wheelAnchor,
-                new Vector(MapPanTransform.X, MapPanTransform.Y),
-                _wheelBaseZoomLevel,
-                ViewModel.MapZoomLevel / _wheelBaseZoomLevel,
-                MapCanvas.ActualWidth,
-                MapCanvas.ActualHeight);
-        }
-
-        _manualPanOffset += committedTranslation;
-        _wheelPreviewTranslation = default;
         RequestRender();
     }
 
     private void ResetWheelZoomTransform()
     {
-        MapWheelPreviewTransform.CenterX = 0;
-        MapWheelPreviewTransform.CenterY = 0;
-        MapWheelPreviewTransform.ScaleX = 1;
-        MapWheelPreviewTransform.ScaleY = 1;
-        MapWheelPreviewTranslateTransform.X = 0;
-        MapWheelPreviewTranslateTransform.Y = 0;
+        MapZoomTransform.CenterX = 0;
+        MapZoomTransform.CenterY = 0;
+        MapZoomTransform.ScaleX = 1;
+        MapZoomTransform.ScaleY = 1;
     }
 
     internal static double GetWheelPreviewScale(double baseZoomLevel, double currentZoomLevel)
@@ -344,29 +347,23 @@ public partial class TsunamiMapView : UserControl
         return Math.Pow(1.25, currentZoomLevel - baseZoomLevel);
     }
 
-    internal static Vector GetWheelPreviewTranslation(
-        Point anchor,
-        Vector panOffset,
-        double baseZoomLevel,
-        double previewScale,
-        double width,
-        double height)
-    {
-        if (!double.IsFinite(baseZoomLevel) || baseZoomLevel < 1 ||
-            !double.IsFinite(previewScale) || previewScale <= 0 ||
-            !double.IsFinite(width) || !double.IsFinite(height))
-        {
-            return default;
-        }
+    internal static Vector GetWheelPanAdjustment(Point anchor, Point projectedAnchor) =>
+        anchor - projectedAnchor;
 
-        Point center = new(width / 2, height / 2);
-        Vector formalAnchorOffset = new(
-            (anchor.X - panOffset.X - center.X) * baseZoomLevel,
-            (anchor.Y - panOffset.Y - center.Y) * baseZoomLevel);
-        return new(
-            formalAnchorOffset.X * (1 - previewScale),
-            formalAnchorOffset.Y * (1 - previewScale));
+    private void TraceMap(string action, string? detail = null)
+    {
+        string message =
+            $"[TsunamiMap] {DateTimeOffset.Now:HH:mm:ss.fff} {action} " +
+            $"zoom={ViewModel?.MapZoomLevel:0.###} " +
+            $"pan={FormatVector(new Vector(MapPanTransform.X, MapPanTransform.Y))} " +
+            $"preview={MapZoomTransform.ScaleX:0.###}@" +
+            $"{FormatPoint(new Point(MapZoomTransform.CenterX, MapZoomTransform.CenterY))}";
+        Console.WriteLine(string.IsNullOrWhiteSpace(detail) ? message : $"{message} {detail}");
     }
+
+    private static string FormatPoint(Point point) => $"{point.X:0.###},{point.Y:0.###}";
+
+    private static string FormatVector(Vector vector) => $"{vector.X:0.###},{vector.Y:0.###}";
 
     private void RenderMap()
     {
@@ -374,6 +371,10 @@ public partial class TsunamiMapView : UserControl
         ResetWheelZoomTransform();
         MapContentCanvas.Children.Clear();
         TsunamiPageViewModel? viewModel = ViewModel;
+        TraceMap(
+            "Render",
+            $"detail={viewModel?.MapDetailLevel.ToString() ?? "none"} " +
+            $"lines={viewModel?.MapLines.Length ?? 0}");
         UpdateLegend(viewModel);
         if (viewModel is null || !viewModel.HasMapGeometry ||
             MapCanvas.ActualWidth < 10 || MapCanvas.ActualHeight < 10)
@@ -384,14 +385,16 @@ public partial class TsunamiMapView : UserControl
         MapProjection projection = MapProjection.Create(
             viewModel.MapBounds,
             MapCanvas.ActualWidth,
-            MapCanvas.ActualHeight);
-        MapZoomTransform.ScaleX = viewModel.MapZoomLevel;
-        MapZoomTransform.ScaleY = viewModel.MapZoomLevel;
+            MapCanvas.ActualHeight,
+            viewModel.MapZoomLevel,
+            0,
+            0);
+        MapZoomTransform.ScaleX = 1;
+        MapZoomTransform.ScaleY = 1;
         UpdateSelectedStationPan(viewModel, projection);
         ImmutableArray<TsunamiMapLine> mapLines = viewModel.MapLines;
         int pointCount = mapLines.Sum(line => line.Coordinates.Length);
-        double minimumPixelDistance = GetLineSimplificationPixels(pointCount) /
-            Math.Max(1, viewModel.MapZoomLevel);
+        double minimumPixelDistance = GetLineSimplificationPixels(pointCount);
         var coastHost = new MapDrawingHost(MapCanvas.ActualWidth, MapCanvas.ActualHeight, context =>
         {
             foreach (IGrouping<string, TsunamiMapLine> group in mapLines.GroupBy(
@@ -441,8 +444,7 @@ public partial class TsunamiMapView : UserControl
 
                 geometry.Freeze();
                 Color color = GetLevelColor(level);
-                double strokeThickness = (level == TsunamiLevel.Unknown ? 0.7 : 3) /
-                    Math.Max(1, viewModel.MapZoomLevel);
+                double strokeThickness = level == TsunamiLevel.Unknown ? 0.7 : 3;
                 Color strokeColor = level == TsunamiLevel.Unknown
                     ? InactiveCoastColor
                     : color;
@@ -498,14 +500,13 @@ public partial class TsunamiMapView : UserControl
             {
                 Fill = new SolidColorBrush(color),
                 Stroke = Brushes.White,
-                StrokeThickness = (isSelected ? 3 : 1.5) /
-                    Math.Max(1, viewModel.MapZoomLevel),
+                StrokeThickness = isSelected ? 3 : 1.5,
             });
             if (showObservationLabels)
             {
                 marker.Children.Add(new TextBlock
                 {
-                    FontSize = 8 / Math.Max(1, viewModel.MapZoomLevel),
+                    FontSize = 8,
                     FontWeight = FontWeights.Bold,
                     Foreground = GetMarkerTextBrush(color),
                     HorizontalAlignment = HorizontalAlignment.Center,
@@ -587,7 +588,7 @@ public partial class TsunamiMapView : UserControl
         bool showLabel)
     {
         double baseSize = showLabel ? 30 : isSelected ? 18 : 12;
-        return baseSize / Math.Max(1, double.IsFinite(zoomLevel) ? zoomLevel : 1);
+        return baseSize;
     }
 
     internal static bool ShouldShowObservationLabels(double zoomLevel) =>
@@ -628,9 +629,7 @@ public partial class TsunamiMapView : UserControl
         double height)
     {
         Point center = new(width / 2, height / 2);
-        return new(
-            center.X - (center.X + (projected.X - center.X) * zoomLevel),
-            center.Y - (center.Y + (projected.Y - center.Y) * zoomLevel));
+        return center - projected;
     }
 
     internal static double GetLineSimplificationPixels(int pointCount) =>
@@ -771,36 +770,87 @@ public partial class TsunamiMapView : UserControl
     private sealed class MapProjection
     {
         private readonly double _scale;
+        private readonly double _longitudeScale;
         private readonly MapGeometryBounds _bounds;
         private readonly double _width;
         private readonly double _height;
+        private readonly double _panX;
+        private readonly double _panY;
 
-        private MapProjection(double scale, MapGeometryBounds bounds, double width, double height)
+        private MapProjection(
+            double scale,
+            double longitudeScale,
+            MapGeometryBounds bounds,
+            double width,
+            double height,
+            double panX,
+            double panY)
         {
             _scale = scale;
+            _longitudeScale = longitudeScale;
             _bounds = bounds;
             _width = width;
             _height = height;
+            _panX = panX;
+            _panY = panY;
         }
 
-        public static MapProjection Create(MapGeometryBounds bounds, double width, double height)
+        public static MapProjection Create(
+            MapGeometryBounds bounds,
+            double width,
+            double height,
+            double zoomLevel,
+            double panX = 0,
+            double panY = 0)
         {
-            double longitudeScale = Math.Max(0.2, Math.Cos(((bounds.MinLatitude + bounds.MaxLatitude) / 2) * Math.PI / 180));
-            double scale = Math.Min(
+            double longitudeScale = Math.Max(
+                0.2,
+                Math.Cos(((bounds.MinLatitude + bounds.MaxLatitude) / 2) * Math.PI / 180));
+            double fitScale = Math.Min(
                 (width - 28) / (bounds.LongitudeSpan * longitudeScale),
                 (height - 28) / bounds.LatitudeSpan);
-            return new(scale, bounds, width, height);
+            double zoomScale = Math.Pow(
+                1.25,
+                Math.Max(0, double.IsFinite(zoomLevel) ? zoomLevel - 1 : 0));
+            return new(
+                fitScale * zoomScale,
+                longitudeScale,
+                bounds,
+                width,
+                height,
+                panX,
+                panY);
         }
 
         public Point Project(GeoCoordinate coordinate)
         {
-            double longitudeScale = Math.Max(0.2, Math.Cos(((
-                _bounds.MinLatitude + _bounds.MaxLatitude) / 2) * Math.PI / 180));
             double centerLongitude = (_bounds.MinLongitude + _bounds.MaxLongitude) / 2;
             double centerLatitude = (_bounds.MinLatitude + _bounds.MaxLatitude) / 2;
             return new(
-                _width / 2 + (coordinate.Longitude - centerLongitude) * _scale * longitudeScale,
-                _height / 2 - (coordinate.Latitude - centerLatitude) * _scale);
+                _width / 2 + (coordinate.Longitude - centerLongitude) * _scale * _longitudeScale + _panX,
+                _height / 2 - (coordinate.Latitude - centerLatitude) * _scale + _panY);
+        }
+
+        public GeoCoordinate Unproject(Point point)
+        {
+            double centerLongitude = (_bounds.MinLongitude + _bounds.MaxLongitude) / 2;
+            double centerLatitude = (_bounds.MinLatitude + _bounds.MaxLatitude) / 2;
+            double latitude = centerLatitude - (point.Y - _height / 2 - _panY) / _scale;
+            double longitude = centerLongitude +
+                (point.X - _width / 2 - _panX) / (_scale * _longitudeScale);
+            return new(
+                Math.Clamp(latitude, -90, 90),
+                NormalizeLongitude(longitude));
+        }
+
+        private static double NormalizeLongitude(double longitude)
+        {
+            double normalized = longitude % 360;
+            return normalized > 180
+                ? normalized - 360
+                : normalized < -180
+                    ? normalized + 360
+                    : normalized;
         }
     }
 }

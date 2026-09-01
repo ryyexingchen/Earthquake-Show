@@ -17,13 +17,10 @@
               LostMouseCapture="OnMapLostMouseCapture"
               MouseWheel="OnMapMouseWheel">
             <Canvas x:Name="MapContentCanvas"
-                    Background="Transparent"
-                    RenderTransformOrigin="0.5,0.5">
+                    Background="Transparent">
                 <Canvas.RenderTransform>
                     <TransformGroup>
                         <ScaleTransform x:Name="MapZoomTransform" ScaleX="1" ScaleY="1" />
-                        <ScaleTransform x:Name="MapWheelPreviewTransform" ScaleX="1" ScaleY="1" />
-                        <TranslateTransform x:Name="MapWheelPreviewTranslateTransform" />
                         <TranslateTransform x:Name="MapPanTransform" />
                     </TransformGroup>
                 </Canvas.RenderTransform>

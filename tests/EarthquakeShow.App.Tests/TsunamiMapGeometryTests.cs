@@ -91,8 +91,8 @@ public sealed class TsunamiMapGeometryTests
             width: 400,
             height: 300);
 
-        Assert.Equal(-320, offset.X);
-        Assert.Equal(-60, offset.Y);
+        Assert.Equal(-160, offset.X);
+        Assert.Equal(-30, offset.Y);
     }
 
     [Fact]
@@ -121,27 +121,19 @@ public sealed class TsunamiMapGeometryTests
     }
 
     [Fact]
-    public void WheelPreviewTranslationAccountsForFormalScaleAndPan()
+    public void WheelPanAdjustmentKeepsAnchorStationary()
     {
         Assert.Equal(
             new Vector(-100, -70),
-            TsunamiMapView.GetWheelPreviewTranslation(
+            TsunamiMapView.GetWheelPanAdjustment(
                 new Point(100, 80),
-                new Vector(0, 0),
-                baseZoomLevel: 2,
-                previewScale: 0.5,
-                width: 400,
-                height: 300));
+                new Point(200, 150)));
 
-        Vector committed = TsunamiMapView.GetWheelPreviewTranslation(
-            new Point(100, 80),
-            new Vector(0, 0),
-            baseZoomLevel: 3,
-            previewScale: 4d / 3,
-            width: 400,
-            height: 300);
-        Assert.Equal(100, committed.X, precision: 9);
-        Assert.Equal(70, committed.Y, precision: 9);
+        Assert.Equal(
+            new Vector(100, 70),
+            TsunamiMapView.GetWheelPanAdjustment(
+                new Point(100, 80),
+                new Point(0, 10)));
     }
 
     [Fact]
@@ -168,7 +160,7 @@ public sealed class TsunamiMapGeometryTests
 
     [Theory]
     [InlineData(1, false, false, 12)]
-    [InlineData(8, true, true, 3.75)]
+    [InlineData(8, true, true, 30)]
     public void ObservationMarkerSizeRemainsScreenSizedAcrossZoom(
         double zoomLevel,
         bool isSelected,
