@@ -336,9 +336,19 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 
     public bool CanRefresh => !State.IsRefreshing;
 
-    public void ZoomMapIn() => MapZoomLevel = Math.Min(MaximumMapZoomLevel, MapZoomLevel + 1);
+    public bool ZoomMapIn()
+    {
+        double previous = MapZoomLevel;
+        MapZoomLevel = Math.Min(MaximumMapZoomLevel, MapZoomLevel + 1);
+        return Math.Abs(previous - MapZoomLevel) >= 0.001;
+    }
 
-    public void ZoomMapOut() => MapZoomLevel = Math.Max(MinimumMapZoomLevel, MapZoomLevel - 1);
+    public bool ZoomMapOut()
+    {
+        double previous = MapZoomLevel;
+        MapZoomLevel = Math.Max(MinimumMapZoomLevel, MapZoomLevel - 1);
+        return Math.Abs(previous - MapZoomLevel) >= 0.001;
+    }
 
     public void ResetMapZoom() => MapZoomLevel = 1;
 

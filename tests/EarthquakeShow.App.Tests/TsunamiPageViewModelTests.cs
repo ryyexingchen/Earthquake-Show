@@ -813,6 +813,30 @@ public sealed class TsunamiPageViewModelTests
     }
 
     [Fact]
+    public void MapZoom_ReportsNoChangeAtConfiguredLimits()
+    {
+        using var viewModel = new TsunamiPageViewModel(new StubTsunamiReportRepository([]));
+
+        for (int index = 0; index < 40; index++)
+        {
+            viewModel.ZoomMapIn();
+        }
+
+        Assert.Equal(TsunamiPageViewModel.MaximumMapZoomLevel, viewModel.MapZoomLevel);
+        Assert.False(viewModel.ZoomMapIn());
+        Assert.Equal(TsunamiPageViewModel.MaximumMapZoomLevel, viewModel.MapZoomLevel);
+
+        for (int index = 0; index < 40; index++)
+        {
+            viewModel.ZoomMapOut();
+        }
+
+        Assert.Equal(TsunamiPageViewModel.MinimumMapZoomLevel, viewModel.MapZoomLevel);
+        Assert.False(viewModel.ZoomMapOut());
+        Assert.Equal(TsunamiPageViewModel.MinimumMapZoomLevel, viewModel.MapZoomLevel);
+    }
+
+    [Fact]
     public void MapGeometry_IsAvailableBeforeReportSelection()
     {
         using var viewModel = new TsunamiPageViewModel(new StubTsunamiReportRepository([]));

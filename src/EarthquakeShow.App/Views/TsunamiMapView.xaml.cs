@@ -76,20 +76,21 @@ public partial class TsunamiMapView : UserControl
         }
 
         Point inputAnchor = e.GetPosition(MapCanvas);
+        double previousZoomLevel = ViewModel.MapZoomLevel;
+        bool zoomChanged = e.Delta > 0
+            ? ViewModel.ZoomMapIn()
+            : e.Delta < 0 && ViewModel.ZoomMapOut();
+        if (!zoomChanged)
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (!_isWheelZooming)
         {
             _isWheelZooming = true;
-            _wheelBaseZoomLevel = ViewModel.MapZoomLevel;
+            _wheelBaseZoomLevel = previousZoomLevel;
             _wheelAnchor = inputAnchor;
-        }
-
-        if (e.Delta > 0)
-        {
-            ViewModel.ZoomMapIn();
-        }
-        else if (e.Delta < 0)
-        {
-            ViewModel.ZoomMapOut();
         }
 
         MapZoomTransform.CenterX = _wheelAnchor.X;
