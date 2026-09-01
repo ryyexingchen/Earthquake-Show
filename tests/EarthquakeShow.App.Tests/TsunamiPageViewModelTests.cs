@@ -158,6 +158,52 @@ public sealed class TsunamiPageViewModelTests
     }
 
     [Fact]
+    public async Task ForecastArea_ExposesChildStationForecastsAndSelection()
+    {
+        DateTimeOffset issuedAt = new(2026, 8, 24, 10, 0, 0, TimeSpan.FromHours(9));
+        JmaTsunamiReport report = CreateReport("forecast-stations", issuedAt) with
+        {
+            ForecastAreas =
+            [
+                new JmaTsunamiForecastArea(
+                    "茨城県",
+                    "300",
+                    "大津波警報：発表",
+                    "53",
+                    "津波なし",
+                    "00",
+                    issuedAt.AddHours(1),
+                    null,
+                    new JmaTsunamiHeight(null, "巨大", "不明", "m", "津波の高さ"),
+                    [
+                        new JmaTsunamiStationForecast(
+                            "大洗",
+                            "30001",
+                            issuedAt.AddHours(8),
+                            issuedAt.AddHours(1),
+                            null),
+                    ]),
+            ],
+        };
+        using var viewModel = new TsunamiPageViewModel(
+            new StubTsunamiReportRepository([report]));
+
+        await viewModel.LoadAsync();
+
+        TsunamiForecastAreaDisplay area = Assert.Single(viewModel.ForecastAreas);
+        TsunamiStationForecastDisplay station = Assert.Single(area.Stations);
+        Assert.Equal("30001", station.Code);
+        Assert.Equal("2026-08-24 18:00:00 JST", station.HighTideText);
+        Assert.True(viewModel.SelectForecastArea("300"));
+        Assert.Equal("300", viewModel.SelectedForecastAreaCode);
+        Assert.Equal("300", viewModel.SelectedForecastArea?.Code);
+        Assert.False(viewModel.SelectForecastArea("missing"));
+
+        viewModel.ClearSelectedForecastArea();
+        Assert.Null(viewModel.SelectedForecastArea);
+    }
+
+    [Fact]
     public async Task Timeline_InvestigationReportInheritsPreviousHighestAlert()
     {
         DateTimeOffset issuedAt = new(2026, 8, 24, 10, 0, 0, TimeSpan.FromHours(9));

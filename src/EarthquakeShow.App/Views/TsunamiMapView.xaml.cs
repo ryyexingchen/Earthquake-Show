@@ -31,6 +31,7 @@ public partial class TsunamiMapView : UserControl
     private Vector _manualPanOffset;
     private bool _centerSelectedStationPending = true;
     private string? _lastSelectedReportIdentity;
+    private string? _lastSelectedObservationStationCode;
 
     public TsunamiMapView()
     {
@@ -55,6 +56,7 @@ public partial class TsunamiMapView : UserControl
     {
         _centerSelectedStationPending = true;
         _lastSelectedReportIdentity = ViewModel?.SelectedTimelineIdentity;
+        _lastSelectedObservationStationCode = ViewModel?.SelectedObservationStation?.Code;
         if (ViewModel is not null)
         {
             ViewModel.PropertyChanged += OnViewModelPropertyChanged;
@@ -74,6 +76,7 @@ public partial class TsunamiMapView : UserControl
         _manualPanOffset = default;
         _centerSelectedStationPending = true;
         _lastSelectedReportIdentity = null;
+        _lastSelectedObservationStationCode = null;
         MapPanTransform.X = 0;
         MapPanTransform.Y = 0;
         _renderPending = false;
@@ -242,6 +245,7 @@ public partial class TsunamiMapView : UserControl
             if (ShouldResetPanForReportIdentity(_lastSelectedReportIdentity, currentIdentity))
             {
                 _manualPanOffset = default;
+                ApplyPanTransform();
             }
 
             _lastSelectedReportIdentity = currentIdentity;
@@ -249,18 +253,24 @@ public partial class TsunamiMapView : UserControl
 
         if (e.PropertyName == nameof(TsunamiPageViewModel.SelectedObservationStation))
         {
-            _manualPanOffset = default;
-        }
+            string? currentCode = ViewModel?.SelectedObservationStation?.Code;
+            if (ShouldResetPanForObservationStation(
+                    _lastSelectedObservationStationCode,
+                    currentCode))
+            {
+                _manualPanOffset = default;
+                _centerSelectedStationPending = true;
+                ApplyPanTransform();
+            }
 
-        if (e.PropertyName == nameof(TsunamiPageViewModel.SelectedObservationStation))
-        {
-            _centerSelectedStationPending = true;
+            _lastSelectedObservationStationCode = currentCode;
         }
 
         if (_isWheelZooming && e.PropertyName is
             nameof(TsunamiPageViewModel.ForecastAreaLevels)
             or nameof(TsunamiPageViewModel.HasMapGeometry)
             or nameof(TsunamiPageViewModel.ObservationStations)
+            or nameof(TsunamiPageViewModel.SelectedForecastArea)
             or nameof(TsunamiPageViewModel.SelectedObservationStation)
             or nameof(TsunamiPageViewModel.MapLines)
             or nameof(TsunamiPageViewModel.MapZoomLevel))
@@ -271,6 +281,7 @@ public partial class TsunamiMapView : UserControl
         if (e.PropertyName is nameof(TsunamiPageViewModel.ForecastAreaLevels)
             or nameof(TsunamiPageViewModel.HasMapGeometry)
             or nameof(TsunamiPageViewModel.ObservationStations)
+            or nameof(TsunamiPageViewModel.SelectedForecastArea)
             or nameof(TsunamiPageViewModel.SelectedObservationStation)
             or nameof(TsunamiPageViewModel.MapLines)
             or nameof(TsunamiPageViewModel.MapZoomLevel))
@@ -355,9 +366,13 @@ public partial class TsunamiMapView : UserControl
         string message =
             $"[TsunamiMap] {DateTimeOffset.Now:HH:mm:ss.fff} {action} " +
             $"zoom={ViewModel?.MapZoomLevel:0.###} " +
-            $"pan={FormatVector(new Vector(MapPanTransform.X, MapPanTransform.Y))} " +
+            $"manualPan={FormatVector(_manualPanOffset)} " +
+            $"automaticPan={FormatVector(_automaticPanOffset)} " +
+            $"appliedPan={FormatVector(new Vector(MapPanTransform.X, MapPanTransform.Y))} " +
             $"preview={MapZoomTransform.ScaleX:0.###}@" +
-            $"{FormatPoint(new Point(MapZoomTransform.CenterX, MapZoomTransform.CenterY))}";
+            $"{FormatPoint(new Point(MapZoomTransform.CenterX, MapZoomTransform.CenterY))} " +
+            $"selectedStation={ViewModel?.SelectedObservationStation?.Code ?? "null"} " +
+            $"report={ViewModel?.SelectedTimelineIdentity ?? "null"}";
         Console.WriteLine(string.IsNullOrWhiteSpace(detail) ? message : $"{message} {detail}");
     }
 
@@ -369,7 +384,6 @@ public partial class TsunamiMapView : UserControl
     {
         // 保留滚轮预览直到正式绘制开始，避免清理临时变换后出现旧倍率闪回。
         ResetWheelZoomTransform();
-        MapContentCanvas.Children.Clear();
         TsunamiPageViewModel? viewModel = ViewModel;
         TraceMap(
             "Render",
@@ -379,6 +393,7 @@ public partial class TsunamiMapView : UserControl
         if (viewModel is null || !viewModel.HasMapGeometry ||
             MapCanvas.ActualWidth < 10 || MapCanvas.ActualHeight < 10)
         {
+            MapContentCanvas.Children.Clear();
             return;
         }
 
@@ -395,6 +410,12 @@ public partial class TsunamiMapView : UserControl
         ImmutableArray<TsunamiMapLine> mapLines = viewModel.MapLines;
         int pointCount = mapLines.Sum(line => line.Coordinates.Length);
         double minimumPixelDistance = GetLineSimplificationPixels(pointCount);
+        var nextLayer = new Canvas
+        {
+            Width = MapCanvas.ActualWidth,
+            Height = MapCanvas.ActualHeight,
+            Background = Brushes.Transparent,
+        };
         var coastHost = new MapDrawingHost(MapCanvas.ActualWidth, MapCanvas.ActualHeight, context =>
         {
             foreach (IGrouping<string, TsunamiMapLine> group in mapLines.GroupBy(
@@ -444,13 +465,35 @@ public partial class TsunamiMapView : UserControl
 
                 geometry.Freeze();
                 Color color = GetLevelColor(level);
-                double strokeThickness = level == TsunamiLevel.Unknown ? 0.7 : 3;
+                bool isSelected = IsForecastAreaSelected(
+                    group.Key,
+                    viewModel.SelectedForecastAreaCode);
+                if (isSelected)
+                {
+                    var highlightBrush = new SolidColorBrush(Colors.White)
+                    {
+                        Opacity = 0.9,
+                    };
+                    highlightBrush.Freeze();
+                    var highlightPen = new Pen(highlightBrush, 7)
+                    {
+                        LineJoin = PenLineJoin.Round,
+                        StartLineCap = PenLineCap.Round,
+                        EndLineCap = PenLineCap.Round,
+                    };
+                    highlightPen.Freeze();
+                    context.DrawGeometry(null, highlightPen, geometry);
+                }
+
+                double strokeThickness = isSelected
+                    ? 4.5
+                    : level == TsunamiLevel.Unknown ? 0.7 : 3;
                 Color strokeColor = level == TsunamiLevel.Unknown
                     ? InactiveCoastColor
                     : color;
                 var brush = new SolidColorBrush(strokeColor)
                 {
-                    Opacity = level == TsunamiLevel.Unknown ? 0.6 : 0.95,
+                    Opacity = isSelected || level != TsunamiLevel.Unknown ? 0.95 : 0.6,
                 };
                 brush.Freeze();
                 var pen = new Pen(brush, strokeThickness)
@@ -463,7 +506,7 @@ public partial class TsunamiMapView : UserControl
                 context.DrawGeometry(null, pen, geometry);
             }
         });
-        MapContentCanvas.Children.Add(coastHost);
+        nextLayer.Children.Add(coastHost);
 
         bool showObservationLabels = ShouldShowObservationLabels(viewModel.MapZoomLevel);
         foreach (TsunamiObservationStationDisplay station in viewModel.ObservationStations
@@ -519,8 +562,12 @@ public partial class TsunamiMapView : UserControl
             marker.MouseLeftButtonUp += (_, _) => viewModel.SelectObservationStation(station.Code);
             Canvas.SetLeft(marker, point.X - marker.Width / 2);
             Canvas.SetTop(marker, point.Y - marker.Height / 2);
-            MapContentCanvas.Children.Add(marker);
+            nextLayer.Children.Add(marker);
         }
+
+        // 脱离可视树完成整层构建后一次替换，避免先清空旧轮廓线造成闪烁。
+        MapContentCanvas.Children.Clear();
+        MapContentCanvas.Children.Add(nextLayer);
     }
 
     private void UpdateSelectedStationPan(
@@ -581,6 +628,15 @@ public partial class TsunamiMapView : UserControl
         string? previousIdentity,
         string? currentIdentity) =>
         !string.Equals(previousIdentity, currentIdentity, StringComparison.Ordinal);
+
+    internal static bool ShouldResetPanForObservationStation(
+        string? previousCode,
+        string? currentCode) =>
+        !string.Equals(previousCode, currentCode, StringComparison.Ordinal);
+
+    internal static bool IsForecastAreaSelected(string lineCode, string? selectedAreaCode) =>
+        !string.IsNullOrWhiteSpace(selectedAreaCode) &&
+        string.Equals(lineCode, selectedAreaCode, StringComparison.Ordinal);
 
     internal static double GetObservationMarkerSize(
         double zoomLevel,

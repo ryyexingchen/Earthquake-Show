@@ -159,6 +159,35 @@ public sealed class TsunamiMapGeometryTests
     }
 
     [Theory]
+    [InlineData("10050", "10050", false)]
+    [InlineData("10050", "10051", true)]
+    [InlineData("10050", null, true)]
+    [InlineData(null, "10050", true)]
+    public void ObservationRefreshOnlyResetsPanWhenStationCodeChanges(
+        string? previousCode,
+        string? currentCode,
+        bool expected)
+    {
+        Assert.Equal(
+            expected,
+            TsunamiMapView.ShouldResetPanForObservationStation(previousCode, currentCode));
+    }
+
+    [Theory]
+    [InlineData("300", "300", true)]
+    [InlineData("300", "301", false)]
+    [InlineData("300", null, false)]
+    public void ForecastAreaHighlightMatchesExactForecastCode(
+        string lineCode,
+        string? selectedAreaCode,
+        bool expected)
+    {
+        Assert.Equal(
+            expected,
+            TsunamiMapView.IsForecastAreaSelected(lineCode, selectedAreaCode));
+    }
+
+    [Theory]
     [InlineData(1, false, false, 12)]
     [InlineData(8, true, true, 30)]
     public void ObservationMarkerSizeRemainsScreenSizedAcrossZoom(

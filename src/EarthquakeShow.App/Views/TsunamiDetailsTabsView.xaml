@@ -257,31 +257,96 @@
                         <TextBlock Grid.Column="2" Style="{StaticResource TsunamiTableHeaderStyle}" Text="预计首波" />
                         <TextBlock Grid.Column="3" Style="{StaticResource TsunamiTableHeaderStyle}" Text="最大高度" />
                     </Grid>
-                    <ItemsControl Margin="0,4,0,0" ItemsSource="{Binding ForecastAreas}">
-                        <ItemsControl.ItemTemplate>
+                    <ListBox Margin="0,4,0,0"
+                             AutomationProperties.Name="海啸警报预报表格"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             ItemsSource="{Binding ForecastAreas}"
+                             ItemContainerStyle="{StaticResource TsunamiTableListBoxItemStyle}"
+                             PreviewMouseLeftButtonDown="OnForecastAreaPreviewMouseLeftButtonDown"
+                             PreviewKeyDown="OnForecastAreaPreviewKeyDown"
+                             SelectedValue="{Binding SelectedForecastAreaCode, Mode=OneWay}"
+                             SelectedValuePath="Code"
+                             SelectionChanged="OnForecastAreaSelectionChanged"
+                             x:Name="ForecastAreaListBox"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Padding="0,6" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="68" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="78" />
-                                            <ColumnDefinition Width="62" />
-                                        </Grid.ColumnDefinitions>
-                                        <Border Style="{StaticResource TsunamiLevelBadgeStyle}" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                            <TextBlock Style="{StaticResource TsunamiLevelTextStyle}" Text="{Binding LevelText}" />
-                                        </Border>
-                                        <StackPanel Grid.Column="1" Margin="6,0,4,0" VerticalAlignment="Center">
-                                            <TextBlock FontWeight="SemiBold" Text="{Binding Name}" TextWrapping="Wrap" />
-                                            <TextBlock Margin="0,2,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding Code}" />
+                                <Border Padding="0,6"
+                                        BorderBrush="{StaticResource BorderBrush}"
+                                        BorderThickness="0,1,0,0">
+                                    <StackPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="68" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="78" />
+                                                <ColumnDefinition Width="62" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Style="{StaticResource TsunamiLevelBadgeStyle}" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                <TextBlock Style="{StaticResource TsunamiLevelTextStyle}" Text="{Binding LevelText}" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Margin="6,0,4,0" VerticalAlignment="Center">
+                                                <TextBlock FontWeight="SemiBold" Text="{Binding Name}" TextWrapping="Wrap" />
+                                                <TextBlock Margin="0,2,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding Code}" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding ArrivalText}" TextWrapping="Wrap" />
+                                            <TextBlock Grid.Column="3" VerticalAlignment="Center" FontSize="10" FontWeight="SemiBold" Text="{Binding HeightText}" TextWrapping="Wrap" />
+                                        </Grid>
+                                        <StackPanel Margin="68,7,0,0">
+                                            <StackPanel.Style>
+                                                <Style TargetType="StackPanel">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding HasStations}" Value="False">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </StackPanel.Style>
+                                            <TextBlock Margin="0,0,0,3"
+                                                       Foreground="{StaticResource MutedTextBrush}"
+                                                       FontSize="10"
+                                                       Text="子地域预测" />
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="78" />
+                                                    <ColumnDefinition Width="62" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Style="{StaticResource TsunamiTableHeaderStyle}" Text="子地域 / 观测点" />
+                                                <TextBlock Grid.Column="1" Style="{StaticResource TsunamiTableHeaderStyle}" Text="预计首波" />
+                                                <TextBlock Grid.Column="2" Style="{StaticResource TsunamiTableHeaderStyle}" Text="满潮时刻" />
+                                            </Grid>
+                                            <ItemsControl ItemsSource="{Binding Stations}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="0,3,0,0">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="78" />
+                                                                <ColumnDefinition Width="62" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <StackPanel>
+                                                                <TextBlock FontSize="10" Text="{Binding Name}" TextWrapping="Wrap" />
+                                                                <TextBlock Foreground="{StaticResource MutedTextBrush}" FontSize="9" Text="{Binding Code}" />
+                                                            </StackPanel>
+                                                            <TextBlock Grid.Column="1" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding ArrivalText}" TextWrapping="Wrap" />
+                                                            <TextBlock Grid.Column="2" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding HighTideText}" TextWrapping="Wrap" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
                                         </StackPanel>
-                                        <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding ArrivalText}" TextWrapping="Wrap" />
-                                        <TextBlock Grid.Column="3" VerticalAlignment="Center" FontSize="10" FontWeight="SemiBold" Text="{Binding HeightText}" TextWrapping="Wrap" />
-                                    </Grid>
+                                    </StackPanel>
                                 </Border>
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                 </StackPanel>
             </ScrollViewer>
         </TabItem>

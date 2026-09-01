@@ -16,7 +16,18 @@ public sealed record TsunamiForecastAreaDisplay(
     TsunamiLevel Level,
     string LevelText,
     string ArrivalText,
-    string HeightText);
+    string HeightText)
+{
+    public ImmutableArray<TsunamiStationForecastDisplay> Stations { get; init; } = [];
+
+    public bool HasStations => !Stations.IsDefaultOrEmpty;
+}
+
+public sealed record TsunamiStationForecastDisplay(
+    string Name,
+    string Code,
+    string ArrivalText,
+    string HighTideText);
 
 public sealed record TsunamiObservationStationDisplay(
     string AreaName,
@@ -121,6 +132,7 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
     private ImmutableArray<JmaTsunamiReport> _allReports = [];
     private bool _isDisposed;
     private double _mapZoomLevel = 1;
+    private string? _selectedForecastAreaCode;
     private CancellationTokenSource? _mapDetailLoadCancellation;
     private Task? _mapDetailLoadTask;
     private long _mapDetailLoadGeneration;
@@ -156,6 +168,15 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
                     StringComparison.Ordinal)))
             {
                 _selectedObservationStationCode = null;
+            }
+
+            if (_selectedForecastAreaCode is not null &&
+                !ForecastAreas.Any(item => string.Equals(
+                    item.Code,
+                    _selectedForecastAreaCode,
+                    StringComparison.Ordinal)))
+            {
+                _selectedForecastAreaCode = null;
             }
             OnPropertyChanged();
             OnPropertyChanged(nameof(Reports));
@@ -195,6 +216,8 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(EarthquakeOriginTimeText));
             OnPropertyChanged(nameof(ObservationSummaryText));
             OnPropertyChanged(nameof(ForecastAreas));
+            OnPropertyChanged(nameof(SelectedForecastAreaCode));
+            OnPropertyChanged(nameof(SelectedForecastArea));
             OnPropertyChanged(nameof(ObservationStations));
             OnPropertyChanged(nameof(SelectedObservationStation));
             OnPropertyChanged(nameof(HasSelectedObservationStation));
@@ -452,6 +475,15 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             : report.ForecastAreas
                 .Select(CreateForecastAreaDisplay)
                 .ToImmutableArray();
+
+    public string? SelectedForecastAreaCode => _selectedForecastAreaCode;
+
+    public TsunamiForecastAreaDisplay? SelectedForecastArea => _selectedForecastAreaCode is null
+        ? null
+        : ForecastAreas.FirstOrDefault(area => string.Equals(
+            area.Code,
+            _selectedForecastAreaCode,
+            StringComparison.Ordinal));
 
     public ImmutableArray<TsunamiObservationStationDisplay> ObservationStations =>
         GetEffectiveSelectedReport() is not JmaTsunamiReport report
@@ -844,7 +876,16 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
             level,
             GetLevelText(level, area.KindName),
             FormatArrival(area.FirstArrivalTime, area.FirstArrivalCondition),
-            FormatForecastHeight(level, area.MaximumHeight));
+            FormatForecastHeight(level, area.MaximumHeight))
+        {
+            Stations = area.Stations
+                .Select(station => new TsunamiStationForecastDisplay(
+                    station.Name,
+                    station.Code,
+                    FormatArrival(station.FirstArrivalTime, station.FirstArrivalCondition),
+                    FormatTimestamp(station.HighTideTime)))
+                .ToImmutableArray(),
+        };
     }
 
     private TsunamiObservationStationDisplay CreateObservationStationDisplay(
@@ -1335,6 +1376,42 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(SelectedObservationStation));
         OnPropertyChanged(nameof(HasSelectedObservationStation));
         return true;
+    }
+
+    public bool SelectForecastArea(string areaCode)
+    {
+        ThrowIfDisposed();
+        ArgumentException.ThrowIfNullOrWhiteSpace(areaCode);
+        if (!ForecastAreas.Any(area => string.Equals(
+                area.Code,
+                areaCode,
+                StringComparison.Ordinal)))
+        {
+            return false;
+        }
+
+        if (string.Equals(_selectedForecastAreaCode, areaCode, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        _selectedForecastAreaCode = areaCode;
+        OnPropertyChanged(nameof(SelectedForecastAreaCode));
+        OnPropertyChanged(nameof(SelectedForecastArea));
+        return true;
+    }
+
+    public void ClearSelectedForecastArea()
+    {
+        ThrowIfDisposed();
+        if (_selectedForecastAreaCode is null)
+        {
+            return;
+        }
+
+        _selectedForecastAreaCode = null;
+        OnPropertyChanged(nameof(SelectedForecastAreaCode));
+        OnPropertyChanged(nameof(SelectedForecastArea));
     }
 
     public void Dispose()
