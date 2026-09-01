@@ -6,14 +6,19 @@ using EarthquakeShow.Core.Models;
 
 namespace EarthquakeShow.App.ViewModels;
 
-public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposable
+public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposable, IAsyncDisposable
 {
     private readonly IEarthquakeEventRepository _repository;
     private readonly SynchronizationContext? _synchronizationContext;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
+    private readonly CancellationTokenSource _operationCancellation = new();
+    private readonly object _operationSync = new();
     private EarthquakePageState _state = new();
     private EarthquakePageDisplayState _display;
+    private int _activeOperationCount;
+    private TaskCompletionSource<bool>? _operationsIdle;
     private bool _isDisposed;
+    private bool _resourcesDisposed;
 
     public EarthquakePageViewModel(
         IEarthquakeEventRepository repository,
@@ -48,9 +53,15 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
 
     public EarthquakePageDisplayState Display => _display;
 
-    public async ValueTask LoadAsync(CancellationToken cancellationToken = default)
+    public ValueTask LoadAsync(CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
+        BeginOperation();
+        return new ValueTask(ExecuteSerializedAsync(LoadCoreAsync, cancellationToken));
+    }
+
+    private async Task LoadCoreAsync(CancellationToken cancellationToken)
+    {
         State = State with
         {
             LoadState = EarthquakePageLoadState.Loading,
@@ -78,21 +89,14 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
         }
     }
 
-    public async ValueTask RefreshAsync(CancellationToken cancellationToken = default)
+    public ValueTask RefreshAsync(CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
-        await _refreshGate.WaitAsync(cancellationToken);
-        try
-        {
-            await RefreshCoreAsync(cancellationToken);
-        }
-        finally
-        {
-            _refreshGate.Release();
-        }
+        BeginOperation();
+        return new ValueTask(ExecuteSerializedAsync(RefreshCoreAsync, cancellationToken));
     }
 
-    private async ValueTask RefreshCoreAsync(CancellationToken cancellationToken)
+    private async Task RefreshCoreAsync(CancellationToken cancellationToken)
     {
         State = State with
         {
@@ -269,16 +273,115 @@ public sealed class EarthquakePageViewModel : INotifyPropertyChanged, IDisposabl
         OnPropertyChanged(nameof(Display));
     }
 
+    public async ValueTask DisposeAsync()
+    {
+        if (!_isDisposed)
+        {
+            _isDisposed = true;
+            _operationCancellation.Cancel();
+        }
+
+        await WaitForOperationsAsync().ConfigureAwait(true);
+        DisposeResources();
+    }
+
     public void Dispose()
     {
-        if (_isDisposed)
+        if (_isDisposed && _resourcesDisposed)
         {
             return;
         }
 
+        _isDisposed = true;
+        _operationCancellation.Cancel();
+        if (Volatile.Read(ref _activeOperationCount) == 0)
+        {
+            DisposeResources();
+        }
+    }
+
+    private async Task ExecuteSerializedAsync(
+        Func<CancellationToken, Task> operation,
+        CancellationToken cancellationToken)
+    {
+        using CancellationTokenSource linkedCancellation =
+            CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken,
+                _operationCancellation.Token);
+        bool entered = false;
+        try
+        {
+            await _refreshGate.WaitAsync(linkedCancellation.Token).ConfigureAwait(true);
+            entered = true;
+            await operation(linkedCancellation.Token).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException) when (_isDisposed)
+        {
+        }
+        finally
+        {
+            if (entered)
+            {
+                _refreshGate.Release();
+            }
+
+            EndOperation();
+        }
+    }
+
+    private void BeginOperation()
+    {
+        lock (_operationSync)
+        {
+            if (_activeOperationCount++ == 0)
+            {
+                _operationsIdle = new TaskCompletionSource<bool>(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+        }
+    }
+
+    private void EndOperation()
+    {
+        TaskCompletionSource<bool>? idle = null;
+        lock (_operationSync)
+        {
+            _activeOperationCount--;
+            if (_activeOperationCount == 0)
+            {
+                idle = _operationsIdle;
+                _operationsIdle = null;
+            }
+        }
+
+        idle?.TrySetResult(true);
+        if (_isDisposed && Volatile.Read(ref _activeOperationCount) == 0)
+        {
+            DisposeResources();
+        }
+    }
+
+    private Task WaitForOperationsAsync()
+    {
+        lock (_operationSync)
+        {
+            return _activeOperationCount == 0
+                ? Task.CompletedTask
+                : _operationsIdle!.Task;
+        }
+    }
+
+    private void DisposeResources()
+    {
+        if (_resourcesDisposed)
+        {
+            return;
+        }
+
+        _resourcesDisposed = true;
         _repository.EventsChanged -= OnRepositoryEventsChanged;
         _refreshGate.Dispose();
-        _isDisposed = true;
+        _operationCancellation.Dispose();
     }
 
     private void OnRepositoryEventsChanged(

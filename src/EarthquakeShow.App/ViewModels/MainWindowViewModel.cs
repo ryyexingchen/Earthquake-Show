@@ -34,11 +34,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
     private readonly HttpClient? _httpClient;
     private readonly IRealtimeTsunamiSource? _tsunamiSource;
     private readonly IReadOnlyList<IRealtimeEarthquakeSource> _realtimeSources = [];
+    private readonly IRealtimeObservationSource? _realtimeObservationSource;
     private readonly Func<WebSocketConnectionSettings, IStreamingEarthquakeSource>? _streamingSourceFactory;
     private IStreamingEarthquakeSource? _streamingSource;
     private readonly RefreshBackoffPolicy _refreshBackoffPolicy = new();
     private Task? _refreshLoopTask;
     private Task? _streamingLoopTask;
+    private Task? _realtimeObservationLoopTask;
     private Task? _initializationTask;
     private Task? _disposeTask;
     private CancellationTokenSource? _streamingSessionCancellation;
@@ -46,6 +48,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
     private string _cacheStatus = "缓存：初始化中";
     private string _autoRefreshStatus = "自动刷新：未启动";
     private ImmutableArray<SourceStatus> _tsunamiSourceStatuses = [];
+    private SourceStatus? _realtimeObservationStatus;
     private ApplicationSettings _applicationSettings;
     private bool _isTsunamiPageVisible;
     private bool _isInitialized;
@@ -58,7 +61,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         IStreamingEarthquakeSource? streamingSource = null,
         string? settingsPath = null,
         Func<WebSocketConnectionSettings, IStreamingEarthquakeSource>? streamingSourceFactory = null,
-        IRealtimeTsunamiSource? tsunamiSource = null)
+        IRealtimeTsunamiSource? tsunamiSource = null,
+        IRealtimeObservationSource? realtimeObservationSource = null)
     {
         AppVersion = GetAppVersion();
         _settingsStore = new(settingsPath ?? GetDefaultSettingsPath());
@@ -89,6 +93,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
                 stationCatalog: stationCatalog);
             _realtimeSources = [xmlSource, p2pQuakeSource];
             _tsunamiSource = tsunamiSource ?? new JmaTsunamiXmlSource(_httpClient);
+            _realtimeObservationSource = realtimeObservationSource ??
+                new NtoolYahooRealtimeObservationSource(_httpClient);
             _streamingSourceFactory = streamingSource is null
                 ? streamingSourceFactory ?? CreateStreamingSource
                 : streamingSourceFactory;
@@ -99,6 +105,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         else
         {
             _tsunamiSource = tsunamiSource;
+            _realtimeObservationSource = realtimeObservationSource;
             _streamingSourceFactory = streamingSourceFactory;
             _streamingSource = streamingSource ??
                 streamingSourceFactory?.Invoke(_applicationSettings.WebSocketSettings);
@@ -204,6 +211,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
 
     public string TsunamiSourceStatusText => GetTsunamiSourceStatusText();
 
+    public string RealtimeObservationStatusText => GetRealtimeObservationStatusText();
+
     public string AppVersion { get; }
 
     public EarthquakePageViewModel EarthquakePage { get; }
@@ -269,6 +278,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
             StartStreamingLoop();
         }
 
+        if (_realtimeObservationSource is not null)
+        {
+            _realtimeObservationLoopTask ??= RunRealtimeObservationLoopAsync(
+                _lifetimeCancellation.Token);
+        }
+
         _isInitialized = true;
     }
 
@@ -297,6 +312,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
             await AwaitShutdownTaskAsync(_initializationTask).ConfigureAwait(true);
             await AwaitShutdownTaskAsync(_refreshLoopTask).ConfigureAwait(true);
             await AwaitShutdownTaskAsync(_streamingLoopTask).ConfigureAwait(true);
+            await AwaitShutdownTaskAsync(_realtimeObservationLoopTask).ConfigureAwait(true);
             await _streamingRestartGate.WaitAsync().ConfigureAwait(true);
             _streamingRestartGate.Release();
         }
@@ -329,10 +345,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
         }
 
         _resourcesDisposed = true;
+        await EarthquakePage.DisposeAsync().ConfigureAwait(true);
+        await EventList.DisposeAsync().ConfigureAwait(true);
         Details.Dispose();
         Map.Dispose();
-        EventList.Dispose();
-        EarthquakePage.Dispose();
         await TsunamiPage.DisposeAsync().ConfigureAwait(true);
         _tsunamiRepository.Dispose();
         _httpClient?.Dispose();
@@ -471,6 +487,66 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable, I
             SourceConnectionState.Unknown => "海啸：状态未知",
             _ => "海啸：未启用",
         };
+    }
+
+    private string GetRealtimeObservationStatusText()
+    {
+        SourceStatus? status = _realtimeObservationStatus;
+        return status?.State switch
+        {
+            SourceConnectionState.Online => "实时观测：在线",
+            SourceConnectionState.Delayed => "实时观测：延迟",
+            SourceConnectionState.RateLimited => "实时观测：限流",
+            SourceConnectionState.ParseFailed => "实时观测：解析失败",
+            SourceConnectionState.Disconnected => "实时观测：离线",
+            SourceConnectionState.Disabled => "实时观测：未启用",
+            _ => _realtimeObservationSource is null
+                ? "实时观测：未启用"
+                : "实时观测：等待数据",
+        };
+    }
+
+    private async Task RunRealtimeObservationLoopAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested &&
+                _realtimeObservationSource is not null)
+            {
+                RealtimeObservationFetchResult result = await _realtimeObservationSource
+                    .FetchAsync(cancellationToken);
+                _realtimeObservationStatus = result.Status;
+                OnPropertyChanged(nameof(RealtimeObservationStatusText));
+                if (!result.Stations.IsDefaultOrEmpty)
+                {
+                    Map.SetRealtimeObservationStations(result.Stations);
+                }
+
+                TimeSpan delay = result.Status.State switch
+                {
+                    SourceConnectionState.Online => TimeSpan.FromSeconds(1),
+                    SourceConnectionState.Delayed => TimeSpan.FromSeconds(2),
+                    SourceConnectionState.RateLimited => TimeSpan.FromSeconds(30),
+                    _ => TimeSpan.FromSeconds(5),
+                };
+                await Task.Delay(delay, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception) when (!_isDisposed)
+        {
+            _realtimeObservationStatus = new SourceStatus(
+                _realtimeObservationSource?.SourceId ?? "ntool-yahoo-realtime",
+                SourceConnectionState.Disconnected,
+                DateTimeOffset.UtcNow,
+                Detail: $"实时观测循环已停止：{exception.Message}");
+            OnPropertyChanged(nameof(RealtimeObservationStatusText));
+        }
     }
 
     private static int GetTsunamiStatusPriority(SourceConnectionState? state) => state switch

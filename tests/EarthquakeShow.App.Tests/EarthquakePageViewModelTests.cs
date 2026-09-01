@@ -145,6 +145,30 @@ public sealed class EarthquakePageViewModelTests
     }
 
     [Fact]
+    public async Task DisposeAsync_CancelsAndWaitsForActiveRefresh()
+    {
+        var repository = new BlockingRepository();
+        var viewModel = new EarthquakePageViewModel(repository);
+
+        try
+        {
+            Task refresh = viewModel.RefreshAsync().AsTask();
+            await repository.RefreshStarted.Task;
+
+            Task dispose = viewModel.DisposeAsync().AsTask();
+
+            await dispose;
+            await refresh;
+
+            Assert.True(refresh.IsCompletedSuccessfully);
+        }
+        finally
+        {
+            viewModel.Dispose();
+        }
+    }
+
+    [Fact]
     public async Task Refresh_SourceStatusProvider_UpdatesOnlineState()
     {
         var status = new SourceStatus(
@@ -262,5 +286,36 @@ public sealed class EarthquakePageViewModelTests
         {
             EventsChanged?.Invoke(this, new EarthquakeEventsChangedEventArgs(events));
         }
+    }
+
+    private sealed class BlockingRepository : IEarthquakeEventRepository
+    {
+        private readonly TaskCompletionSource _refreshCompletion =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public event EventHandler<EarthquakeEventsChangedEventArgs>? EventsChanged;
+
+        public TaskCompletionSource RefreshStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public ValueTask<ImmutableArray<EarthquakeEvent>> ListEventsAsync(
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(ImmutableArray<EarthquakeEvent>.Empty);
+
+        public ValueTask<EarthquakeEvent?> GetEventAsync(
+            string eventId,
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<EarthquakeEvent?>(null);
+
+        public async ValueTask RefreshAsync(CancellationToken cancellationToken = default)
+        {
+            RefreshStarted.TrySetResult();
+            await _refreshCompletion.Task.WaitAsync(cancellationToken);
+        }
+
+        public void Publish(ImmutableArray<EarthquakeEvent> events) =>
+            EventsChanged?.Invoke(this, new EarthquakeEventsChangedEventArgs(events));
+
+        public void CompleteRefresh() => _refreshCompletion.TrySetResult();
     }
 }

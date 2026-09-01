@@ -278,6 +278,28 @@ public sealed class TsunamiPageViewModelTests
     }
 
     [Fact]
+    public async Task DisposeAsync_CancelsAndObservesActiveRefresh()
+    {
+        var repository = new BlockingRefreshTsunamiReportRepository();
+        var viewModel = new TsunamiPageViewModel(repository);
+
+        try
+        {
+            Task refresh = viewModel.RefreshAsync().AsTask();
+            await repository.RefreshStarted.Task;
+
+            await viewModel.DisposeAsync();
+            await refresh;
+
+            Assert.True(refresh.IsCompletedSuccessfully);
+        }
+        finally
+        {
+            viewModel.Dispose();
+        }
+    }
+
+    [Fact]
     public async Task Refresh_PreservesSelectedReportIdentity()
     {
         DateTimeOffset issuedAt = new(2026, 8, 24, 12, 0, 0, TimeSpan.FromHours(9));
@@ -1141,6 +1163,37 @@ public sealed class TsunamiPageViewModelTests
             await _releaseFirstRead.Task;
             return [_initialReport];
         }
+    }
+
+    private sealed class BlockingRefreshTsunamiReportRepository : ITsunamiReportRepository
+    {
+        public TaskCompletionSource RefreshStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public ImmutableArray<SourceStatus> SourceStatuses { get; } = [];
+
+        public Task InitializeAsync(CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public async Task RefreshAsync(CancellationToken cancellationToken = default)
+        {
+            RefreshStarted.TrySetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        }
+
+        public ValueTask<ImmutableArray<JmaTsunamiReport>> ListReportsAsync(
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(ImmutableArray<JmaTsunamiReport>.Empty);
+
+        public ValueTask<ImmutableArray<JmaTsunamiReport>> ListReportsForEventAsync(
+            string eventId,
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(ImmutableArray<JmaTsunamiReport>.Empty);
+
+        public Task SaveReportsAsync(
+            IEnumerable<JmaTsunamiReport> reports,
+            CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 
     private sealed class CatalogStubTsunamiReportRepository(

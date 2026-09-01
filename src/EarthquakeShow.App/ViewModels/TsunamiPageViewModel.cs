@@ -1578,6 +1578,9 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable, 
             entered = true;
             await operation(linkedCancellation.Token).ConfigureAwait(true);
         }
+        catch (OperationCanceledException) when (_isDisposed)
+        {
+        }
         finally
         {
             if (entered)

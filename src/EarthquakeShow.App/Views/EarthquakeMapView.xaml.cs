@@ -27,7 +27,7 @@ public partial class EarthquakeMapView : UserControl
         new(StationLabelFont, FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
     private static readonly Dictionary<int, SolidColorBrush> BrushCache = [];
     private static readonly Dictionary<(int Color, double Thickness), Pen> PenCache = [];
-    private static readonly Dictionary<(JmaIntensity Intensity, double PixelsPerDip), FormattedText>
+    private static readonly Dictionary<(JmaIntensity Intensity, string Text, double PixelsPerDip), FormattedText>
         StationLabelTextCache = [];
     private readonly DispatcherTimer _renderThrottleTimer;
     private readonly DispatcherTimer _wheelZoomTimer;
@@ -1979,6 +1979,7 @@ public partial class EarthquakeMapView : UserControl
             marker.Kind == EarthquakeMapMarkerKind.Hypocenter
                 ? JmaIntensity.Unknown
                 : marker.Intensity,
+            marker.IntensityText,
             showStationLabel,
             pixelsPerDip);
         if (_markerDrawingCache.TryGetValue(key, out DrawingGroup? cachedDrawing))
@@ -2001,7 +2002,9 @@ public partial class EarthquakeMapView : UserControl
             context.DrawEllipse(fill, stroke, new Point(), size / 2, size / 2);
             if (showStationLabel)
             {
-                FormattedText formattedText = GetStationLabelText(marker.Intensity, pixelsPerDip);
+                FormattedText formattedText = marker.IntensityText is string intensityText
+                    ? GetStationLabelText(intensityText, marker.Intensity, pixelsPerDip)
+                    : GetStationLabelText(marker.Intensity, pixelsPerDip);
                 context.DrawText(
                     formattedText,
                     new Point(-formattedText.Width / 2, -formattedText.Height / 2));
@@ -2035,7 +2038,8 @@ public partial class EarthquakeMapView : UserControl
                          marker.Kind,
                          Intensity: marker.Kind == EarthquakeMapMarkerKind.Hypocenter
                              ? JmaIntensity.Unknown
-                             : marker.Intensity))
+                             : marker.Intensity,
+                         marker.IntensityText))
                      .Select(group => group.First()))
         {
             GetMarkerDrawing(marker, showStationLabels, pixelsPerDip);
@@ -2046,14 +2050,22 @@ public partial class EarthquakeMapView : UserControl
         JmaIntensity intensity,
         double pixelsPerDip)
     {
-        var key = (intensity, pixelsPerDip);
+        return GetStationLabelText(GetStationMarkerText(intensity) ?? "?", intensity, pixelsPerDip);
+    }
+
+    private static FormattedText GetStationLabelText(
+        string text,
+        JmaIntensity intensity,
+        double pixelsPerDip)
+    {
+        var key = (intensity, text, pixelsPerDip);
         if (StationLabelTextCache.TryGetValue(key, out FormattedText? cachedText))
         {
             return cachedText;
         }
 
         var formattedText = new FormattedText(
-            GetStationMarkerText(intensity) ?? "?",
+            text,
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             StationLabelTypeface,
@@ -2264,6 +2276,7 @@ public partial class EarthquakeMapView : UserControl
     private readonly record struct MarkerDrawingKey(
         EarthquakeMapMarkerKind Kind,
         JmaIntensity Intensity,
+        string? IntensityText,
         bool ShowStationLabel,
         double PixelsPerDip);
 

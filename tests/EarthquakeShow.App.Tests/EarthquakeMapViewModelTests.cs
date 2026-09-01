@@ -13,6 +13,47 @@ public sealed class EarthquakeMapViewModelTests
         new(2026, 8, 20, 9, 0, 0, TimeSpan.FromHours(9));
 
     [Fact]
+    public async Task SetRealtimeObservationStations_ReusesStationMarkersAndKeepsZeroGray()
+    {
+        using var page = new EarthquakePageViewModel(
+            new InMemoryEarthquakeEventRepository());
+        await page.LoadAsync();
+        using var map = new EarthquakeMapViewModel(
+            page,
+            OfflineMapGeometry.LoadFromJson(GeometryJson));
+
+        map.SetRealtimeObservationStations(
+        [
+            new RealtimeObservationStation(
+                "RT-0",
+                "实时零级",
+                new GeoCoordinate(32.5, 130.5),
+                JmaIntensity.Unknown,
+                true,
+                BaseTime,
+                BaseTime.AddSeconds(1),
+                RealtimeObservationQuality.Valid,
+                "ntool-yahoo-realtime"),
+            new RealtimeObservationStation(
+                "RT-4",
+                "实时四级",
+                new GeoCoordinate(32.6, 130.6),
+                JmaIntensity.Four,
+                false,
+                BaseTime,
+                BaseTime.AddSeconds(1),
+                RealtimeObservationQuality.Valid,
+                "ntool-yahoo-realtime"),
+        ]);
+
+        Assert.Equal(2, map.Markers.Count);
+        Assert.Equal("realtime:RT-0", map.Markers[0].Code);
+        Assert.True(map.Markers[0].IntensityText == "0");
+        Assert.Equal(JmaIntensity.Unknown, map.Markers[0].Intensity);
+        Assert.Equal(JmaIntensity.Four, map.Markers[1].Intensity);
+    }
+
+    [Fact]
     public void LoadFromJson_PreservesSchematicMetadataAndPolygon()
     {
         OfflineMapGeometry geometry = OfflineMapGeometry.LoadFromJson(GeometryJson);

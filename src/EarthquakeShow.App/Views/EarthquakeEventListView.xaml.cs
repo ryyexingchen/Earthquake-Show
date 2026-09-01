@@ -37,7 +37,16 @@ public partial class EarthquakeEventListView : UserControl
     {
         if (DataContext is EarthquakeEventListViewModel viewModel)
         {
-            await viewModel.RefreshAsync();
+            try
+            {
+                await viewModel.RefreshAsync();
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
     }
 

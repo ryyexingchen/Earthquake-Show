@@ -18,7 +18,16 @@ public partial class TsunamiPageView : UserControl
     {
         if (DataContext is ViewModels.TsunamiPageViewModel viewModel)
         {
-            await viewModel.RefreshAsync();
+            try
+            {
+                await viewModel.RefreshAsync();
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
     }
 

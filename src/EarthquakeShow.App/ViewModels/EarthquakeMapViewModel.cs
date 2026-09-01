@@ -60,6 +60,8 @@ public sealed record EarthquakeMapMarker(
     JmaIntensity Intensity)
 {
     public string Code { get; init; } = string.Empty;
+
+    public string? IntensityText { get; init; }
 }
 
 public sealed record EarthquakeMapBoundaryLayer(
@@ -116,6 +118,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     private EarthquakeMapSelection? _selectedMapSelection;
     private EarthquakeMapViewState _lastMapState;
     private string? _selectedEventId;
+    private IReadOnlyList<EarthquakeMapMarker> _realtimeMarkers = [];
 
     public EarthquakeMapViewModel(
         EarthquakePageViewModel page,
@@ -194,6 +197,30 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
     public IReadOnlyList<EarthquakeMapBoundaryLayer> BoundaryLayers { get; private set; } = [];
 
     public IReadOnlyList<EarthquakeMapMarker> Markers { get; private set; } = [];
+
+    public void SetRealtimeObservationStations(
+        IEnumerable<RealtimeObservationStation> stations)
+    {
+        ArgumentNullException.ThrowIfNull(stations);
+        _realtimeMarkers = stations
+            .Where(station => station.Coordinate is not null &&
+                station.Quality is RealtimeObservationQuality.Valid or
+                    RealtimeObservationQuality.Delayed &&
+                (station.IsZero || IsKnownIntensity(station.Intensity)))
+            .OrderBy(station => station.IsZero ? 0 : (int)station.Intensity)
+            .ThenBy(station => station.Code, StringComparer.Ordinal)
+            .Select(station => new EarthquakeMapMarker(
+                EarthquakeMapMarkerKind.Station,
+                station.Name,
+                station.Coordinate!.Value,
+                station.IsZero ? JmaIntensity.Unknown : station.Intensity)
+            {
+                Code = $"realtime:{station.Code}",
+                IntensityText = station.IsZero ? "0" : null,
+            })
+            .ToArray();
+        RebuildLayers();
+    }
 
     public EarthquakeMapSelection? SelectedMapSelection => _selectedMapSelection;
 
@@ -1357,7 +1384,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             }
             Areas = [];
             Municipalities = [];
-            Markers = [];
+            Markers = _realtimeMarkers;
             BoundaryLayers = [];
             UnmappedAreaCount = 0;
             UnmappedMunicipalityCount = 0;
@@ -1477,6 +1504,7 @@ public sealed class EarthquakeMapViewModel : INotifyPropertyChanged, IDisposable
             {
                 Code = station.Code,
             }));
+        markers.AddRange(_realtimeMarkers);
         Markers = markers;
         RaiseLayerProperties();
         if (reportChanged)

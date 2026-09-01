@@ -7,7 +7,7 @@ namespace EarthquakeShow.App.ViewModels;
 
 public sealed record EventListOption<T>(T Value, string Label);
 
-public sealed class EarthquakeEventListViewModel : INotifyPropertyChanged, IDisposable
+public sealed class EarthquakeEventListViewModel : INotifyPropertyChanged, IDisposable, IAsyncDisposable
 {
     private readonly EarthquakePageViewModel _page;
     private readonly Func<DateTimeOffset> _now;
@@ -18,6 +18,7 @@ public sealed class EarthquakeEventListViewModel : INotifyPropertyChanged, IDisp
     private EarthquakeEventListItemViewModel? _selectedItem;
     private bool _hasObservedLoadedSnapshot;
     private bool _isRefreshPending;
+    private Task? _refreshTask;
     private bool _isDisposed;
 
     public EarthquakeEventListViewModel(
@@ -170,16 +171,22 @@ public sealed class EarthquakeEventListViewModel : INotifyPropertyChanged, IDisp
         ? _page.State.ErrorMessage ?? "未知错误"
         : ShowNoResults ? "请调整搜索或筛选条件" : "本地缓存中没有事件";
 
-    public async ValueTask RefreshAsync(CancellationToken cancellationToken = default)
+    public ValueTask RefreshAsync(CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
         if (!CanRefresh)
         {
-            return;
+            return ValueTask.CompletedTask;
         }
 
         _isRefreshPending = true;
         RaiseRefreshProperties();
+        _refreshTask = RefreshCoreAsync(cancellationToken);
+        return new ValueTask(_refreshTask);
+    }
+
+    private async Task RefreshCoreAsync(CancellationToken cancellationToken)
+    {
         try
         {
             await _page.RefreshAsync(cancellationToken);
@@ -207,6 +214,24 @@ public sealed class EarthquakeEventListViewModel : INotifyPropertyChanged, IDisp
 
         _page.PropertyChanged -= OnPagePropertyChanged;
         _isDisposed = true;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Dispose();
+        if (_refreshTask is not null)
+        {
+            try
+            {
+                await _refreshTask.ConfigureAwait(true);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+        }
     }
 
     private void OnPagePropertyChanged(object? sender, PropertyChangedEventArgs eventArgs)
