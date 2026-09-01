@@ -258,6 +258,7 @@
                         <TextBlock Grid.Column="3" Style="{StaticResource TsunamiTableHeaderStyle}" Text="最大高度" />
                     </Grid>
                     <ListBox Margin="0,4,0,0"
+                             MaxHeight="420"
                              AutomationProperties.Name="海啸警报预报表格"
                              Background="Transparent"
                              BorderThickness="0"
@@ -270,7 +271,7 @@
                              SelectionChanged="OnForecastAreaSelectionChanged"
                              x:Name="ForecastAreaListBox"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                             ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                             ScrollViewer.VerticalScrollBarVisibility="Auto">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border Padding="0,6"
@@ -401,12 +402,17 @@
                             <TextBlock Grid.Column="5" Style="{StaticResource TsunamiTableHeaderStyle}" Text="状态" />
                         </Grid>
                         <ListBox Margin="0,6,0,0"
+                                 MaxHeight="360"
                                  AutomationProperties.Name="海啸观测点表格"
                                  ItemsSource="{Binding ObservationStations}"
                                  ItemContainerStyle="{StaticResource TsunamiTableListBoxItemStyle}"
-                                 SelectedItem="{Binding SelectedObservationStation, Mode=TwoWay}"
+                                 PreviewMouseLeftButtonDown="OnObservationStationPreviewMouseLeftButtonDown"
+                                 PreviewKeyDown="OnObservationStationPreviewKeyDown"
+                                 SelectionChanged="OnObservationStationSelectionChanged"
+                                 SelectedItem="{Binding SelectedObservationStation, Mode=OneWay}"
+                                 x:Name="ObservationStationListBox"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                 ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Border Padding="0,2">

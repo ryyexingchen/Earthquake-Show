@@ -1378,6 +1378,40 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         return true;
     }
 
+    public bool ToggleObservationStationSelection(string stationCode)
+    {
+        ThrowIfDisposed();
+        ArgumentException.ThrowIfNullOrWhiteSpace(stationCode);
+        if (!ObservationStations.Any(station => string.Equals(
+                station.Code,
+                stationCode,
+                StringComparison.Ordinal)))
+        {
+            return false;
+        }
+
+        if (string.Equals(_selectedObservationStationCode, stationCode, StringComparison.Ordinal))
+        {
+            ClearSelectedObservationStation();
+            return true;
+        }
+
+        return SelectObservationStation(stationCode);
+    }
+
+    public void ClearSelectedObservationStation()
+    {
+        ThrowIfDisposed();
+        if (_selectedObservationStationCode is null)
+        {
+            return;
+        }
+
+        _selectedObservationStationCode = null;
+        OnPropertyChanged(nameof(SelectedObservationStation));
+        OnPropertyChanged(nameof(HasSelectedObservationStation));
+    }
+
     public bool SelectForecastArea(string areaCode)
     {
         ThrowIfDisposed();
@@ -1399,6 +1433,27 @@ public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(SelectedForecastAreaCode));
         OnPropertyChanged(nameof(SelectedForecastArea));
         return true;
+    }
+
+    public bool ToggleForecastAreaSelection(string areaCode)
+    {
+        ThrowIfDisposed();
+        ArgumentException.ThrowIfNullOrWhiteSpace(areaCode);
+        if (!ForecastAreas.Any(area => string.Equals(
+                area.Code,
+                areaCode,
+                StringComparison.Ordinal)))
+        {
+            return false;
+        }
+
+        if (string.Equals(_selectedForecastAreaCode, areaCode, StringComparison.Ordinal))
+        {
+            ClearSelectedForecastArea();
+            return true;
+        }
+
+        return SelectForecastArea(areaCode);
     }
 
     public void ClearSelectedForecastArea()

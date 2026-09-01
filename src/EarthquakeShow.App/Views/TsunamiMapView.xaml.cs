@@ -17,6 +17,8 @@ public partial class TsunamiMapView : UserControl
     internal const double DenseLineSimplificationPixels = 1.0;
     internal const int DenseLinePointThreshold = 10000;
     internal const double ObservationLabelZoomThreshold = 4;
+    internal const double SelectedForecastAreaOuterStrokeThickness = 13;
+    internal const double SelectedForecastAreaInnerStrokeThickness = 5;
 
     private static readonly Color InactiveCoastColor = Color.FromRgb(103, 135, 145);
     private readonly DispatcherTimer _renderThrottleTimer;
@@ -475,7 +477,7 @@ public partial class TsunamiMapView : UserControl
                         Opacity = 0.9,
                     };
                     highlightBrush.Freeze();
-                    var highlightPen = new Pen(highlightBrush, 7)
+                    var highlightPen = new Pen(highlightBrush, SelectedForecastAreaOuterStrokeThickness)
                     {
                         LineJoin = PenLineJoin.Round,
                         StartLineCap = PenLineCap.Round,
@@ -486,7 +488,7 @@ public partial class TsunamiMapView : UserControl
                 }
 
                 double strokeThickness = isSelected
-                    ? 4.5
+                    ? SelectedForecastAreaInnerStrokeThickness
                     : level == TsunamiLevel.Unknown ? 0.7 : 3;
                 Color strokeColor = level == TsunamiLevel.Unknown
                     ? InactiveCoastColor

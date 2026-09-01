@@ -197,6 +197,11 @@ public sealed class TsunamiPageViewModelTests
         Assert.True(viewModel.SelectForecastArea("300"));
         Assert.Equal("300", viewModel.SelectedForecastAreaCode);
         Assert.Equal("300", viewModel.SelectedForecastArea?.Code);
+        Assert.True(viewModel.ToggleForecastAreaSelection("300"));
+        Assert.Null(viewModel.SelectedForecastAreaCode);
+        Assert.Null(viewModel.SelectedForecastArea);
+        Assert.True(viewModel.ToggleForecastAreaSelection("300"));
+        Assert.Equal("300", viewModel.SelectedForecastAreaCode);
         Assert.False(viewModel.SelectForecastArea("missing"));
 
         viewModel.ClearSelectedForecastArea();
@@ -614,6 +619,11 @@ public sealed class TsunamiPageViewModelTests
         Assert.Equal("数据库站点", viewModel.SelectedObservationStation?.Name);
         Assert.Equal("00410", viewModel.SelectedObservationStation?.PublicationCode);
         Assert.Equal("观测到海啸", viewModel.SelectedObservationStation?.ObservationStatusText);
+        Assert.True(viewModel.ToggleObservationStationSelection("10050"));
+        Assert.False(viewModel.HasSelectedObservationStation);
+        Assert.Null(viewModel.SelectedObservationStation);
+        Assert.True(viewModel.ToggleObservationStationSelection("10050"));
+        Assert.Equal("10050", viewModel.SelectedObservationStation?.Code);
         Assert.False(viewModel.SelectObservationStation("不存在"));
         viewModel.SelectedObservationStation = viewModel.ObservationStations[0];
         Assert.Equal("10050", viewModel.SelectedObservationStation?.Code);

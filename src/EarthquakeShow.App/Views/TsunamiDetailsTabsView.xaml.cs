@@ -8,6 +8,7 @@ public partial class TsunamiDetailsTabsView : System.Windows.Controls.UserContro
 {
     private bool _timelineSelectionRequested;
     private bool _forecastAreaSelectionRequested;
+    private bool _observationStationSelectionRequested;
 
     public TsunamiDetailsTabsView()
     {
@@ -97,6 +98,23 @@ public partial class TsunamiDetailsTabsView : System.Windows.Controls.UserContro
 
     private void OnForecastAreaPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        if (DataContext is ViewModels.TsunamiPageViewModel viewModel &&
+            e.OriginalSource is DependencyObject source &&
+            System.Windows.Controls.ItemsControl.ContainerFromElement(ForecastAreaListBox, source)
+                is System.Windows.Controls.ListBoxItem item &&
+            item.DataContext is ViewModels.TsunamiForecastAreaDisplay area &&
+            string.Equals(
+                viewModel.SelectedForecastAreaCode,
+                area.Code,
+                StringComparison.Ordinal))
+        {
+            _forecastAreaSelectionRequested = false;
+            viewModel.ToggleForecastAreaSelection(area.Code);
+            ForecastAreaListBox.SelectedItem = null;
+            e.Handled = true;
+            return;
+        }
+
         ArmForecastAreaSelectionRequest();
     }
 
@@ -115,5 +133,59 @@ public partial class TsunamiDetailsTabsView : System.Windows.Controls.UserContro
         Dispatcher.BeginInvoke(
             DispatcherPriority.Input,
             new Action(() => _forecastAreaSelectionRequested = false));
+    }
+
+    private void OnObservationStationSelectionChanged(
+        object sender,
+        System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (!_observationStationSelectionRequested ||
+            ObservationStationListBox.SelectedItem is not ViewModels.TsunamiObservationStationDisplay station ||
+            DataContext is not ViewModels.TsunamiPageViewModel viewModel)
+        {
+            return;
+        }
+
+        _observationStationSelectionRequested = false;
+        viewModel.SelectObservationStation(station.Code);
+    }
+
+    private void OnObservationStationPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is ViewModels.TsunamiPageViewModel viewModel &&
+            e.OriginalSource is DependencyObject source &&
+            System.Windows.Controls.ItemsControl.ContainerFromElement(ObservationStationListBox, source)
+                is System.Windows.Controls.ListBoxItem item &&
+            item.DataContext is ViewModels.TsunamiObservationStationDisplay station &&
+            string.Equals(
+                viewModel.SelectedObservationStation?.Code,
+                station.Code,
+                StringComparison.Ordinal))
+        {
+            _observationStationSelectionRequested = false;
+            viewModel.ToggleObservationStationSelection(station.Code);
+            ObservationStationListBox.SelectedItem = null;
+            e.Handled = true;
+            return;
+        }
+
+        ArmObservationStationSelectionRequest();
+    }
+
+    private void OnObservationStationPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key is Key.Up or Key.Down or Key.Left or Key.Right or Key.Home or Key.End or
+            Key.PageUp or Key.PageDown or Key.Enter or Key.Space)
+        {
+            ArmObservationStationSelectionRequest();
+        }
+    }
+
+    private void ArmObservationStationSelectionRequest()
+    {
+        _observationStationSelectionRequested = true;
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Input,
+            new Action(() => _observationStationSelectionRequested = false));
     }
 }
