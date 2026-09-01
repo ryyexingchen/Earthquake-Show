@@ -31,6 +31,7 @@ public partial class TsunamiMapView : UserControl
     private Vector _manualPanOffset;
     private Vector _wheelPreviewTranslation;
     private bool _centerSelectedStationPending = true;
+    private string? _lastSelectedReportIdentity;
 
     public TsunamiMapView()
     {
@@ -54,6 +55,7 @@ public partial class TsunamiMapView : UserControl
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         _centerSelectedStationPending = true;
+        _lastSelectedReportIdentity = ViewModel?.SelectedTimelineIdentity;
         if (ViewModel is not null)
         {
             ViewModel.PropertyChanged += OnViewModelPropertyChanged;
@@ -73,6 +75,7 @@ public partial class TsunamiMapView : UserControl
         _manualPanOffset = default;
         _wheelPreviewTranslation = default;
         _centerSelectedStationPending = true;
+        _lastSelectedReportIdentity = null;
         MapPanTransform.X = 0;
         MapPanTransform.Y = 0;
         _renderPending = false;
@@ -211,8 +214,18 @@ public partial class TsunamiMapView : UserControl
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(TsunamiPageViewModel.SelectedReport)
-            or nameof(TsunamiPageViewModel.SelectedObservationStation))
+        if (e.PropertyName == nameof(TsunamiPageViewModel.SelectedReport))
+        {
+            string? currentIdentity = ViewModel?.SelectedTimelineIdentity;
+            if (ShouldResetPanForReportIdentity(_lastSelectedReportIdentity, currentIdentity))
+            {
+                _manualPanOffset = default;
+            }
+
+            _lastSelectedReportIdentity = currentIdentity;
+        }
+
+        if (e.PropertyName == nameof(TsunamiPageViewModel.SelectedObservationStation))
         {
             _manualPanOffset = default;
         }
@@ -562,6 +575,11 @@ public partial class TsunamiMapView : UserControl
 
     internal static Vector ComposePanOffset(Vector automaticOffset, Vector manualOffset) =>
         automaticOffset + manualOffset;
+
+    internal static bool ShouldResetPanForReportIdentity(
+        string? previousIdentity,
+        string? currentIdentity) =>
+        !string.Equals(previousIdentity, currentIdentity, StringComparison.Ordinal);
 
     internal static double GetObservationMarkerSize(
         double zoomLevel,

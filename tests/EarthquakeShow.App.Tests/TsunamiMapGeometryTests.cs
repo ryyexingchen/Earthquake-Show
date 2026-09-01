@@ -153,6 +153,20 @@ public sealed class TsunamiMapGeometryTests
     }
 
     [Theory]
+    [InlineData("event-1", "event-1", false)]
+    [InlineData("event-1", "event-2", true)]
+    [InlineData("event-1", null, true)]
+    public void ReportRefreshOnlyResetsPanWhenIdentityChanges(
+        string? previousIdentity,
+        string? currentIdentity,
+        bool expected)
+    {
+        Assert.Equal(
+            expected,
+            TsunamiMapView.ShouldResetPanForReportIdentity(previousIdentity, currentIdentity));
+    }
+
+    [Theory]
     [InlineData(1, false, false, 12)]
     [InlineData(8, true, true, 3.75)]
     public void ObservationMarkerSizeRemainsScreenSizedAcrossZoom(
