@@ -121,14 +121,15 @@ public sealed class TsunamiMapGeometryTests
     }
 
     [Fact]
-    public void WheelPreviewCenterAccountsForFormalScaleAndPan()
+    public void WheelPreviewTranslationAccountsForFormalScaleAndPan()
     {
         Assert.Equal(
-            new Point(0, 10),
-            TsunamiMapView.GetWheelPreviewCenter(
+            new Vector(-100, -70),
+            TsunamiMapView.GetWheelPreviewTranslation(
                 new Point(100, 80),
                 new Vector(0, 0),
                 baseZoomLevel: 2,
+                previewScale: 0.5,
                 width: 400,
                 height: 300));
     }
@@ -142,8 +143,8 @@ public sealed class TsunamiMapGeometryTests
     }
 
     [Theory]
-    [InlineData(1, false, false, 8)]
-    [InlineData(8, true, true, 2.5)]
+    [InlineData(1, false, false, 12)]
+    [InlineData(8, true, true, 3.75)]
     public void ObservationMarkerSizeRemainsScreenSizedAcrossZoom(
         double zoomLevel,
         bool isSelected,

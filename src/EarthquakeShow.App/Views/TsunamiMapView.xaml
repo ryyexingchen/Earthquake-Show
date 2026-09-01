@@ -23,6 +23,7 @@
                     <TransformGroup>
                         <ScaleTransform x:Name="MapZoomTransform" ScaleX="1" ScaleY="1" />
                         <ScaleTransform x:Name="MapWheelPreviewTransform" ScaleX="1" ScaleY="1" />
+                        <TranslateTransform x:Name="MapWheelPreviewTranslateTransform" />
                         <TranslateTransform x:Name="MapPanTransform" />
                     </TransformGroup>
                 </Canvas.RenderTransform>

@@ -163,15 +163,18 @@ public partial class TsunamiMapView : UserControl
             return;
         }
 
-        Point previewCenter = GetWheelPreviewCenter(
+        double previewScale = GetWheelPreviewScale(_wheelBaseZoomLevel, ViewModel.MapZoomLevel);
+        Vector previewTranslation = GetWheelPreviewTranslation(
             _wheelAnchor,
             new Vector(MapPanTransform.X, MapPanTransform.Y),
             _wheelBaseZoomLevel,
+            previewScale,
             MapCanvas.ActualWidth,
             MapCanvas.ActualHeight);
-        MapWheelPreviewTransform.CenterX = previewCenter.X;
-        MapWheelPreviewTransform.CenterY = previewCenter.Y;
-        double previewScale = GetWheelPreviewScale(_wheelBaseZoomLevel, ViewModel.MapZoomLevel);
+        MapWheelPreviewTransform.CenterX = 0;
+        MapWheelPreviewTransform.CenterY = 0;
+        MapWheelPreviewTranslateTransform.X = previewTranslation.X;
+        MapWheelPreviewTranslateTransform.Y = previewTranslation.Y;
         MapWheelPreviewTransform.ScaleX = previewScale;
         MapWheelPreviewTransform.ScaleY = previewScale;
         _wheelZoomTimer.Stop();
@@ -277,7 +280,6 @@ public partial class TsunamiMapView : UserControl
 
         _wheelZoomTimer.Stop();
         _isWheelZooming = false;
-        ResetWheelZoomTransform();
         RequestRender();
     }
 
@@ -287,6 +289,8 @@ public partial class TsunamiMapView : UserControl
         MapWheelPreviewTransform.CenterY = 0;
         MapWheelPreviewTransform.ScaleX = 1;
         MapWheelPreviewTransform.ScaleY = 1;
+        MapWheelPreviewTranslateTransform.X = 0;
+        MapWheelPreviewTranslateTransform.Y = 0;
     }
 
     internal static double GetWheelPreviewScale(double baseZoomLevel, double currentZoomLevel)
@@ -299,27 +303,34 @@ public partial class TsunamiMapView : UserControl
         return Math.Pow(1.25, currentZoomLevel - baseZoomLevel);
     }
 
-    internal static Point GetWheelPreviewCenter(
+    internal static Vector GetWheelPreviewTranslation(
         Point anchor,
         Vector panOffset,
         double baseZoomLevel,
+        double previewScale,
         double width,
         double height)
     {
         if (!double.IsFinite(baseZoomLevel) || baseZoomLevel < 1 ||
+            !double.IsFinite(previewScale) || previewScale <= 0 ||
             !double.IsFinite(width) || !double.IsFinite(height))
         {
-            return anchor;
+            return default;
         }
 
         Point center = new(width / 2, height / 2);
+        Vector formalAnchorOffset = new(
+            (anchor.X - panOffset.X - center.X) * baseZoomLevel,
+            (anchor.Y - panOffset.Y - center.Y) * baseZoomLevel);
         return new(
-            center.X + (anchor.X - panOffset.X - center.X) * baseZoomLevel,
-            center.Y + (anchor.Y - panOffset.Y - center.Y) * baseZoomLevel);
+            formalAnchorOffset.X * (1 - previewScale),
+            formalAnchorOffset.Y * (1 - previewScale));
     }
 
     private void RenderMap()
     {
+        // 保留滚轮预览直到正式绘制开始，避免清理临时变换后出现旧倍率闪回。
+        ResetWheelZoomTransform();
         MapContentCanvas.Children.Clear();
         TsunamiPageViewModel? viewModel = ViewModel;
         UpdateLegend(viewModel);
@@ -522,7 +533,7 @@ public partial class TsunamiMapView : UserControl
         bool isSelected,
         bool showLabel)
     {
-        double baseSize = showLabel ? 20 : isSelected ? 15 : 8;
+        double baseSize = showLabel ? 30 : isSelected ? 18 : 12;
         return baseSize / Math.Max(1, double.IsFinite(zoomLevel) ? zoomLevel : 1);
     }
 
