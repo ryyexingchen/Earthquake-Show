@@ -797,6 +797,8 @@ public sealed class TsunamiPageViewModelTests
     {
         using var viewModel = new TsunamiPageViewModel(new StubTsunamiReportRepository([]));
 
+        Assert.Equal(1.0, TsunamiPageViewModel.MinimumMapZoomLevel);
+
         for (int index = 0; index < 40; index++)
         {
             viewModel.ZoomMapIn();
@@ -810,6 +812,7 @@ public sealed class TsunamiPageViewModelTests
         }
 
         Assert.Equal(TsunamiPageViewModel.MinimumMapZoomLevel, viewModel.MapZoomLevel);
+        Assert.False(viewModel.ZoomMapOut());
     }
 
     [Fact]
@@ -843,7 +846,7 @@ public sealed class TsunamiPageViewModelTests
         Assert.Equal(TsunamiPageViewModel.MinimumMapZoomLevel, viewModel.MapZoomLevel);
         Assert.False(viewModel.ZoomMapOut());
         Assert.Equal(TsunamiPageViewModel.MinimumMapZoomLevel, viewModel.MapZoomLevel);
-        Assert.Equal(31, zoomChangedNotifications);
+        Assert.Equal(30, zoomChangedNotifications);
     }
 
     [Fact]

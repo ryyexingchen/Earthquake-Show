@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
@@ -21,8 +22,12 @@ public partial class TsunamiMapView : UserControl
     private readonly DispatcherTimer _wheelZoomTimer;
     private bool _renderPending;
     private bool _isWheelZooming;
+    private bool _isPanning;
     private double _wheelBaseZoomLevel;
     private Point _wheelAnchor;
+    private Point _lastPanPoint;
+    private Vector _automaticPanOffset;
+    private Vector _manualPanOffset;
 
     public TsunamiMapView()
     {
@@ -59,6 +64,11 @@ public partial class TsunamiMapView : UserControl
         _wheelZoomTimer.Stop();
         _isWheelZooming = false;
         ResetWheelZoomTransform();
+        StopPanning();
+        _automaticPanOffset = default;
+        _manualPanOffset = default;
+        MapPanTransform.X = 0;
+        MapPanTransform.Y = 0;
         _renderPending = false;
         if (ViewModel is not null)
         {
@@ -67,6 +77,58 @@ public partial class TsunamiMapView : UserControl
     }
 
     private void OnMapSizeChanged(object sender, SizeChangedEventArgs e) => RequestRender();
+
+    private void OnMapMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left || ViewModel is null ||
+            e.OriginalSource is Ellipse)
+        {
+            return;
+        }
+
+        if (_isWheelZooming)
+        {
+            FinishWheelZoomPreview();
+        }
+
+        _isPanning = true;
+        _lastPanPoint = e.GetPosition(MapCanvas);
+        MapCanvas.CaptureMouse();
+        Cursor = Cursors.SizeAll;
+        e.Handled = true;
+    }
+
+    private void OnMapMouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_isPanning || !MapCanvas.IsMouseCaptured)
+        {
+            return;
+        }
+
+        Point currentPoint = e.GetPosition(MapCanvas);
+        Vector delta = currentPoint - _lastPanPoint;
+        if (delta.LengthSquared > 0)
+        {
+            _manualPanOffset += delta;
+            _lastPanPoint = currentPoint;
+            ApplyPanTransform();
+        }
+
+        e.Handled = true;
+    }
+
+    private void OnMapMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left || !_isPanning)
+        {
+            return;
+        }
+
+        StopPanning();
+        e.Handled = true;
+    }
+
+    private void OnMapLostMouseCapture(object sender, MouseEventArgs e) => StopPanning();
 
     private void OnMapMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
     {
@@ -100,25 +162,45 @@ public partial class TsunamiMapView : UserControl
             return;
         }
 
-        MapZoomTransform.CenterX = _wheelAnchor.X;
-        MapZoomTransform.CenterY = _wheelAnchor.Y;
+        MapWheelPreviewTransform.CenterX = _wheelAnchor.X;
+        MapWheelPreviewTransform.CenterY = _wheelAnchor.Y;
         double previewScale = GetWheelPreviewScale(_wheelBaseZoomLevel, ViewModel.MapZoomLevel);
-        MapZoomTransform.ScaleX = previewScale;
-        MapZoomTransform.ScaleY = previewScale;
+        MapWheelPreviewTransform.ScaleX = previewScale;
+        MapWheelPreviewTransform.ScaleY = previewScale;
         _wheelZoomTimer.Stop();
         _wheelZoomTimer.Start();
 
         e.Handled = true;
     }
 
-    private void OnZoomInClick(object sender, RoutedEventArgs e) => ViewModel?.ZoomMapIn();
+    private void OnZoomInClick(object sender, RoutedEventArgs e)
+    {
+        FinishWheelZoomPreview();
+        ViewModel?.ZoomMapIn();
+    }
 
-    private void OnZoomOutClick(object sender, RoutedEventArgs e) => ViewModel?.ZoomMapOut();
+    private void OnZoomOutClick(object sender, RoutedEventArgs e)
+    {
+        FinishWheelZoomPreview();
+        ViewModel?.ZoomMapOut();
+    }
 
-    private void OnResetZoomClick(object sender, RoutedEventArgs e) => ViewModel?.ResetMapZoom();
+    private void OnResetZoomClick(object sender, RoutedEventArgs e)
+    {
+        FinishWheelZoomPreview();
+        _manualPanOffset = default;
+        ApplyPanTransform();
+        ViewModel?.ResetMapZoom();
+    }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName is nameof(TsunamiPageViewModel.SelectedReport)
+            or nameof(TsunamiPageViewModel.SelectedObservationStation))
+        {
+            _manualPanOffset = default;
+        }
+
         if (e.PropertyName == nameof(TsunamiPageViewModel.MapZoomLevel) && _isWheelZooming)
         {
             return;
@@ -170,6 +252,17 @@ public partial class TsunamiMapView : UserControl
             return;
         }
 
+        FinishWheelZoomPreview();
+    }
+
+    private void FinishWheelZoomPreview()
+    {
+        if (!_isWheelZooming)
+        {
+            return;
+        }
+
+        _wheelZoomTimer.Stop();
         _isWheelZooming = false;
         ResetWheelZoomTransform();
         RequestRender();
@@ -177,10 +270,10 @@ public partial class TsunamiMapView : UserControl
 
     private void ResetWheelZoomTransform()
     {
-        MapZoomTransform.CenterX = 0;
-        MapZoomTransform.CenterY = 0;
-        MapZoomTransform.ScaleX = 1;
-        MapZoomTransform.ScaleY = 1;
+        MapWheelPreviewTransform.CenterX = 0;
+        MapWheelPreviewTransform.CenterY = 0;
+        MapWheelPreviewTransform.ScaleX = 1;
+        MapWheelPreviewTransform.ScaleY = 1;
     }
 
     internal static double GetWheelPreviewScale(double baseZoomLevel, double currentZoomLevel)
@@ -327,12 +420,8 @@ public partial class TsunamiMapView : UserControl
     {
         if (!viewModel.TryGetSelectedObservationCoordinate(out GeoCoordinate coordinate))
         {
-            if (!viewModel.HasSelectedObservationStation)
-            {
-                MapPanTransform.X = 0;
-                MapPanTransform.Y = 0;
-            }
-
+            _automaticPanOffset = default;
+            ApplyPanTransform();
             return;
         }
 
@@ -342,9 +431,35 @@ public partial class TsunamiMapView : UserControl
             viewModel.MapZoomLevel,
             MapCanvas.ActualWidth,
             MapCanvas.ActualHeight);
+        _automaticPanOffset = offset;
+        ApplyPanTransform();
+    }
+
+    private void ApplyPanTransform()
+    {
+        Vector offset = ComposePanOffset(_automaticPanOffset, _manualPanOffset);
         MapPanTransform.X = offset.X;
         MapPanTransform.Y = offset.Y;
     }
+
+    private void StopPanning()
+    {
+        if (!_isPanning)
+        {
+            return;
+        }
+
+        _isPanning = false;
+        if (MapCanvas.IsMouseCaptured)
+        {
+            MapCanvas.ReleaseMouseCapture();
+        }
+
+        Cursor = null;
+    }
+
+    internal static Vector ComposePanOffset(Vector automaticOffset, Vector manualOffset) =>
+        automaticOffset + manualOffset;
 
     internal static Vector GetStationCenteringOffset(
         Point projected,

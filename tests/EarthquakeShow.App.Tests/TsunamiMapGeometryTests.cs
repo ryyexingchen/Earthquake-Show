@@ -121,6 +121,14 @@ public sealed class TsunamiMapGeometryTests
     }
 
     [Fact]
+    public void ComposePanOffset_PreservesAutomaticAndManualTranslation()
+    {
+        Assert.Equal(
+            new Vector(-15, 28),
+            TsunamiMapView.ComposePanOffset(new Vector(-40, 10), new Vector(25, 18)));
+    }
+
+    [Fact]
     public void GeometryJump_IsolatedWhenProjectedSegmentIsTooLong()
     {
         Assert.True(TsunamiMapView.IsGeometryJump(new Point(0, 0), new Point(501, 0)));

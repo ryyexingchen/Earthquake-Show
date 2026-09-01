@@ -11,6 +11,10 @@
               Background="#D9EEF3"
               ClipToBounds="True"
               SizeChanged="OnMapSizeChanged"
+              MouseLeftButtonDown="OnMapMouseLeftButtonDown"
+              MouseLeftButtonUp="OnMapMouseLeftButtonUp"
+              MouseMove="OnMapMouseMove"
+              LostMouseCapture="OnMapLostMouseCapture"
               MouseWheel="OnMapMouseWheel">
             <Canvas x:Name="MapContentCanvas"
                     Background="Transparent"
@@ -18,6 +22,7 @@
                 <Canvas.RenderTransform>
                     <TransformGroup>
                         <ScaleTransform x:Name="MapZoomTransform" ScaleX="1" ScaleY="1" />
+                        <ScaleTransform x:Name="MapWheelPreviewTransform" ScaleX="1" ScaleY="1" />
                         <TranslateTransform x:Name="MapPanTransform" />
                     </TransformGroup>
                 </Canvas.RenderTransform>
