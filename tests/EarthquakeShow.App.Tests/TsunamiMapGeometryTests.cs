@@ -121,11 +121,47 @@ public sealed class TsunamiMapGeometryTests
     }
 
     [Fact]
+    public void WheelPreviewCenterAccountsForFormalScaleAndPan()
+    {
+        Assert.Equal(
+            new Point(0, 10),
+            TsunamiMapView.GetWheelPreviewCenter(
+                new Point(100, 80),
+                new Vector(0, 0),
+                baseZoomLevel: 2,
+                width: 400,
+                height: 300));
+    }
+
+    [Fact]
     public void ComposePanOffset_PreservesAutomaticAndManualTranslation()
     {
         Assert.Equal(
             new Vector(-15, 28),
             TsunamiMapView.ComposePanOffset(new Vector(-40, 10), new Vector(25, 18)));
+    }
+
+    [Theory]
+    [InlineData(1, false, false, 8)]
+    [InlineData(8, true, true, 2.5)]
+    public void ObservationMarkerSizeRemainsScreenSizedAcrossZoom(
+        double zoomLevel,
+        bool isSelected,
+        bool showLabel,
+        double expected)
+    {
+        Assert.Equal(
+            expected,
+            TsunamiMapView.GetObservationMarkerSize(zoomLevel, isSelected, showLabel),
+            precision: 6);
+    }
+
+    [Theory]
+    [InlineData(7.99, false)]
+    [InlineData(8, true)]
+    public void ObservationLabelsAppearOnlyAtHighZoom(double zoomLevel, bool expected)
+    {
+        Assert.Equal(expected, TsunamiMapView.ShouldShowObservationLabels(zoomLevel));
     }
 
     [Fact]

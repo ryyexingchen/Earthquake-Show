@@ -761,7 +761,7 @@ public sealed class TsunamiPageViewModelTests
     }
 
     [Fact]
-    public void MapZoom_UsesThreeDetailLevelsAndOneStepIncrement()
+    public void MapZoom_UsesAvailableDetailLevelsAndOneStepIncrement()
     {
         using var viewModel = new TsunamiPageViewModel(new StubTsunamiReportRepository([]));
 
@@ -784,9 +784,9 @@ public sealed class TsunamiPageViewModelTests
         Assert.Equal(12, viewModel.MapZoomLevel);
         Assert.Equal(TsunamiMapDetailLevel.Medium, viewModel.MapDetailLevel);
 
-        viewModel.ZoomMapIn();
-        Assert.Equal(13, viewModel.MapZoomLevel);
-        Assert.Equal(TsunamiMapDetailLevel.Detailed, viewModel.MapDetailLevel);
+        Assert.False(viewModel.ZoomMapIn());
+        Assert.Equal(12, viewModel.MapZoomLevel);
+        Assert.Equal(TsunamiMapDetailLevel.Medium, viewModel.MapDetailLevel);
 
         viewModel.ResetMapZoom();
         Assert.Equal(1, viewModel.MapZoomLevel);
@@ -798,6 +798,7 @@ public sealed class TsunamiPageViewModelTests
         using var viewModel = new TsunamiPageViewModel(new StubTsunamiReportRepository([]));
 
         Assert.Equal(1.0, TsunamiPageViewModel.MinimumMapZoomLevel);
+        Assert.Equal(12.0, TsunamiPageViewModel.MaximumMapZoomLevel);
 
         for (int index = 0; index < 40; index++)
         {
@@ -836,7 +837,7 @@ public sealed class TsunamiPageViewModelTests
         Assert.Equal(TsunamiPageViewModel.MaximumMapZoomLevel, viewModel.MapZoomLevel);
         Assert.False(viewModel.ZoomMapIn());
         Assert.Equal(TsunamiPageViewModel.MaximumMapZoomLevel, viewModel.MapZoomLevel);
-        Assert.Equal(15, zoomChangedNotifications);
+        Assert.Equal(11, zoomChangedNotifications);
 
         for (int index = 0; index < 40; index++)
         {
@@ -846,7 +847,7 @@ public sealed class TsunamiPageViewModelTests
         Assert.Equal(TsunamiPageViewModel.MinimumMapZoomLevel, viewModel.MapZoomLevel);
         Assert.False(viewModel.ZoomMapOut());
         Assert.Equal(TsunamiPageViewModel.MinimumMapZoomLevel, viewModel.MapZoomLevel);
-        Assert.Equal(30, zoomChangedNotifications);
+        Assert.Equal(22, zoomChangedNotifications);
     }
 
     [Fact]

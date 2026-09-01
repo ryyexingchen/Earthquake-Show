@@ -16,6 +16,7 @@ public partial class TsunamiMapView : UserControl
     internal const double LineSimplificationPixels = 0.65;
     internal const double DenseLineSimplificationPixels = 1.0;
     internal const int DenseLinePointThreshold = 10000;
+    internal const double ObservationLabelZoomThreshold = 8;
 
     private static readonly Color InactiveCoastColor = Color.FromRgb(103, 135, 145);
     private readonly DispatcherTimer _renderThrottleTimer;
@@ -81,7 +82,7 @@ public partial class TsunamiMapView : UserControl
     private void OnMapMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton != MouseButton.Left || ViewModel is null ||
-            e.OriginalSource is Ellipse)
+            IsMapMarkerSource(e.OriginalSource as DependencyObject))
         {
             return;
         }
@@ -162,8 +163,14 @@ public partial class TsunamiMapView : UserControl
             return;
         }
 
-        MapWheelPreviewTransform.CenterX = _wheelAnchor.X;
-        MapWheelPreviewTransform.CenterY = _wheelAnchor.Y;
+        Point previewCenter = GetWheelPreviewCenter(
+            _wheelAnchor,
+            new Vector(MapPanTransform.X, MapPanTransform.Y),
+            _wheelBaseZoomLevel,
+            MapCanvas.ActualWidth,
+            MapCanvas.ActualHeight);
+        MapWheelPreviewTransform.CenterX = previewCenter.X;
+        MapWheelPreviewTransform.CenterY = previewCenter.Y;
         double previewScale = GetWheelPreviewScale(_wheelBaseZoomLevel, ViewModel.MapZoomLevel);
         MapWheelPreviewTransform.ScaleX = previewScale;
         MapWheelPreviewTransform.ScaleY = previewScale;
@@ -201,7 +208,13 @@ public partial class TsunamiMapView : UserControl
             _manualPanOffset = default;
         }
 
-        if (e.PropertyName == nameof(TsunamiPageViewModel.MapZoomLevel) && _isWheelZooming)
+        if (_isWheelZooming && e.PropertyName is
+            nameof(TsunamiPageViewModel.ForecastAreaLevels)
+            or nameof(TsunamiPageViewModel.HasMapGeometry)
+            or nameof(TsunamiPageViewModel.ObservationStations)
+            or nameof(TsunamiPageViewModel.SelectedObservationStation)
+            or nameof(TsunamiPageViewModel.MapLines)
+            or nameof(TsunamiPageViewModel.MapZoomLevel))
         {
             return;
         }
@@ -284,6 +297,25 @@ public partial class TsunamiMapView : UserControl
         }
 
         return Math.Pow(1.25, currentZoomLevel - baseZoomLevel);
+    }
+
+    internal static Point GetWheelPreviewCenter(
+        Point anchor,
+        Vector panOffset,
+        double baseZoomLevel,
+        double width,
+        double height)
+    {
+        if (!double.IsFinite(baseZoomLevel) || baseZoomLevel < 1 ||
+            !double.IsFinite(width) || !double.IsFinite(height))
+        {
+            return anchor;
+        }
+
+        Point center = new(width / 2, height / 2);
+        return new(
+            center.X + (anchor.X - panOffset.X - center.X) * baseZoomLevel,
+            center.Y + (anchor.Y - panOffset.Y - center.Y) * baseZoomLevel);
     }
 
     private void RenderMap()
@@ -379,6 +411,7 @@ public partial class TsunamiMapView : UserControl
         });
         MapContentCanvas.Children.Add(coastHost);
 
+        bool showObservationLabels = ShouldShowObservationLabels(viewModel.MapZoomLevel);
         foreach (TsunamiObservationStationDisplay station in viewModel.ObservationStations
                      .Where(item => item.HasMeasuredTsunami))
         {
@@ -394,19 +427,42 @@ public partial class TsunamiMapView : UserControl
                 station.Code,
                 viewModel.SelectedObservationStation?.Code,
                 StringComparison.Ordinal);
-            Ellipse marker = new()
+            double markerSize = GetObservationMarkerSize(
+                viewModel.MapZoomLevel,
+                isSelected,
+                showObservationLabels);
+            var marker = new Grid
             {
-                Width = isSelected ? 15 : 11,
-                Height = isSelected ? 15 : 11,
-                Fill = new SolidColorBrush(color),
-                Stroke = Brushes.White,
-                StrokeThickness = isSelected ? 3 : 1.5,
+                Width = markerSize,
+                Height = markerSize,
+                Tag = "tsunami-marker",
                 ToolTip = station.Name + "（" + station.Code + "）\n" +
                     station.ObservationStatusText + " · " + station.HeightText +
                     (string.IsNullOrWhiteSpace(station.PublicationText)
                         ? string.Empty
                         : "\n" + station.PublicationText),
             };
+            marker.Children.Add(new Ellipse
+            {
+                Fill = new SolidColorBrush(color),
+                Stroke = Brushes.White,
+                StrokeThickness = (isSelected ? 3 : 1.5) /
+                    Math.Max(1, viewModel.MapZoomLevel),
+            });
+            if (showObservationLabels)
+            {
+                marker.Children.Add(new TextBlock
+                {
+                    FontSize = 8 / Math.Max(1, viewModel.MapZoomLevel),
+                    FontWeight = FontWeights.Bold,
+                    Foreground = GetMarkerTextBrush(color),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Text = GetObservationMarkerText(station),
+                    TextAlignment = TextAlignment.Center,
+                });
+            }
+
             marker.MouseLeftButtonUp += (_, _) => viewModel.SelectObservationStation(station.Code);
             Canvas.SetLeft(marker, point.X - marker.Width / 2);
             Canvas.SetTop(marker, point.Y - marker.Height / 2);
@@ -460,6 +516,46 @@ public partial class TsunamiMapView : UserControl
 
     internal static Vector ComposePanOffset(Vector automaticOffset, Vector manualOffset) =>
         automaticOffset + manualOffset;
+
+    internal static double GetObservationMarkerSize(
+        double zoomLevel,
+        bool isSelected,
+        bool showLabel)
+    {
+        double baseSize = showLabel ? 20 : isSelected ? 15 : 8;
+        return baseSize / Math.Max(1, double.IsFinite(zoomLevel) ? zoomLevel : 1);
+    }
+
+    internal static bool ShouldShowObservationLabels(double zoomLevel) =>
+        double.IsFinite(zoomLevel) && zoomLevel >= ObservationLabelZoomThreshold;
+
+    internal static string GetObservationMarkerText(
+        TsunamiObservationStationDisplay station) =>
+        string.IsNullOrWhiteSpace(station.HeightText)
+            ? station.ObservationStatusText
+            : station.HeightText;
+
+    private static Brush GetMarkerTextBrush(Color background)
+    {
+        double luminance =
+            (0.299 * background.R + 0.587 * background.G + 0.114 * background.B) / 255;
+        return luminance > 0.58 ? Brushes.Black : Brushes.White;
+    }
+
+    private bool IsMapMarkerSource(DependencyObject? source)
+    {
+        while (source is not null && source != MapCanvas)
+        {
+            if (source is FrameworkElement { Tag: "tsunami-marker" })
+            {
+                return true;
+            }
+
+            source = VisualTreeHelper.GetParent(source);
+        }
+
+        return false;
+    }
 
     internal static Vector GetStationCenteringOffset(
         Point projected,

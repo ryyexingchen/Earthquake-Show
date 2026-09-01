@@ -102,7 +102,7 @@ public enum TsunamiMapDetailLevel
 public sealed class TsunamiPageViewModel : INotifyPropertyChanged, IDisposable
 {
     public const double MinimumMapZoomLevel = 1.0;
-    public const double MaximumMapZoomLevel = 16;
+    public const double MaximumMapZoomLevel = 12;
     public const double MediumMapZoomThreshold = 2;
     public const double DetailedMapZoomThreshold = 12;
 
