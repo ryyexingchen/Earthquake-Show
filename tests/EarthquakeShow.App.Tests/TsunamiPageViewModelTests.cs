@@ -624,6 +624,11 @@ public sealed class TsunamiPageViewModelTests
         Assert.Null(viewModel.SelectedObservationStation);
         Assert.True(viewModel.ToggleObservationStationSelection("10050"));
         Assert.Equal("10050", viewModel.SelectedObservationStation?.Code);
+        Assert.True(viewModel.ToggleObservationStationSelection("10050"));
+        Assert.False(viewModel.HasSelectedObservationStation);
+        Assert.True(viewModel.ToggleObservationStationSelection("10050"));
+        Assert.True(viewModel.ToggleObservationStationSelection("10050"));
+        Assert.False(viewModel.HasSelectedObservationStation);
         Assert.False(viewModel.SelectObservationStation("不存在"));
         viewModel.SelectedObservationStation = viewModel.ObservationStations[0];
         Assert.Equal("10050", viewModel.SelectedObservationStation?.Code);

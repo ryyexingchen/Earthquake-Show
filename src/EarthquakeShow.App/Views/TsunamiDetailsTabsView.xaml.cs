@@ -154,22 +154,39 @@ public partial class TsunamiDetailsTabsView : System.Windows.Controls.UserContro
     {
         if (DataContext is ViewModels.TsunamiPageViewModel viewModel &&
             e.OriginalSource is DependencyObject source &&
-            System.Windows.Controls.ItemsControl.ContainerFromElement(ObservationStationListBox, source)
-                is System.Windows.Controls.ListBoxItem item &&
-            item.DataContext is ViewModels.TsunamiObservationStationDisplay station &&
-            string.Equals(
+            FindListBoxItem(source) is System.Windows.Controls.ListBoxItem item &&
+            item.DataContext is ViewModels.TsunamiObservationStationDisplay station)
+        {
+            bool isSelected = string.Equals(
                 viewModel.SelectedObservationStation?.Code,
                 station.Code,
-                StringComparison.Ordinal))
-        {
+                StringComparison.Ordinal);
             _observationStationSelectionRequested = false;
             viewModel.ToggleObservationStationSelection(station.Code);
-            ObservationStationListBox.SelectedItem = null;
+            ObservationStationListBox.SelectedItem = isSelected ? null : station;
             e.Handled = true;
             return;
         }
 
         ArmObservationStationSelectionRequest();
+    }
+
+    private static System.Windows.Controls.ListBoxItem? FindListBoxItem(DependencyObject source)
+    {
+        DependencyObject? current = source;
+        while (current is not null)
+        {
+            if (current is System.Windows.Controls.ListBoxItem item)
+            {
+                return item;
+            }
+
+            current = current is System.Windows.Media.Visual visual
+                ? System.Windows.Media.VisualTreeHelper.GetParent(visual)
+                : null;
+        }
+
+        return null;
     }
 
     private void OnObservationStationPreviewKeyDown(object sender, KeyEventArgs e)

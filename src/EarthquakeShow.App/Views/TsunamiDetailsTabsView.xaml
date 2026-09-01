@@ -359,8 +359,7 @@
                             Background="#F1F7F8"
                             BorderBrush="#A5BEC3"
                             BorderThickness="1"
-                            CornerRadius="6"
-                            Visibility="{Binding HasSelectedObservationStation, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            CornerRadius="6">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -368,15 +367,15 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel>
                                 <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="选中观测点" />
-                                <TextBlock Margin="0,4,0,0" FontSize="15" FontWeight="SemiBold" Text="{Binding SelectedObservationStation.Name}" TextWrapping="Wrap" />
-                                <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="11" Text="{Binding SelectedObservationStation.AreaName}" />
-                                <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding SelectedObservationStation.Code}" />
+                                <TextBlock Margin="0,4,0,0" FontSize="15" FontWeight="SemiBold" Text="{Binding SelectedObservationStation.Name, TargetNullValue=未选择观测点}" TextWrapping="Wrap" />
+                                <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="11" Text="{Binding SelectedObservationStation.AreaName, TargetNullValue=——}" />
+                                <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding SelectedObservationStation.Code, TargetNullValue=——}" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" Margin="14,0,0,0">
                                 <TextBlock Style="{StaticResource EyebrowTextStyle}" Text="状态 / 高度" />
-                                <TextBlock Margin="0,4,0,0" FontSize="13" FontWeight="SemiBold" Text="{Binding SelectedObservationStation.StatusDisplayText}" TextWrapping="Wrap" />
-                                <TextBlock Margin="0,3,0,0" FontSize="12" Text="{Binding SelectedObservationStation.MeasuredHeightDisplayText}" />
-                                <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding SelectedObservationStation.ArrivalText}" TextWrapping="Wrap" />
+                                <TextBlock Margin="0,4,0,0" FontSize="13" FontWeight="SemiBold" Text="{Binding SelectedObservationStation.StatusDisplayText, TargetNullValue=——}" TextWrapping="Wrap" />
+                                <TextBlock Margin="0,3,0,0" FontSize="12" Text="{Binding SelectedObservationStation.MeasuredHeightDisplayText, TargetNullValue=——}" />
+                                <TextBlock Margin="0,3,0,0" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Text="{Binding SelectedObservationStation.ArrivalText, TargetNullValue=——}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Grid>
                     </Border>
