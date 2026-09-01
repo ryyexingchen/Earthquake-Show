@@ -77,20 +77,27 @@ public partial class TsunamiMapView : UserControl
 
         Point inputAnchor = e.GetPosition(MapCanvas);
         double previousZoomLevel = ViewModel.MapZoomLevel;
-        bool zoomChanged = e.Delta > 0
-            ? ViewModel.ZoomMapIn()
-            : e.Delta < 0 && ViewModel.ZoomMapOut();
-        if (!zoomChanged)
-        {
-            e.Handled = true;
-            return;
-        }
-
+        bool startedWheelZoom = false;
         if (!_isWheelZooming)
         {
             _isWheelZooming = true;
             _wheelBaseZoomLevel = previousZoomLevel;
             _wheelAnchor = inputAnchor;
+            startedWheelZoom = true;
+        }
+
+        bool zoomChanged = e.Delta > 0
+            ? ViewModel.ZoomMapIn()
+            : e.Delta < 0 && ViewModel.ZoomMapOut();
+        if (!zoomChanged)
+        {
+            if (startedWheelZoom)
+            {
+                _isWheelZooming = false;
+            }
+
+            e.Handled = true;
+            return;
         }
 
         MapZoomTransform.CenterX = _wheelAnchor.X;
@@ -112,6 +119,11 @@ public partial class TsunamiMapView : UserControl
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(TsunamiPageViewModel.MapZoomLevel) && _isWheelZooming)
+        {
+            return;
+        }
+
         if (e.PropertyName is nameof(TsunamiPageViewModel.ForecastAreaLevels)
             or nameof(TsunamiPageViewModel.HasMapGeometry)
             or nameof(TsunamiPageViewModel.ObservationStations)

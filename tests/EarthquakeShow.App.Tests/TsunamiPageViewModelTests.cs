@@ -816,6 +816,14 @@ public sealed class TsunamiPageViewModelTests
     public void MapZoom_ReportsNoChangeAtConfiguredLimits()
     {
         using var viewModel = new TsunamiPageViewModel(new StubTsunamiReportRepository([]));
+        int zoomChangedNotifications = 0;
+        viewModel.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(TsunamiPageViewModel.MapZoomLevel))
+            {
+                zoomChangedNotifications++;
+            }
+        };
 
         for (int index = 0; index < 40; index++)
         {
@@ -825,6 +833,7 @@ public sealed class TsunamiPageViewModelTests
         Assert.Equal(TsunamiPageViewModel.MaximumMapZoomLevel, viewModel.MapZoomLevel);
         Assert.False(viewModel.ZoomMapIn());
         Assert.Equal(TsunamiPageViewModel.MaximumMapZoomLevel, viewModel.MapZoomLevel);
+        Assert.Equal(15, zoomChangedNotifications);
 
         for (int index = 0; index < 40; index++)
         {
@@ -834,6 +843,7 @@ public sealed class TsunamiPageViewModelTests
         Assert.Equal(TsunamiPageViewModel.MinimumMapZoomLevel, viewModel.MapZoomLevel);
         Assert.False(viewModel.ZoomMapOut());
         Assert.Equal(TsunamiPageViewModel.MinimumMapZoomLevel, viewModel.MapZoomLevel);
+        Assert.Equal(31, zoomChangedNotifications);
     }
 
     [Fact]
