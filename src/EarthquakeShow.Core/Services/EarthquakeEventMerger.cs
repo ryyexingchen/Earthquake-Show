@@ -386,7 +386,9 @@ public static class EarthquakeEventMerger
     {
         return reports
             .Select(report => report.MaxIntensity)
-            .FirstOrDefault(intensity => intensity != JmaIntensity.Unknown);
+            .Where(intensity => intensity != JmaIntensity.Unknown)
+            .DefaultIfEmpty(JmaIntensity.Unknown)
+            .Max();
     }
 
     private static bool TryParseTemporaryEventTime(

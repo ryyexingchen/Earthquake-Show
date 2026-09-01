@@ -433,6 +433,43 @@ public sealed class EarthquakeEventMergerTests
     }
 
     [Fact]
+    public void Merge_JmaTemporaryEventIds_UsesMaximumIntensityRegardlessOfInputOrder()
+    {
+        EarthquakeReport lowerIntensity = CreateReport(
+            "VXSE51",
+            "temporary-51-lower",
+            1,
+            eventId: "20260824040519",
+            intensity: JmaIntensity.Four);
+        EarthquakeReport higherIntensity = CreateReport(
+            "VXSE51",
+            "temporary-51-higher",
+            2,
+            eventId: "20260824040519",
+            intensity: JmaIntensity.Seven);
+        EarthquakeReport hypocenter = CreateReport(
+            "VXSE52",
+            "temporary-52",
+            3,
+            eventId: "20260824040526",
+            intensity: JmaIntensity.Seven);
+
+        EarthquakeEvent[] mergedResults =
+        [
+            Assert.Single(EarthquakeEventMerger.Merge(
+                [lowerIntensity, higherIntensity, hypocenter])),
+            Assert.Single(EarthquakeEventMerger.Merge(
+                [higherIntensity, lowerIntensity, hypocenter])),
+        ];
+
+        Assert.All(mergedResults, earthquakeEvent =>
+        {
+            Assert.Equal("20260824040526", earthquakeEvent.EventId);
+            Assert.Equal(JmaIntensity.Seven, earthquakeEvent.Summary?.MaxIntensity);
+        });
+    }
+
+    [Fact]
     public void Merge_JmaTemporaryEventIds_DifferentIntensityDoesNotMerge()
     {
         EarthquakeReport intensity = CreateReport(
